@@ -11,11 +11,28 @@ import numpy as np
 """
 
 @dataclass
-class NODE:
+class Node:
     """
     @class Node
     @brief Generic node definition where raw data from input file can be saved and general 
         coordinates in global sistem are also saved.
+    
+    @details
+        This class stores both the “raw” data from the input file (such as a Nastran GRID card)
+        and the coordinates processed in the global Cartesian system,
+        which are necessary for matrix assembly.
+
+    @var nid ID único del nodo (Entero > 0).
+    @var coord_id ID del sistema de coordenadas (CP) donde se definen x1, x2, x3. (0 = Global Cartesiano).
+    @var x1 Primera coordenada en el sistema local CP.
+    @var x2 Segunda coordenada en el sistema local CP.
+    @var x3 Tercera coordenada en el sistema local CP.
+    @var cd_id ID del sistema de coordenadas de salida (CD) para los desplazamientos.
+    @var ps Restricción permanente de punto único (Permanent SPC), ej: "123".
+    @var seid ID del super-elemento (SEID).
+    @var x Coordenada X procesada en el Sistema Cartesiano Global (Calculada).
+    @var y Coordenada Y procesada en el Sistema Cartesiano Global (Calculada).
+    @var z Coordenada Z procesada en el Sistema Cartesiano Global (Calculada).
     """
     nid: int # node id 
     # Raw data fom input file
@@ -36,26 +53,32 @@ class NODE:
         return np.array([self.x, self.y, self.z])
     
 
-# region MATERIALS CLASES
+# region Materials classes
 @dataclass
-class MATERIAL:
+class Material:
     """
-    @class MATERIAL
+    @class Material
     @brief Base class for properties constituting materials.
     """
     mid: int #: ID material
 
-# region ISOTROPIC_MATERIAL(MATERIAL)
+# region IsotropicMaterial(Material)
 @dataclass
-class ISOTROPIC_MATERIAL(MATERIAL):
+class IsotropicMaterial(Material):
     """
-    @class ISOTROPIC_MATERIAL
+    @class IsotropicMaterial
     @brief Linear isotropic elastic material (equivalent to NASTRAN MAT1).
-    
+    @details 
+    This class implements the elastic constant triangulation logic.
+    The triplet (E, G, nu) is guaranteed to be complete and consistent.    
     Allows the class to be instantiated with ANY pair of constants:
         1. (E, nu) -> Calculates G
         2. (E, G) -> Calculates nu
         3. (G, nu) -> Calculates E
+    @var E Módulo de Young's Module [Pa].
+    @var nu Coeficiente de Poisson [-].
+    @var G Shear Module [Pa].
+    @var rho density [kg/m^3].
 
     """
     E: Optional[float] = None   #: Young´s Module
@@ -99,7 +122,7 @@ class ISOTROPIC_MATERIAL(MATERIAL):
                 
                 
                 if error > 0.05: # If the error is greater than 5%, it´s notified (engineering tolerance).
-                    print(f"Review inputs in material '{self.mid}'\n"
+                    print(f"Review inputs in material id: '{self.mid}'\n"
                           "The parameters entered are not consistent. "
                         f"E theoretical: {E_calculated:.2e}, E introduced: {self.E:.2e}")
 
@@ -107,76 +130,76 @@ class ISOTROPIC_MATERIAL(MATERIAL):
         # Usamos 'or 0' por seguridad en el f-string, aunque post_init asegura valores
         return (f"IsotropicMaterial with id:{self.mid}\n"
                 f"(E={self.E:.2e}, nu={self.nu:.4f}, G={self.G:.2e}, rho={self.rho})")
-# endregion ISOTROPIC_MATERIAL(MATERIAL)
+# endregion IsotropicMaterial(Material)
 
-# endregion MATERIAL CLASES
+# endregion Material Classes
 
-# region PROPERTY CLASES
+# region Property Classes
 @dataclass
-class PROPERTY:
+class Property:
     """
-    @class PPROPERTY
+    @class PProperty
     @brief Base class for any elemen property.
     """
     pid: int #: ID property
     
 
-# region ROD_PROPERTY(PPROPERTY)
+# region RodProperty(PProperty)
 @dataclass
-class ROD_PROPERTY(PROPERTY):
+class RodProperty(Property):
     """
-    @class ROD_PROPERTY
+    @class RodProperty
     @brief Corresponds to PROD in NASTRAN.
     """
-    mat_id: int   #: ID from asociated material.
-    A: float = 0.0    #: Transverse section area.
-    J: float = 0.0    #: Torsion constant (Polar inertia for circulars coordinates)
-    C: float = 0.0    #: Coefficient for calculating torsional stresses
-    NSM: float = 0.0  #: Non-structural mass per unit length
-# endregion ROD_PROPERTY(PPROPERTY)
-# endregion PROPERTY CLASES
+    mat_id: int  #: ID from asociated material.
+    A: float     #: Transverse section area.
+    J: float     #: Torsion constant (Polar inertia for circulars coordinates)
+    C: float     #: Coefficient for calculating torsional stresses
+    NSM: float   #: Non-structural mass per unit length
+# endregion RodProperty(PProperty)
+# endregion Property Classes
 
 
-# region ELEMENT CLASES
+# region Element Classes
 @dataclass
-class ELEMENT:
+class Element:
     """Base class for elements."""
     eid: int
     prop_id: int
     nodes: List[int]
 
 @dataclass
-class ROD_ELEMENT(ELEMENT):
+class RodElement(Element):
     """
     @brief 2-node bar (CROD).
     @details Defines a tension-compression-torsion element"""
     pass
 
 @dataclass
-class QUADELEMENT(ELEMENT):
+class QUADElement(Element):
     """
     @brief 4-node Quadrilateral Plate Element (CQUAD4).
     @details ¿Supports flat tension and plate bending.?
     """
     pass
 
-# endregion ELEMENT CLASES
+# endregion Element Classes
 
 
-# region LOADs CLASES
+# region LOADs Classes
 @dataclass
-class LOAD_CASE:
+class LoadCase:
     """
-    @class LOAD_CASE
+    @class LoadCase
     @brief Abstract base class for any load type (point, distributed, thermal).
     """
     sid: int  #: Set ID (SID) para agrupar casos de carga
 
-# region SINGLE_POINT_LOAD(LOAD_CASE) (FORCE)
+# region SinglePointLoad(LoadCase) (FORCE)
 @dataclass
-class SINGLE_POINT_LOAD(LOAD_CASE):
+class SinglePointLoad(LoadCase):
     """
-    @class SINGLE_POINT_LOAD
+    @class SinglePointLoad
     @brief Represents a static point load (FORCE card).
     @details Defines a force applied to a specific node, 
         with a magnitude and direction vector referenced to a coordinate system.
@@ -185,13 +208,13 @@ class SINGLE_POINT_LOAD(LOAD_CASE):
     module: float        #: Force module (F, scale factor)
     vector: List[float]  #: Director vector [N1, N2, N3]
     cid: int = 0    #: Coordinate system ID (CID) where the vector is defined. 0=Global.
-# endregion SINGLE_POINT_LOAD(LOAD_CASE) (FORCE)
+# endregion SinglePointLoad(LoadCase) (FORCE)
 
-# region SINGLE_MOMENT_LOAD(LOAD_CASE) (MOMENT)
+# region SinglePointMoment(LoadCase) (MOMENT)
 @dataclass
-class SINGLE_MOMENT_LOAD(LOAD_CASE):
+class SinglePointMoment(LoadCase):
     """
-    @class SINGLE_MOMENT_LOAD
+    @class SinglePointMoment
     @brief Point-in-time applied to a node (MOMENT card).
     @details affects the degrees of rotational freedom. (For beams(CBAR) or plates (CQUAD4) elements.)
     """
@@ -199,63 +222,67 @@ class SINGLE_MOMENT_LOAD(LOAD_CASE):
     module: float        #: Moment module (M, scale factor)
     vector: List[float]  #: Director vector [N1, N2, N3]
     cid: int = 0         #: Coordinate system ID (CID) where the vector is defined. 0=Global.
-# endregion SINGLE_MOMENT_LOAD(LOAD_CASE) (MOMENT)
+# endregion SinglePointMoment(LoadCase) (MOMENT)
 
-# endregion LOADS CLASES
+# endregion LOADS Classes
 
-# region CONSTRAINTs
+# region Constraints
 @dataclass
-class CONSTRAINT:
+class Constraint:
     """
-    @class CONSTRAINTS
+    @class ConstraintS
     @brief Base class for boundary conditions and kinematic constraints.
     """
     sid: int  #: Set ID (SID) para agrupar restricciones (Load Case)
 
-# region SPC_CONSTRAINT
+# region SPCConstraint
 @dataclass
-class SPC_CONSTRAINT(CONSTRAINT):
+class SPCConstraint(Constraint):
     """
-    @class SPC_CONSTRAINT
+    @class SPCConstraint
     @brief Restricción de Punto Único (Tarjetas SPC y SPC1).
     @details Fija grados de libertad específicos de un nodo a un valor constante.
     """
     node_id: int        #: Grid ID (Gi)
     components: str     #: Componentes restringidas (ej. "123456" o "3")
     value: float = 0.0  #: Enforced displacement (Di). Default=0.0 (empotramiento).
-# endregion SPC_CONSTRAINT
+# endregion SPCConstraint
 
-# endregion CONSTRAINTs
+# endregion Constraints
 
-# region FEM_MODEL
-class FEM_MODEL:
+# region FEMModel
+class FEMModel:
     """
-    @class FEM_MODEL
+    @class FEMModel
     @brief Main container (“Database”) of the physical model.
     @details Stores all parsed and processed entities, 
         acting as the single source for the Solver.
     """
     def __init__(self):
-        self.nodes: Dict[int, NODE] = {}            #: Diccionario de Nodos {ID: NODE}
-        self.materials: Dict[int, MATERIAL] = {}    #: Diccionario de Materiales {ID: MATERIAL}
-        self.properties: Dict[int, PROPERTY] = {}   #: Propiedades de sección {ID: PROPERTY}
-        self.elements: Dict[int, ELEMENT] = {}      #: Elementos finitos {ID: ELEMENT}
+        self.nodes: Dict[int, Node] = {}            #: Diccionario de Nodos {ID: Node}
+        self.materials: Dict[int, Material] = {}    #: Diccionario de Materiales {ID: Material}
+        self.properties: Dict[int, Property] = {}   #: Propiedades de sección {ID: Property}
+        self.elements: Dict[int, Element] = {}      #: Elementos finitos {ID: Element}
 
                 # Future user coordinate systems will be implemented
                 #self.coords: Dict[int, CoordSystem] = {}    #: Sistemas de Coordenadas definidos por usuario
         
         # Loads and restrictions are stored in lists because different sucase can count with the same load_id or SPC_id multiple times,
         # therefor in a dictionary they can be overwritten.
-        self.constraints: List[CONSTRAINT] = []     
-        self.loads: List[LOAD_CASE] = []
+        self.constraints: List[Constraint] = []     
+        self.loads: List[LoadCase] = []
 
-    def get_node(self, node_id: int) -> NODE:
+    def get_node(self, node_id: int) -> Node:
         """
-        @brief Retrieves a NODE object by its ID.
+        @brief Retrieves a Node object by its ID.
         @param node_id ID of the node to search for.
-        @return Class NODE.
+        @return Class Node with the node id requested.
         @throws KeyError if the node does not exist in the model.
         """
+
+        if node_id not in self.nodes:
+            raise KeyError(f"[FEMModel ERROR] Node ID: '{node_id}' does not exist in the model.")
+        
         return self.nodes[node_id]
     
         '''def get_coord_system(self, cid: int) -> Optional[CoordSystem]:
@@ -267,7 +294,7 @@ class FEM_MODEL:
                 return None
             return self.coords[cid]'''
 
-# endregion FEM_MODEL
+# endregion FEMModel
 
 
 
