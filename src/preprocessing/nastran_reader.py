@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Callable
 
 # Importamos las clases definidas en tu data_model
 from .data_model import (
@@ -33,6 +33,7 @@ def _parse_nastran_number(s: str) -> Union[float, None]:
     @param s Raw text string from the field (8 characters). "$1234567"
     @return Float value or None if it is an empty field.
     """
+    s_input = s
     s = s.strip()
     if not s:
         return None
@@ -54,7 +55,7 @@ def _parse_nastran_number(s: str) -> Union[float, None]:
         return float(s)
     
     except ValueError as e:
-        raise ValueError(f"The value '{s}' can not be converted into a float number.") from e
+        raise ValueError(f"[ERROR] The value '{s_input}' can not be converted into a float number.") from e
 
 def _get_entry_fields(line: str) -> list[str]:
     """
@@ -228,7 +229,7 @@ def _read_moment(fields: list[str], model: FEMModel):
 
 # region --- RELATIONSHIP DICTIONARIES ---
 # Map the card name to the function that processes it.
-_CARD_HANDLERS: dict[str, callable[[list[str], FEMModel], None]] = {
+_CARD_HANDLERS: dict[str, Callable[[list[str], FEMModel], None]] = {
     'GRID': _read_grid,
     'CROD': _read_crod,
     'PROD': _read_prod,

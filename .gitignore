@@ -4,3 +4,4 @@ __pycache__/
 *.tmp
 *.log
 draft_*
+.pytest_cache/

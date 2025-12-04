@@ -138,13 +138,13 @@ class IsotropicMaterial(Material):
 @dataclass
 class Property:
     """
-    @class PProperty
+    @class Property
     @brief Base class for any elemen property.
     """
     pid: int #: ID property
     
 
-# region RodProperty(PProperty)
+# region RodProperty(Property)
 @dataclass
 class RodProperty(Property):
     """
@@ -156,7 +156,7 @@ class RodProperty(Property):
     J: float     #: Torsion constant (Polar inertia for circulars coordinates)
     C: float     #: Coefficient for calculating torsional stresses
     NSM: float   #: Non-structural mass per unit length
-# endregion RodProperty(PProperty)
+# endregion RodProperty(Property)
 # endregion Property Classes
 
 
