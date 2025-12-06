@@ -2,6 +2,22 @@ import pytest
 import numpy as np
 from solver.transformations import CoordinateTransformation
 
+"""
+@file test_transformations.py
+@brief Verification of geometric transformations and linear algebra logic.
+@details
+This suite tests the robustness of coordinate system transformations under various
+spatial orientations.
+
+Test Coverage:
+    - Vector Orthogonality: Ensures local axes (x, y, z) are unitary and perpendicular.
+    - SO(3) Properties: Validates that Rotation matrices have Determinant=1.0 and
+      that their Inverse equals their Transpose (R^-1 = R^T).
+    - Right-Hand Rule: Checks consistency of cross products.
+    - Matrix Assembly: Verifies the correct construction of the 12x12 transformation
+      matrix (block-diagonal structure).
+    - Edge Cases: Tests stability with random vectors and parallel alignment cases.
+"""
 
 class TestCoordinateTransformation:
     """

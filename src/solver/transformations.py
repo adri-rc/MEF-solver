@@ -1,5 +1,21 @@
 import numpy as np
 
+"""
+@file transformations.py
+@brief Geometric transformation utilities for Finite Element Analysis.
+@details
+This module handles the linear algebra required to transform stiffness matrices
+and vectors between Local and Global coordinate systems.
+
+Key functionalities:
+    1. Local Axis Computation: Generates an orthonormal basis (vx, vy, vz)
+       given two nodes and an optional orientation vector.
+    2. Rotation Matrix (R): Constructs the 3x3 matrix where v_local = R * v_global.
+    3. System Transformation (T): Expands the 3x3 rotation matrix into a full
+       block-diagonal matrix (e.g., 12x12 for a 2-node beam) suitable for
+       transforming the element stiffness matrix.
+"""
+
 class CoordinateTransformation:
     """
     @class CoordinateTransformation
