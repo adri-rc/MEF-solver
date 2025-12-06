@@ -1,5 +1,22 @@
 import numpy as np
 
+"""
+@file quadrature.py
+@brief Numerical integration provider using Gauss-Legendre quadrature.
+@details
+This module implements the logic to obtain integration points (xi) and weights (w)
+required for the numerical integration of Finite Elements.
+The integration is performed on the natural interval [-1, 1].
+
+The general formula applied is:
+    Integral(f(x)) approx Sum( w_i * f(xi_i) )
+
+Implemented Orders:
+    - n=1: Exact for linear polynomials (p=1).
+    - n=2: Exact for cubic polynomials (p=3).
+    - n=3: Exact for quintic polynomials (p=5).
+"""
+
 class GaussQuadrature:
     """
     @class GaussQuadrature
@@ -12,8 +29,8 @@ class GaussQuadrature:
         @brief Returns the points (xi) and weights (w) for the Gauss-Legendre quadrature
         on the natural interval [-1, 1].
         @details
-        The number of integration points required (n_gp) to approximate a polynomial of degree 'p' is:
-        p<=2*n_gp-1.
+        The number of integration points required (n_gaussp) to approximate a polynomial of degree 'p' is:
+        p<=2*n_gaussp-1.
 
         SEE: TABLE 4.1 POSITION OF GAUSS POINTS AND CORRESPONDING WEIGHTS.
         (Ref: J. Fish & T. Belytschko)
