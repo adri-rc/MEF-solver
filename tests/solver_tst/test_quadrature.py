@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from solver.quadrature import GaussQuadrature
+from src.solver.quadrature import GaussQuadrature
 
 """
 @file test_quadrature.py

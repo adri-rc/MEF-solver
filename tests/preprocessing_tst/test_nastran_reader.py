@@ -1,7 +1,7 @@
 import pytest
-from preprocessing.data_model import FEMModel
+from src.preprocessing.data_model import FEMModel
 from tests.conftest import test_data_dir
-from preprocessing.nastran_reader import (
+from src.preprocessing.nastran_reader import (
     parse_nastran_input, 
     _parse_nastran_number, 
     _get_entry_fields

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from solver.transformations import CoordinateTransformation
+from src.solver.transformations import CoordinateTransformation
 
 """
 @file test_transformations.py

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from preprocessing.data_model import (          
+from src.preprocessing.data_model import (          
     Node,
     IsotropicMaterial, # Material
     FEMModel,

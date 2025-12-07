@@ -10,7 +10,7 @@ Focuses on DofMapper logic:
 """
 
 import pytest
-from solver.utilities import DofMapper
+from src.solver.utilities import DofMapper
 
 class TestDofMapper:
     """
