@@ -7,7 +7,7 @@ from pathlib import Path
 current_file_path = Path(__file__).resolve()
 project_root = current_file_path.parent.parent
 src_path = project_root / 'src'
-
+print(src_path)
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
