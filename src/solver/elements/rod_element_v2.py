@@ -6,7 +6,7 @@ Implements the stiffness matrix calculation for a 2-node Rod element
 considering Axial and Torsional degrees of freedom.
 """
 import numpy as np
-from ...preprocessing.data_model import Node, RodProperty, IsotropicMaterial
+from src.preprocessing.data_model import Node, RodProperty, IsotropicMaterial
 from ..quadrature import GaussQuadrature
 from ..transformations import CoordinateTransformation 
 
