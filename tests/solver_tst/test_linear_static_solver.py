@@ -406,6 +406,3 @@ class TestLinearStaticSolverIntegration:
         
         assert ux_calc == pytest.approx(expected_ux, rel=1e-5)
         assert uy_calc == pytest.approx(expected_uy, rel=1e-5)
-
-
-
