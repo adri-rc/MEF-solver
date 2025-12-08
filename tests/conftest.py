@@ -35,3 +35,14 @@ def test_data_dir(request):
     """
     test_file_path = Path(request.module.__file__)
     return test_file_path.parent / "files4test"
+
+
+@pytest.fixture
+def validation_data_dir(request):
+    """
+    @brief Returns the Path to the 'tests/validation_cases' folder.
+    @details Assumes standard structure: tests/conftest.py -> tests/validation_cases/
+    """
+    test_file_path = Path(request.module.__file__)
+    # .parent is 'tests' folder
+    return test_file_path.parent / "validation_cases"
