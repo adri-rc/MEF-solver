@@ -167,6 +167,38 @@ VALIDATION_DATA = [
             # Element 173 (Connects 3-4)
             173: {"axial_force": -1.001535E+02, "axial_stress": -2.003070E+01}
         }
+    },
+
+    # --- CASO 8: Cercha Clase DAA (Planar Truss Multi-bay) ---
+    {
+        "case_name": "Ej8_DAA_Class_Truss",
+        "folder": "case_8",
+        "filename": "Ej_DAA_clase.dat",
+        
+        "expected_displacements": {
+            1: {0: 0.0, 1: 0.0, 2:0.0},
+            2: {0: -4.523520E-03, 1: -8.945180E-03},
+            3: {0: -8.994993E-03, 1: -1.793394E-02},
+            4: {0: -1.347874E-02, 1: -3.143701E-02},
+            5: {0: -2.735212E-03, 1: -4.040562E-02},
+            6: {0: 0.0, 1: 0.0, 2:0.0}
+            
+        },
+        "expected_reactions": {
+            1: {0: 7.533646E+04, 1: 6.000000E+04, 2:0.0, 3:0.0, 4:0.0, 5:0.0},
+            6: {0: -7.533646E+04, 1: 8.000000E+04, 2:0.0}
+        },
+        
+        "expected_element_forces": {
+            1: {"axial_force": -8.485281E+04, "axial_stress": -3.367175E+08},
+            3: {"axial_force": 2.000000E+04, "axial_stress": 4.494382E+08},
+            4: {"axial_force": -6.000000E+04, "axial_stress": -4.477612E+08},
+            6: {"axial_force": 4.663537E+03, "axial_stress": 3.129890E+08},
+            7: {"axial_force": 1.000000E+05, "axial_stress": 4.484305E+08},
+            9: {"axial_force": -1.131371E+05, "axial_stress": -4.489567E+08}
+            
+        },
+        "description": "Multi-bay planar truss. Validates asymmetric loading and reactions.\nEjercicio de clase DAA. Solo ha sido necesario adaptar las SPC de los nodos libres restringiendo todos los girros y movimiento en eje Z."
     }
 
 ]
