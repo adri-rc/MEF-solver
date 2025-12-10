@@ -232,6 +232,10 @@ class LinearStaticSolver:
         @details
         Solves [K_ff]{u_f} = {F_f} - [K_fs]{u_s}
         This approach handles both zero (clamped) and non-zero (enforced) displacements.
+        @return A dictionary containing:
+            - 'displacements': np.ndarray (Total Displacement Vector)
+            - 'reactions': dict {NodeID: np.ndarray(6)}
+            - 'stresses': dict {ElemID: dict(axial_force, stress...)}
         """
         print("[Solver] Solving system...")
         
@@ -293,7 +297,67 @@ class LinearStaticSolver:
         
         max_disp = np.max(np.abs(self.displacements))
         print(f"[Solver] Solution done. Max displacement: {max_disp:.4e}")
-        return self.displacements
+
+        # 9. Post-Process (Reactions and Stresses)
+        return self.reactions_and_stresses()
+
+    def reactions_and_stresses(self) -> dict:
+        """
+        @brief Calculates reaction forces and element stresses based on the solution.
+        @details
+        Reactions: R = K_global * u_total - F_external
+        Stresses: Delegates to each element solver (e.g. RodElementSolverV2.calculate_stresses)
+
+        @return Dictionary with structure:
+            {
+                "displacements": np.ndarray,
+                "reactions": { NodeID: np.ndarray(6) },
+                "stresses": { ElemID: { 'axial_force': float, ... } }
+            }
+        """
+        print("[Solver] Post-processing results (Reactions & Stresses)...")
+        
+        results = {
+            "displacements": self.displacements,
+            "reactions": {},
+            "stresses": {}
+        }
+
+        # --- A. REACTION FORCES ---
+        # R = K * u - F
+        # Only relevant at constrained DOFs. At free DOFs, R should be ~0 (equilibrium check).
+        if self.model.constraints:
+            K_csr = self.K_global.tocsr()
+            F_internal = K_csr.dot(self.displacements)
+            R_total = F_internal - self.F_global
+            
+            # Filter and store reactions only for constrained nodes
+            # Optimization: We loop through unique constrained nodes to avoid duplicate work
+            constrained_nodes = set(c.node_id for c in self.model.constraints if isinstance(c, SPCConstraint))
+            
+            for node_id in constrained_nodes:
+                indices = self._get_global_dof_indices(node_id)
+                # Store the reaction vector [Rx, Ry, Rz, Mx, My, Mz]
+                results["reactions"][node_id] = R_total[indices]
+
+        # --- B. ELEMENT STRESSES ---
+        for eid, element in self.model.elements.items():
+            
+            if isinstance(element, RodElement):
+                # TODO: Optimization - Retrieve cached ElementSolver instead of re-instantiating.
+                # Currently, geometry and T matrix are re-computed here.
+                n1 = self.model.get_node(element.nodes[0])
+                n2 = self.model.get_node(element.nodes[1])
+                prop = self.model.properties[element.prop_id]
+                mat = self.model.materials[prop.mat_id]
+                
+                elem_solver = RodElementSolverV2(n1, n2, prop, mat)
+                
+                # Call the specific stress recovery method
+                stress_data = elem_solver.calculate_stresses(self.displacements, self.mapper)
+                results["stresses"][eid] = stress_data
+        
+        return results 
 
     def _get_dof_partition(self):
         """

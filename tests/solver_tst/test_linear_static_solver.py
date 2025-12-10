@@ -65,7 +65,8 @@ class TestLinearStaticSolverIntegration:
         # 2. Run Solver
         solver = LinearStaticSolver(model)
         solver.assemble()
-        displacements = solver.solve()
+        results = solver.solve()
+        displacements = results['displacements']
         
         # 3. Validate
         dofs_n2 = solver.mapper.get_dof_indices(2)
@@ -106,7 +107,8 @@ class TestLinearStaticSolverIntegration:
 
         solver = LinearStaticSolver(model)
         solver.assemble()
-        displacements = solver.solve()
+        results = solver.solve()
+        displacements = results['displacements']
 
         # Check Node 2 X displacement
         dofs_n2 = solver.mapper.get_dof_indices(2)
@@ -278,7 +280,8 @@ class TestLinearStaticSolverIntegration:
             # Solve
             solver = LinearStaticSolver(model)
             solver.assemble()
-            u = solver.solve()
+            results = solver.solve()
+            u = results['displacements']
 
             # Validation
             idx_u2 = solver.mapper.get_dof_indices(2)[0] # Tx node 2
@@ -295,6 +298,7 @@ class TestLinearStaticSolverIntegration:
             
             assert u2_calc == pytest.approx(u2_theory, rel=1e-6)
             assert u3_calc == pytest.approx(u3_theory, rel=1e-6)
+    
     def test_rotated_truss_structure(self):
         """
         @test Rotated Elements (Global Coordinate Assembly).
@@ -362,7 +366,8 @@ class TestLinearStaticSolverIntegration:
         # Solve
         solver = LinearStaticSolver(model)
         solver.assemble()
-        u = solver.solve()
+        results = solver.solve()
+        u = results['displacements']
 
         # --- VALIDATION ---
         # Analytical Check:
@@ -406,3 +411,212 @@ class TestLinearStaticSolverIntegration:
         
         assert ux_calc == pytest.approx(expected_ux, rel=1e-5)
         assert uy_calc == pytest.approx(expected_uy, rel=1e-5)
+
+    def test_solve_reactions_and_stresses(self):
+        """
+        @test Verify Reaction Forces and Element Stresses.
+        @brief Solves a simple cantilever rod and checks R = -F and Sigma = F/A.
+        """
+        # Setup: Cantilever Rod (Fixed Node 1, Force Node 2)
+        model = FEMModel()
+        model.nodes[1] = Node(1, 0, 0., 0., 0., 0, "", 0)
+        model.nodes[1].x, model.nodes[1].y, model.nodes[1].z = 0., 0., 0.
+        model.nodes[2] = Node(2, 0, 2., 0., 0., 0, "", 0) # L=2.0
+        model.nodes[2].x, model.nodes[2].y, model.nodes[2].z = 2., 0., 0.
+
+        # E=1000, A=10.0
+        model.materials[1] = IsotropicMaterial(mid=1, E=1000.0, nu=0.3)
+        model.properties[1] = RodProperty(pid=1, mat_id=1, A=10.0, J=1.0, C=0.0, NSM=0.0)
+        model.elements[10] = RodElement(eid=10, prop_id=1, nodes=[1, 2])
+
+        # BC: Fix Node 1
+        model.constraints.append(SPCConstraint(sid=1, node_id=1, components="123456", value=0.0))
+        # Stability Node 2
+        model.constraints.append(SPCConstraint(sid=1, node_id=2, components="23456", value=0.0))
+
+        # Load: Fx = +500.0 at Node 2
+        model.loads.append(SinglePointLoad(sid=1, appnode_id=2, module=500.0, vector=[1.0, 0.0, 0.0]))
+
+        # Solve
+        solver = LinearStaticSolver(model)
+        solver.assemble()
+        solver.solve() # Computes displacements internally
+        
+        # --- TESTED METHOD ---
+        results = solver.reactions_and_stresses()
+        
+        # 1. Validate Reactions
+        # Reaction at Node 1 (Tx) must be -500.0 (Equilibrium)
+        r_node1 = results['reactions'][1]
+        assert r_node1[0] == pytest.approx(-500.0, abs=1e-9)
+        
+        # 2. Validate Stresses
+        # Stress = Force / Area = 500 / 10 = 50.0
+        # Axial Force = 500.0
+        elem_res = results['stresses'][10]
+        
+        assert elem_res['axial_force'] == pytest.approx(500.0)
+        assert elem_res['axial_stress'] == pytest.approx(50.0)
+        assert elem_res['torque'] == pytest.approx(0.0)
+
+
+    def test_reaction_inclined_rod(self):
+        """
+        @test Reaction Forces on Inclined Rod.
+        @brief Verifies reaction decomposition (X/Y) on a 45-degree bar.
+        @details
+        Model:
+            - Node 1 (0,0): Fully Fixed.
+            - Node 2 (1,1): Roller (Fixed Y, Z, Rotations; Free X).
+            - Element: Rod connecting 1-2 (45 deg).
+            - Load: Fx = +1000 N at Node 2.
+        
+        Physics / Equilibrium Check:
+            - The applied force Fx tries to stretch the bar.
+            - Due to inclination, the bar pulls Node 2 'down' and 'left'.
+            - Constraint at Node 2 (Fixed Y) must push 'up'.
+            - Equilibrium condition:
+                Sum(Fx) = F_app + R_x1 = 0  => R_x1 = -1000
+                Sum(Fy) = R_y2 + R_y1 = 0
+                Moment(at N1) = R_y2*1.0 - F_app*1.0 = 0 => R_y2 = 1000
+                Therefore => R_y1 = -1000
+        """
+        model = FEMModel()
+        model.nodes[1] = Node(1, 0, 0., 0., 0., 0, "", 0)
+        model.nodes[1].x, model.nodes[1].y, model.nodes[1].z = 0., 0., 0.
+        model.nodes[2] = Node(2, 0, 1., 1., 0., 0, "", 0)
+        model.nodes[2].x, model.nodes[2].y, model.nodes[2].z = 1., 1., 0.
+
+        # Properties (Arbitrary, equilibrium depends only on geometry/load here)
+        model.materials[1] = IsotropicMaterial(mid=1, E=1000.0, nu=0.3)
+        model.properties[1] = RodProperty(pid=1, mat_id=1, A=1.0, J=1.0, C=0., NSM=0.)
+        model.elements[1] = RodElement(eid=1, prop_id=1, nodes=[1, 2])
+
+        # BCs
+        # Node 1: Fully Fixed
+        model.constraints.append(SPCConstraint(sid=1, node_id=1, components="123456", value=0.0))
+        
+        # Node 2: Roller (Fix Y(2), Z(3) and Rotations). Allow X(1).
+        # We constrain Y to force a vertical reaction.
+        model.constraints.append(SPCConstraint(sid=1, node_id=2, components="23456", value=0.0))
+
+        # Load: Fx = 1000.0
+        F_app = 1000.0
+        model.loads.append(SinglePointLoad(sid=1, appnode_id=2, module=F_app, vector=[1, 0, 0]))
+
+        # Solve
+        solver = LinearStaticSolver(model)
+        solver.assemble()
+        solver.solve()
+        
+        results = solver.reactions_and_stresses()
+        
+        # --- VALIDATION ---
+        
+        # 1. Reaction at Node 1 (The Wall)
+        # It must pull back (-1000 in X) and pull down (-1000 in Y) to counteract the bar tension
+        r1 = results['reactions'][1]
+        assert r1[0] == pytest.approx(-F_app, abs=1e-9), "Reaction Rx at Node 1 incorrect"
+        assert r1[1] == pytest.approx(-F_app, abs=1e-9), "Reaction Ry at Node 1 incorrect"
+
+        # 2. Reaction at Node 2 (The Roller)
+        # It must push UP (+1000 in Y) to keep the node at y=1.0
+        r2 = results['reactions'][2]
+        # Index 1 is Ty (Global Y)
+        # Note: Index 0 (Tx) is not in reactions because it's a free DOF.
+        assert r2[1] == pytest.approx(F_app, abs=1e-9), "Reaction Ry at Node 2 incorrect"
+
+    def test_reaction_3d_arbitrary_rod(self):
+        """
+        @test 3D Inclined Rod (Arbitrary Coordinates).
+        @brief Verifies reaction decomposition and stress recovery in full 3D space.
+        @details
+        Model:
+            - Node 1 (0,0,0): Fully Fixed.
+            - Node 2 (3,4,12): Loaded.
+            - Length L = sqrt(3^2 + 4^2 + 12^2) = 13.0.
+            - Element: Rod connecting 1-2.
+            
+        Load:
+            - Vector aligned with the rod direction to induce pure tension.
+            - F = (300, 400, 1200). Magnitude = 1300.0.
+            
+        Expected Results:
+            - Reactions at N1: (-300, -400, -1200).
+            - Axial Force: +1300.0 (Tension).
+            - Displacements: Proportional to the force vector.
+        """
+        model = FEMModel()
+        
+        # 1. Geometry (3-4-12 Triangle -> Hypotenuse 13)
+        model.nodes[1] = Node(1, 0, 0., 0., 0., 0, "", 0)
+        model.nodes[1].x, model.nodes[1].y, model.nodes[1].z = 0.0, 0.0, 0.0
+        
+        model.nodes[2] = Node(2, 0, 3., 4., 12., 0, "", 0)
+        model.nodes[2].x, model.nodes[2].y, model.nodes[2].z = 3.0, 4.0, 12.0
+
+        # 2. Properties (A=1.0)
+        model.materials[1] = IsotropicMaterial(mid=1, E=13000.0, nu=0.3) # E chosen for clean numbers
+        model.properties[1] = RodProperty(pid=1, mat_id=1, A=1.0, J=1.0, C=0., NSM=0.)
+        model.elements[10] = RodElement(eid=10, prop_id=1, nodes=[1, 2])
+
+        # 3. BCs
+        # Node 1: Fully Fixed (The Wall)
+        model.constraints.append(SPCConstraint(sid=1, node_id=1, components="123456", value=0.0))
+        
+        # Node 2: Stability fix. 
+        # Since we pull exactly along the axis, lateral forces are 0. 
+        # FIX LATERALS (Ty, Tz) + Rotations to avoid singularity.
+        # Ideally, we constrain rotations to avoid singularities in the Rx,Ry,Rz rows.
+        model.constraints.append(SPCConstraint(sid=1, node_id=2, components="23456", value=0.0))
+
+        # 4. Load
+        # Force vector aligned with geometry (3, 4, 12)
+        # Magnitude F = 1300
+        Fx, Fy, Fz = 300.0, 400.0, 1200.0
+        model.loads.append(SinglePointLoad(sid=1, appnode_id=2, module=1.0, vector=[Fx, Fy, Fz]))
+
+        # 5. Solve
+        solver = LinearStaticSolver(model)
+        solver.assemble()
+        results = solver.solve()
+        
+        # --- VALIDATION ---
+        
+        # A) Reactions at Node 1
+        # Must balance the applied load exactly
+        r1 = results['reactions'][1]
+        
+        assert r1[0] == pytest.approx(-Fx, abs=1e-9), "Reaction Rx incorrect"
+        assert r1[1] == pytest.approx(-Fy, abs=1e-9), "Reaction Ry incorrect"
+        assert r1[2] == pytest.approx(-Fz, abs=1e-9), "Reaction Rz incorrect"
+
+        # B) Reactions at Node 2 (The Guiderails)
+        # Since load is perfectly aligned with rod, no lateral force exists to push against constraints.
+        r2 = results['reactions'][2]
+        # Index 1 (Ty) and 2 (Tz) should be zero.
+        assert r2[1] == pytest.approx(0.0, abs=1e-9)
+        assert r2[2] == pytest.approx(0.0, abs=1e-9)
+        
+        # C) Element Internal Force
+        # The internal axial force must equal the magnitude of the vector load
+        # Magnitude = sqrt(300^2 + 400^2 + 1200^2) = 1300.0
+        elem_stress = results['stresses'][10]
+        expected_force = 1300.0
+        
+        assert elem_stress['axial_force'] == pytest.approx(expected_force, abs=1e-9)
+        
+        # D) Displacement Check (Sanity)
+        # Node 2 is constrained to move ONLY in X.
+        # Required bar elongation = 1.3 m.
+        # Projection: delta = u_x * cos(theta_x) = u_x * (3/13)
+        # u_x = 1.3 * 13 / 3 = 16.9 / 3 = 5.6333...
+        
+        idx_n2 = solver.mapper.get_dof_indices(2)
+        u = results['displacements']
+        
+        expected_ux = 16.9 / 3.0
+        assert u[idx_n2[0]] == pytest.approx(expected_ux, rel=1e-5) # Tx
+        assert u[idx_n2[1]] == pytest.approx(0.0, abs=1e-9) # Ty (Constrained)
+        assert u[idx_n2[2]] == pytest.approx(0.0, abs=1e-9) # Tz (Constrained)
+        
