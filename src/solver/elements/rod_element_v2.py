@@ -123,3 +123,64 @@ class RodElementSolverV2:
                 K[i_global, j_global] = k_tor[i_local, j_local]
                 
         return K
+    
+    def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
+        """
+        @brief Calculates element internal forces and stresses from global displacements.
+        @details
+        Performs the following steps:
+          1. Extracts global displacements for the element nodes.
+          2. Transforms global displacements to local coordinates (u_local = T * u_global).
+          3. Computes strains, stresses, and forces based on constitutive equations.
+        
+        Calculated outputs:
+          - Axial Force (N) and Axial Stress (sigma)
+          - Torque (T) and Torsional Shear Stress (tau)
+
+        @param u_global_vector The full solution vector of the system (size N_dofs).
+        @param dof_mapper Object responsible for mapping Node IDs to global indices.
+        @return Dictionary with keys: 'axial_force', 'axial_stress', 'torque', 'torsional_stress'.
+        """
+        # 1. Extract Global Displacements for this element
+        idxs_n1 = dof_mapper.get_dof_indices(self.node1.nid)
+        idxs_n2 = dof_mapper.get_dof_indices(self.node2.nid)
+        
+        # Concatenate to get the 12x1 vector [u_n1, u_n2]
+        u_elem_global = np.concatenate([
+            u_global_vector[idxs_n1], 
+            u_global_vector[idxs_n2]
+        ])
+        # 2. Transform to Local Coordinates: 
+        # u_local = T * u_global
+        u_local = self.T @ u_elem_global
+        
+        # 3. Physics Calculation
+        # --- AXIAL (Tx) ---
+        # Indices: 0 (Node 1 Tx), 6 (Node 2 Tx) in local system
+        u_ax_1, u_ax_2 = u_local[0], u_local[6]
+        axial_strain = (u_ax_2 - u_ax_1) / self.L
+        axial_stress = self.mat.E * axial_strain # Hooke's Law: sigma = E * epsilon
+        axial_force = axial_stress * self.prop.A
+
+        # --- TORSION (Rx) ---
+        # Indices: 3 (Node 1 Rx), 9 (Node 2 Rx) in local system
+        th_x1, th_x2 = u_local[3], u_local[9]
+        twist_rate = (th_x2 - th_x1) / self.L
+        torque = self.mat.G * self.prop.J * twist_rate
+        
+        # Torsional Shear Stress (Tau) = (T * C) / J
+        c_val = getattr(self.prop, 'C', 0.0) # Coeficiente de fibra más alejada
+        
+        torsional_stress = 0.0
+        if self.prop.J > 1e-12:
+            torsional_stress = (torque * c_val) / self.prop.J
+
+        return {
+            'axial_force': axial_force,
+            'axial_stress': axial_stress,
+            'torque': torque,
+            'torsional_stress': torsional_stress
+        }
+
+
+

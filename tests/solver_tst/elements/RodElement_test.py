@@ -22,14 +22,22 @@ class MockNode:
         return self._coords
 
 class MockProp:
-    def __init__(self, A, J):
+    def __init__(self, A, J, C=0.0):
         self.A = A
         self.J = J
+        self.C = C
 
 class MockMat:
     def __init__(self, E, G):
         self.E = E
         self.G = G
+
+class MockDofMapper:
+    """Simulates the DofMapper behavior for stress calculation tests."""
+    def get_dof_indices(self, node_id):
+        # Logic: Node 1 -> [0..5], Node 2 -> [6..11]
+        start = (node_id - 1) * 6
+        return list(range(start, start + 6))
 
 # --- TESTS
 class TestRodElementSolver:
@@ -155,8 +163,126 @@ class TestRodElementSolver:
         assert "Zero length" in error_msg
         assert "Nodes 1-2" in error_msg or "id nodes" in error_msg
 
+    def test_calculate_stresses_axial_tension(self):
+        """
+        @test Stress Recovery (Axial Tension).
+        @brief Verifies stress calculation for a bar pulled in X.
+        """
+        # Setup: L=2.0
+        n1 = MockNode(1, [0., 0., 0.])
+        n2 = MockNode(2, [2., 0., 0.])
+        prop = MockProp(A=10.0, J=1.0)
+        mat = MockMat(E=2000.0, G=1000.0)
+        
+        solver = RodElementSolverV2(n1, n2, prop, mat)
+        mapper = MockDofMapper()
+        
+        # Create a Global Displacement Vector (size 12 for 2 nodes)
+        u_global = np.zeros(12)
+        
+        # Apply displacement: Node 2 moves +0.1 in X (Global Index 6)
+        # Node 1 is fixed (0.0).
+        u_global[6] = 0.1
+        
+        # Expected Physics:
+        # Strain = delta_L / L = 0.1 / 2.0 = 0.05
+        # Stress = E * Strain = 2000 * 0.05 = 100.0
+        # Force = Stress * A = 100.0 * 10.0 = 1000.0
+        
+        results = solver.calculate_stresses(u_global, mapper)
+        
+        assert results['axial_stress'] == pytest.approx(100.0)
+        assert results['axial_force'] == pytest.approx(1000.0)
+        # Verify no torsion was induced
+        assert results['torque'] == pytest.approx(0.0)
 
+    def test_calculate_stresses_rotated_bar(self):
+        """
+        @test Stress Recovery with Coordinate Transformation.
+        @brief Verifies that global displacements are correctly rotated to local
+               before calculating stress.
+        @details
+        Bar at 90 degrees (Along Y axis).
+        Global displacement in Y should cause AXIAL stress.
+        Global displacement in X should cause NO stress (shear/bending ignored).
+        """
+        # Setup: Bar along Y axis, L=1.0
+        n1 = MockNode(1, [0., 0., 0.])
+        n2 = MockNode(2, [0., 1., 0.])
+        prop = MockProp(A=1.0, J=1.0)
+        mat = MockMat(E=1000.0, G=1000.0)
+        
+        solver = RodElementSolverV2(n1, n2, prop, mat)
+        mapper = MockDofMapper()
+        
+        u_global = np.zeros(12)
+        
+        # Apply Global Displacement in Y at Node 2 (Index 7) -> +0.1
+        # In Local System (where X_local aligns with Global Y), this is a local extension.
+        u_global[7] = 0.1 
+        
+        results = solver.calculate_stresses(u_global, mapper)
+        
+        # Strain = 0.1 / 1.0 = 0.1
+        # Stress = 1000 * 0.1 = 100.0
+        assert results['axial_stress'] == pytest.approx(100.0)
+        
+        # --- Case 2: Apply Global X displacement (Index 6) ---
+        # This is perpendicular to the bar. Should cause NO axial stress in a Rod.
+        u_global_shear = np.zeros(12)
+        u_global_shear[6] = 0.1
+        
+        results_shear = solver.calculate_stresses(u_global_shear, mapper)
+        assert results_shear['axial_stress'] == pytest.approx(0.0, abs=1e-9)
 
-
-
+    def test_calculate_stresses_rotated_bar_torsion(self):
+        """
+        @test Stress Recovery with Coordinate Transformation (Rotations).
+        @brief Verifies that global rotations are correctly transformed to local twist.
+        @details
+        Bar at 90 degrees (Along Global Y axis).
+        - Global Rotation about Y (Ry) -> Aligns with Local X -> CAUSES TORSION.
+        - Global Rotation about X (Rx) -> Perpendicular to Local X -> NO STRESS (Bending ignored).
+        """
+        # Setup: Bar along Y axis, L=1.0
+        n1 = MockNode(1, [0., 0., 0.])
+        n2 = MockNode(2, [0., 1., 0.])
+        
+        # Properties for Torsion
+        # J=2.0, C=0.5 (Distance to extreme fiber)
+        prop = MockProp(A=10.0, J=2.0, C=0.5)
+        mat = MockMat(E=1000.0, G=1000.0) # G=1000
+        
+        solver = RodElementSolverV2(n1, n2, prop, mat)
+        mapper = MockDofMapper()
+        
+        # --- Case 1: Apply Global Rotation in Y (Ry) ---
+        # Node 2 indices: [6, 7, 8, 9(Rx), 10(Ry), 11(Rz)]
+        # We apply +0.1 rad to Ry (Index 10)
+        u_global_tor = np.zeros(12)
+        u_global_tor[10] = 0.1
+        
+        results = solver.calculate_stresses(u_global_tor, mapper)
+        
+        # Physics Check:
+        # The bar is vertical, so Global Ry == Local Twist (Rx_local)
+        # Twist Rate = 0.1 / 1.0 = 0.1
+        # Torque = G * J * Rate = 1000 * 2.0 * 0.1 = 200.0
+        # Shear Stress = (T * C) / J = (200 * 0.5) / 2.0 = 50.0
+        
+        assert results['torque'] == pytest.approx(200.0)
+        assert results['torsional_stress'] == pytest.approx(50.0)
+        
+        # --- Case 2: Apply Global Rotation in X (Rx) ---
+        # We apply +0.1 rad to Rx (Index 9)
+        # In Local system (Bar along Y), Global X is a transversal axis.
+        # Ideally, this is bending. Rod element has NO bending stiffness.
+        u_global_bend = np.zeros(12)
+        u_global_bend[9] = 0.1
+        
+        results_bend = solver.calculate_stresses(u_global_bend, mapper)
+        
+        # Should be zero torque
+        assert results_bend['torque'] == pytest.approx(0.0, abs=1e-9)
+        assert results_bend['torsional_stress'] == pytest.approx(0.0, abs=1e-9)
 
