@@ -5,3 +5,4 @@ __pycache__/
 *.log
 draft_*
 .pytest_cache/
+output/
