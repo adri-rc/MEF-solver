@@ -27,6 +27,7 @@ from src.solver.linear_static_solver import LinearStaticSolver
 # DOF Index map: 0=Tx, 1=Ty, 2=Tz, 3=Rx, 4=Ry, 5=Rz
 
 VALIDATION_DATA = [
+   # --- CASO 1: Barra Simple (Reference) ---
     {
         "case_name": "Ej1_v1_Simple_Tension",
         "folder": "case_1",
@@ -44,6 +45,8 @@ VALIDATION_DATA = [
         },
         "description": "Single Rod element. Fixed at Node 1. Load at Node 2."
     },
+
+    # --- CASO 2: Barras en Serie (Multi-material) ---
     {
         "case_name": "Ej2_Series_Rods",
         "folder": "case_2",
@@ -61,6 +64,8 @@ VALIDATION_DATA = [
         },
         "description": "Two Rod elements in series with different materials."
     },
+
+    # --- CASO 3: Cercha Plana (Rotated Coords) ---
     {
         "case_name": "Ej3_Planar_Truss",
         "folder": "case_3",
@@ -84,7 +89,86 @@ VALIDATION_DATA = [
             105: {"axial_force": 4.330095E+02, "axial_stress": 1.924487E+00}
         },
         "description": "2D Truss (Triangle). Validates rotated coordinate assembly."
+    },
+
+    # --- CASO 4: El Riel 3D (3D Rail Effect) ---
+    # Validates projection of stiffness on a constrained sliding node.
+    {
+        "case_name": "Ej4_Rail_3D",
+        "folder": "case_4",
+        "filename": "Ej4.dat",
+        "expected_displacements": { 
+            2: {0: 5.633333E+00, 1: 0.0, 2: 0.0} # X moves, Y/Z fixed
+        },
+        "expected_reactions": { 
+            1: {0: -300.0, 1: -400.0, 2: -1200.0}, # Wall takes full load
+            2: {1: 0.0, 2: 0.0} # Rail takes NO load (perfect alignment)
+        },
+        "expected_element_forces": { 
+            104: {"axial_force": 1.300000E+03, "axial_stress": 1.300000E+03}
+        }
+    },
+
+    # --- CASO 5: CSV Parser Test ---
+    # Physically identical to Ej2 but input is Comma-Separated.
+    {
+        "case_name": "Ej5_CSV_Parser",
+        "folder": "case_5",
+        "filename": "Ej5.dat",
+        "expected_displacements": { 
+            2: {0: 2.380952E-03}, 
+            3: {0: 4.761905E-03} 
+        },
+        # Force is 1000 in both elements
+        "expected_element_forces": {
+            105: {"axial_force": 1.000000E+03, "axial_stress": 1.000000E+01},
+            115: {"axial_force": 1.000000E+03, "axial_stress": 1.000000E+01}
+        }
+    },
+
+    # --- CASO 6: Torsion Oblicua ---
+    # Validates Moment -> Torque projection on rotated element.
+    {
+        "case_name": "Ej6_Oblique_Torsion",
+        "folder": "case_6",
+        "filename": "Ej6.dat",
+        "expected_displacements": { 
+            2: {3: 4.062500E-01} # Rotation X (Radiants)
+        },
+        "expected_element_forces": { 
+            # Element 106. Torque is amplified by 1/cos(alpha) = 1/0.8 = 1.25
+            106: {
+                "torque": 1.250000E+03, 
+                "torsional_stress": 0.0 # Zero because C=0 in PROD entry
+            } 
+        }
+    },
+
+    # --- CASO 7: Tripode (Full 3D Structure) ---
+    {
+        "case_name": "Ej7_Tripod_3D",
+        "folder": "case_7",
+        "filename": "Ej7.dat",
+        "expected_displacements": { 
+            2: {0: 0.0, 1: 0.0, 2: 0.0},
+            # Node 4: T1, T3 (T2 is 0)
+            4: {0: 1.860011E-02, 1: 0.0, 2: -8.266668E-03}
+        },
+        "expected_reactions": { 
+            1: {0: -5.555556E+02, 2: 8.333333E+02},
+            2: {0:  2.777778E+01, 1: -4.811111E+01},
+            3: {0:  2.777778E+01, 1:  4.811111E+01}
+        },
+        "expected_element_forces": { 
+            # Element 171 (Connects 1-4)
+            171: {"axial_force": -1.001542E+03, "axial_stress": -2.003084E+02},
+            # Element 172 (Connects 2-4)
+            172: {"axial_force": -1.001535E+02, "axial_stress": -2.003070E+01},
+            # Element 173 (Connects 3-4)
+            173: {"axial_force": -1.001535E+02, "axial_stress": -2.003070E+01}
+        }
     }
+
 ]
 class TestNastranEndToEnd:
     """
@@ -186,4 +270,3 @@ class TestNastranEndToEnd:
                 assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
 
-       
