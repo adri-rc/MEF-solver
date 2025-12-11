@@ -7,21 +7,14 @@ Usage:
     python main.py --all                      -> Runs all .dat files in /input directory
 """
 import sys
-import os
 import argparse
 import numpy as np
 from pathlib import Path
 from time import time
 
+FILE_PATH = Path(__file__).resolve()  
+PROJECT_ROOT = FILE_PATH.parent      
 
-FILE_PATH = Path(__file__).resolve()  # Ruta absoluta de este archivo main.py
-PROJECT_ROOT = FILE_PATH.parent       # Carpeta raíz del proyecto
-
-'''# Añadimos al path solo si no está ya
-if str(SRC_PATH) not in sys.path:
-    sys.path.insert(0, str(SRC_PATH))'''
-
-# --- IMPORTS DEL PROYECTO (Deben ir DESPUÉS del sys.path.insert) ---
 try:
     from src.preprocessing.nastran_reader import parse_nastran_input
     from src.solver.linear_static_solver import LinearStaticSolver
@@ -29,13 +22,12 @@ try:
         SinglePointLoad, SinglePointMoment, SPCConstraint, RodElement
     )
 except ImportError as e:
-    print("\n[ERROR CRÍTICO] No se pudieron importar los módulos del proyecto.")
-    print(f"Detalle del error: {e}")
+    print("\n[CRITICAL ERROR] The project modules could not be imported.")
+    print(f"Details: {e}")
     sys.exit(1)
 
 
-
-# --- CONFIGURATION ---
+# --- PATHS CONFIGURATION ---
 INPUT_DIR = PROJECT_ROOT / "input"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
@@ -47,7 +39,6 @@ def main():
     
     args = parser.parse_args()
 
-    # 2. Ensure directories exist
     if not INPUT_DIR.exists():
         INPUT_DIR.mkdir()
         print(f"[INFO] Created '{INPUT_DIR}' folder. Place your .dat files here.")
@@ -56,7 +47,6 @@ def main():
     if not OUTPUT_DIR.exists():
         OUTPUT_DIR.mkdir()
 
-    # 3. Job Dispatcher
     if args.file:
         file_path = Path(args.file)
         run_analysis_job(file_path)
@@ -68,19 +58,15 @@ def main():
         for f in files:
             run_analysis_job(f)
     else:
-        # --- MODIFICACIÓN: Comportamiento por defecto ---
-        print("[INFO] No se indicaron argumentos. Buscando en carpeta 'input'...")
-        
-        # Buscar todos los .dat
+        print("[INFO] No arguments were specified. Searching in /input...")
+
         files = list(INPUT_DIR.glob("*.dat"))
         
         if len(files) > 0:
-            # Si hay archivos, cogemos el primero (o el que quieras)
-            archivo_a_correr = files[0] 
-            print(f"[AUTO] Se ha encontrado: '{archivo_a_correr.name}'. Ejecutando...")
-            run_analysis_job(archivo_a_correr)
+            file_to_run = files[0]
+            run_analysis_job(file_to_run)
         else:
-            print("[ERROR] No hay archivos .dat en la carpeta input/ para ejecutar.")
+            print("[ERROR] No .dat found in input/")
 
 def run_analysis_job(file_path: Path):
     """
@@ -98,9 +84,6 @@ def run_analysis_job(file_path: Path):
         # --- STEP 1: PRE-PROCESSING ---
         print(f"[{time()-t0:.4f}s] Parsing input file...")
         model = parse_nastran_input(str(file_path))
-        print(f"   -> Nodes: {len(model.nodes)}")
-        print(f"   -> Elements: {len(model.elements)}")
-        print(f"   -> Loads: {len(model.loads)}")
         
         # --- STEP 2: SOLVER INITIALIZATION ---
         print(f"[{time()-t0:.4f}s] Initializing Solver...")
@@ -112,7 +95,7 @@ def run_analysis_job(file_path: Path):
         
         # --- STEP 4: SOLUTION ---
         print(f"[{time()-t0:.4f}s] Solving Linear System...")
-        results = solver.solve() # Returns dict {displacements, reactions, stresses}
+        results = solver.solve()
         
         # --- STEP 5: POST-PROCESSING / REPORTING ---
         print(f"[{time()-t0:.4f}s] Generating Report...")
@@ -135,19 +118,20 @@ def write_report(path: Path, job_name: str, model, results, solver):
     reactions = results['reactions']
     stresses = results['stresses']
     
-    # --- CONTEO PARA EL RESUMEN ---
+    # --- SUMMARY COUNT ---
+    # Nodes, Materials, Properties
     count_grid = len(model.nodes)
     count_mat1 = len(model.materials)
     count_prod = len(model.properties)
 
-    # Contar elementos por tipo
+    # Elements
     count_crod = sum(1 for l in model.loads if isinstance(l, SinglePointLoad))
     
-    # Contar Cargas por tipo
+    # Loads
     count_force = sum(1 for l in model.loads if isinstance(l, SinglePointLoad))
     count_moment = sum(1 for l in model.loads if isinstance(l, SinglePointMoment))
     
-    # Contar Constraints (SPC1)
+    # SPCs
     count_spc = sum(1 for c in model.constraints if isinstance(c, SPCConstraint))
     
     with open(path, 'w') as f:
@@ -176,12 +160,11 @@ def write_report(path: Path, job_name: str, model, results, solver):
         f.write(f"{'NODE ID':<10} {'T1 (X)':<12} {'T2 (Y)':<12} {'T3 (Z)':<12} {'R1 (Rx)':<12} {'R2 (Ry)':<12} {'R3 (Rz)':<12}\n")
         f.write("-" * 85 + "\n")
 
-        # Iterate over sorted node IDs for clean output
         for nid in sorted(model.nodes.keys()):
             try:
                 # Use Mapper to get the 6 indices for this node
                 indices = solver.mapper.get_dof_indices(nid)
-                u = displacements[indices] # Extract 6 components
+                u = displacements[indices] # 6 DOFs
                 
                 f.write(f"{nid:<10} {u[0]:.4e}   {u[1]:.4e}   {u[2]:.4e}   {u[3]:.4e}   {u[4]:.4e}   {u[5]:.4e}\n")
             except Exception:
@@ -198,9 +181,8 @@ def write_report(path: Path, job_name: str, model, results, solver):
             f.write("   (No reactions recorded)\n")
         else:
             for nid in sorted(reactions.keys()):
-                r = reactions[nid]
-              # Filter to show only if magnitude is significant (> 1e-9)
-                if np.linalg.norm(r) > 1e-9:
+                r = reactions[nid]              
+                if np.linalg.norm(r) > 1e-9:# Filter
                     f.write(f"{nid:<10} {r[0]:.4e}   {r[1]:.4e}   {r[2]:.4e}   {r[3]:.4e}   {r[4]:.4e}   {r[5]:.4e}\n")
         f.write("\n")
 
@@ -218,7 +200,6 @@ def write_report(path: Path, job_name: str, model, results, solver):
             torq = data.get('torque', 0.0)
             tau  = data.get('torsional_stress', 0.0)
             
-            # Formateamos con la nueva columna
             f.write(f"{eid:<8} {ax_f:<15.4e} {ax_s:<15.4e} {torq:<15.4e} {tau:<18.4e}\n")
             
 
