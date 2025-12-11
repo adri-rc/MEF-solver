@@ -234,7 +234,34 @@ VALIDATION_DATA = [
         },
         "description": ("Multi-bay planar truss. Validates asymmetric loading and reactions.\n"
         "Ejercicio de clase DAA. Solo ha sido necesario adaptar las SPC de los nodos libres restringiendo todos los girros y movimiento en eje Z.")
-    }
+    },
+    # --- CASO 11: Spider Heterogénea y Barra Torsión (Ej11.dat) ---
+    # Reference: ej11.f06
+    {
+        "case_name": "Ej11_Heterogeneous_Spider",
+        "folder": "case_11",
+        "filename": "Ej11.dat",
+        "expected_displacements": {
+            100: {0: 1.366455E-03, 1: -9.998412E-03, 2: 1.794456E-02},
+            12: {5: 2.285560E+00} 
+        },
+        "expected_reactions": {
+            1: {0: -4.457096E+02, 1: -8.914191E+02, 2: -6.685643E+02},
+            2: {0: 1.843799E+03, 1: -5.900157E+02, 2: -1.696295E+03},
+            4: {0: -1.525898E+03, 1: -7.629488E+02, 2: -7.629488E+02, 3: 0.0, 4: 0.0, 5: 0.0},
+            11: {0: 0.0, 1: 0.0, 3: -2.000000E+04, 4: -1.000000E+04, 5: -5.000000E+03}
+        },
+        "expected_element_forces": {
+            101: {"axial_force": 1.200110E+03, "axial_stress": 2.400219E+01},
+            103: {"axial_force": 4.585915E+03, "axial_stress": 9.171829E+01},
+            104: {"axial_force": -1.868835E+03, "axial_stress": -3.737671E+01},
+            200: {"axial_force": 0.0, "torque": 2.291288E+04, "axial_stress": 0.0, "torsional_stress": 1.432055E+02}
+        },
+        "description": "Complex 3D assembly with heterogeneous materials and properties. Validates 3D torque projection."
+    },
+
+    # --- CASO 12: Cadena 3D con Desplazamientos Impuestos (Ej12.dat) ---
+    # PENDIENTE INPLEMENTAR LECTURA DE DESPLAZAMIENTOS IMPUESTOS (SPC)
 
 ]
 class TestNastranEndToEnd:
