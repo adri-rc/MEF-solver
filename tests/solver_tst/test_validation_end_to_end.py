@@ -169,10 +169,44 @@ VALIDATION_DATA = [
         }
     },
 
-    # --- CASO 8: Cercha Clase DAA (Planar Truss Multi-bay) ---
+# --- CASO 8: Riel 3D en Eje Y (Ej8.dat) ---
     {
-        "case_name": "Ej8_DAA_Class_Truss",
+        "case_name": "Ej8_Rail_Y_Axis",
         "folder": "case_8",
+        "filename": "Ej8.dat",
+        "expected_displacements": {
+            8: {1: 1.919646E-04}
+        },
+        "expected_reactions": {
+            7: {0: 3.516000E+01, 1: -3.516000E+01, 2: -2.344000E+01}
+        },
+        "expected_element_forces": {
+            104: {"axial_force": 5.497167E+01, "axial_stress": 5.497167E-01}
+        },
+        "description": "3D Rod with Node 8 constrained to slide only along Global Y axis."
+    },
+
+    # --- CASO 9: Riel 3D en Eje X (Ej9.dat) ---
+    {
+        "case_name": "Ej9_Rail_X_Axis",
+        "folder": "case_9",
+        "filename": "Ej9.dat",
+        "expected_displacements": {
+            8: {0: 7.916667E-03}
+        },
+        "expected_reactions": {
+            7: {0: -1.734220E+02, 1: -3.901995E+02, 2: -2.601330E+02}
+        },
+        "expected_element_forces": {
+            101: {"axial_force": 5.000000E+02,"axial_stress": 5.000000E+00}
+        },
+        "description": "3D Rod with Node 8 constrained to slide only along Global X axis."
+    },
+
+    # --- CASO 10: Cercha Clase DAA (Planar Truss Multi-bay) ---
+    {
+        "case_name": "Ej10_DAA_Class_Truss",
+        "folder": "case_10",
         "filename": "Ej_DAA_clase.dat",
         
         "expected_displacements": {
@@ -198,7 +232,8 @@ VALIDATION_DATA = [
             9: {"axial_force": -1.131371E+05, "axial_stress": -4.489567E+08}
             
         },
-        "description": "Multi-bay planar truss. Validates asymmetric loading and reactions.\nEjercicio de clase DAA. Solo ha sido necesario adaptar las SPC de los nodos libres restringiendo todos los girros y movimiento en eje Z."
+        "description": ("Multi-bay planar truss. Validates asymmetric loading and reactions.\n"
+        "Ejercicio de clase DAA. Solo ha sido necesario adaptar las SPC de los nodos libres restringiendo todos los girros y movimiento en eje Z.")
     }
 
 ]
