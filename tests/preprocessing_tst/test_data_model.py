@@ -1,18 +1,6 @@
 import pytest
-import sys
-import os
 import numpy as np
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(os.path.dirname(current_dir))
-target_dir = os.path.join(root_dir, 'src')#, 'preprocessing'
-
-if not os.path.exists(target_dir):
-    print(f"[ERROR] Path not found: {target_dir}")
-
-sys.path.insert(0, target_dir) # Insert into sys.path
-
-from preprocessing.data_model import (          
+from src.preprocessing.data_model import (          
     Node,
     IsotropicMaterial, # Material
     FEMModel,
@@ -26,9 +14,6 @@ from preprocessing.data_model import (
 @file test_data_model.py
 @brief Unit tests for the main data clasess defined in 'data_model.py'.
 """
-
-
-
 
 class TestNode:
     """

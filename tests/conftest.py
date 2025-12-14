@@ -1,5 +1,15 @@
 import pytest
+import sys
+import os
 from pathlib import Path
+
+# Global paths settings for /tests folder.
+current_file_path = Path(__file__).resolve()
+project_root = current_file_path.parent.parent
+src_path = project_root / 'src'
+print(src_path)
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
 @pytest.fixture
 def test_data_dir(request):
@@ -25,3 +35,14 @@ def test_data_dir(request):
     """
     test_file_path = Path(request.module.__file__)
     return test_file_path.parent / "files4test"
+
+
+@pytest.fixture
+def validation_data_dir(request):
+    """
+    @brief Returns the Path to the 'tests/validation_cases' folder.
+    @details Assumes standard structure: tests/conftest.py -> tests/validation_cases/
+    """
+    test_file_path = Path(request.module.__file__)
+    # .parent is 'tests' folder
+    return test_file_path.parent / "validation_cases"

@@ -1,31 +1,11 @@
 import pytest
-import sys
-import os
-
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(os.path.dirname(current_dir))
-
-# --- CAMBIO 1: Apunta a 'src', NO a 'src/preprocessing' ---
-target_dir = os.path.join(root_dir, 'src') 
-
-if not os.path.exists(target_dir):
-    print(f"[ERROR] Path not found: {target_dir}")
-
-sys.path.insert(0, target_dir) 
-
-# --- CAMBIO 2: Importa usando la ruta del paquete ---
-# Ahora Python entiende que 'nastran_reader' es hijo de 'preprocessing'
-from preprocessing.nastran_reader import (
+from src.preprocessing.data_model import FEMModel
+from tests.conftest import test_data_dir
+from src.preprocessing.nastran_reader import (
     parse_nastran_input, 
     _parse_nastran_number, 
     _get_entry_fields
 )
-# También importamos FEMModel a través del paquete
-from preprocessing.data_model import FEMModel
-from tests.conftest import test_data_dir
-
-
 
 """
 @file test_nastran_reader.py
