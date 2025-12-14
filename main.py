@@ -31,6 +31,7 @@ except ImportError as e:
 INPUT_DIR = PROJECT_ROOT / "input"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
+
 def main():
     # 1. Setup Arguments
     parser = argparse.ArgumentParser(description="PyFEM Solver - Linear Static Analysis")
