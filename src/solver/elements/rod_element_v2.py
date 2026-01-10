@@ -23,7 +23,9 @@ class RodElementSolverV2:
     Supported DOFs per node: 6 (Tx, Ty, Tz, Rx, Ry, Rz).
     Active DOFs in Local System: Tx (Axial), Rx (Torsion).
     """
-    # Class constants for DOF mapping (Local indices mapped to 12x12 matrix)
+    # --- CONSTANTS FOR DOF MAPPING (Local indices mapped to 12x12 matrix) ---
+    # Global Local Vector indexes: [Tx1, Ty1, Tz1, Rx1, Ry1, Rz1, Tx2, Ty2, Tz2, Rx2, Ry2, Rz2]
+    # Index:                         0    1    2    3    4    5    6    7    8    9    10   11
     # Node 1: Tx=0, Ty=1, Tz=2, Rx=3...
     # Node 2: Tx=6, Ty=7, ...
     IDX_AXIAL = [0, 6] 
@@ -178,8 +180,10 @@ class RodElementSolverV2:
         return {
             'axial_force': axial_force,
             'axial_stress': axial_stress,
+            'axial_strain': axial_strain,
             'torque': torque,
-            'torsional_stress': torsional_stress
+            'torsional_stress': torsional_stress,
+            'twist_rate': twist_rate
         }
 
 

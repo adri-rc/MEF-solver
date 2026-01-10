@@ -1,5 +1,5 @@
 """
-@file test_rod_element.py
+@file RodElement_test.py
 @brief Unit tests for the Rod Element Solver (Physics & Assembly).
 @details
 Validates:
@@ -7,6 +7,7 @@ Validates:
 2. Torsional Stiffness calculation (GJ/L).
 3. Zero Coupling verification (Axial vs Torsion vs Bending).
 4. Coordinate rotation logic (45 degree projection check).
+5. Axial strain and twist rate values.
 """
 import pytest
 import numpy as np
@@ -39,7 +40,7 @@ class MockDofMapper:
         start = (node_id - 1) * 6
         return list(range(start, start + 6))
 
-# --- TESTS
+# --- TESTS ---
 class TestRodElementSolver:
 
     def test_stiffness_axial_x_aligned(self):
@@ -196,7 +197,7 @@ class TestRodElementSolver:
         # Verify no torsion was induced
         assert results['torque'] == pytest.approx(0.0)
 
-    def test_calculate_stresses_rotated_bar(self):
+    def test_calculate_stresses_rotated_rod(self):
         """
         @test Stress Recovery with Coordinate Transformation.
         @brief Verifies that global displacements are correctly rotated to local
@@ -235,7 +236,7 @@ class TestRodElementSolver:
         results_shear = solver.calculate_stresses(u_global_shear, mapper)
         assert results_shear['axial_stress'] == pytest.approx(0.0, abs=1e-9)
 
-    def test_calculate_stresses_rotated_bar_torsion(self):
+    def test_calculate_stresses_rotated_rod_torsion(self):
         """
         @test Stress Recovery with Coordinate Transformation (Rotations).
         @brief Verifies that global rotations are correctly transformed to local twist.
@@ -286,3 +287,59 @@ class TestRodElementSolver:
         assert results_bend['torque'] == pytest.approx(0.0, abs=1e-9)
         assert results_bend['torsional_stress'] == pytest.approx(0.0, abs=1e-9)
 
+    def test_stress_recovery_axial_and_strain(self):
+        """
+        @test  Axial Strain and Stress validation.
+        @brief Extend the bar by 0.01m and check epsilon, sigma, and force.
+        """
+        # Setup: 1m rod along X
+        n1, n2 = MockNode(1, [0,0,0]), MockNode(2, [1,0,0])
+        prop = MockProp(A=0.1, J=0.0) 
+        mat = MockMat(E=200e9, G=0)
+        
+        solver = RodElementSolverV2(n1, n2, prop, mat)
+        mapper = MockDofMapper()
+
+        # Case: Displacement u2 = 0.01 (Traction)
+        # Global indices: u1=0..5, u2=6..11. Tx is at 0 and 6.
+        u_global = np.zeros(12)
+        u_global[6] = 0.01 # Tx in node 2
+        
+        results = solver.calculate_stresses(u_global, mapper)
+        
+        expected_strain = 0.01 / 1.0  # deltaL / L
+        expected_stress = expected_strain * 200e9 # Hooke Law
+        
+        assert results['axial_strain'] == pytest.approx(expected_strain)
+        assert results['axial_stress'] == pytest.approx(expected_stress)
+        assert results['axial_force'] == pytest.approx(expected_stress * 0.1)
+
+    def test_stress_recovery_torsion_and_twist(self):
+            """
+            @test  Twist Rate and Torque validation.
+            @brief Rotate node 2 by 0.1 rad and check the twist_rate.
+            """
+            # Setup: Vertical rod (to test that it rotates with local axes)
+            # L = 2.0m
+            n1, n2 = MockNode(1, [0,0,0]), MockNode(2, [0,2.0,0])
+            prop = MockProp(A=0.1, J=0.5)
+            mat = MockMat(E=0, G=80e9)
+            
+            solver = RodElementSolverV2(n1, n2, prop, mat)
+            mapper = MockDofMapper()
+            
+            # Case: Global rotation in Y (Ry) on a vertical bar (Y axis).
+            # Global Ry corresponds to local Rx (torsion).
+            # Index Ry node 2 is 10 (6+4)
+            u_global = np.zeros(12)
+            u_global[10] = 0.1 # 0.1 radianes
+            
+            results = solver.calculate_stresses(u_global, mapper)
+            
+            expected_twist = 0.1 / 2.0 # theta / L = 0.05 rad/m
+            expected_torque = 80e9 * 0.5 * expected_twist # G * J * twist
+            
+            assert results['twist_rate'] == pytest.approx(expected_twist)
+            assert results['torque'] == pytest.approx(expected_torque)
+            # Check that it does not ‘invent’ axial force.
+            assert results['axial_force'] == pytest.approx(0.0)
