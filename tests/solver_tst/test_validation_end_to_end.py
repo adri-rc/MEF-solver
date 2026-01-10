@@ -314,7 +314,7 @@ class TestNastranEndToEnd:
         for nid, dofs_dict in expected_disp.items():
             # Get Global Indices
             try:
-                global_indices = solver.mapper.get_dof_indices(nid)
+                global_indices = solver.dof_mapper.get_dof_indices(nid)
             except ValueError:
                 pytest.fail(f"Node {nid} expected in results but not found in Solver Mapper.")
             
