@@ -246,13 +246,14 @@ class BarElementSolver:
         # u_loc[0] = u_x1, u_loc[6] = u_x2
         axial_strain = (u_loc[6] - u_loc[0]) / self.L
         sigma_ax = self.mat.E * axial_strain
+        axial_force_val = sigma_ax * self.prop.A
         # Note: The kinematically calculated axial force (sigma * A) should match
         # f_loc[6] (reaction at node 2). We use kinematics for stress reporting.
         
         # --- TORSION ---
         # u_loc[3] = theta_x1, u_loc[9] = theta_x2
         twist_rate = (u_loc[9] - u_loc[3]) / self.L
-        torque = self.mat.G * self.prop.J * twist_rate
+        torque_val = self.mat.G * self.prop.J * twist_rate
        
        
        
@@ -289,7 +290,7 @@ class BarElementSolver:
             # Normal Stress = (Axial + Bending)
             # Normal Stress = Axial + Bending
             # Navier Formula: Sigma = -Mz*y/I1 + My*z/I2
-            
+
             sigma_bend_z = -(M_z * y) / self.prop.I1 if self.prop.I1 else 0
             sigma_bend_y = (M_y * z) / self.prop.I2 if self.prop.I2 else 0
             
@@ -297,7 +298,7 @@ class BarElementSolver:
             
             # Shear Stress (Torsion)
             r = np.sqrt(y**2 + z**2)
-            tau_tor = (torque * r) / self.prop.J if self.prop.J else 0
+            tau_tor = (torque_val * r) / self.prop.J if self.prop.J else 0
             
             stress_results[f"P{i}"] = {
                 'sigma_x': sigma_tot,
@@ -306,10 +307,15 @@ class BarElementSolver:
             }
 
         return {
+            # --- CAMPOS UNIFICADOS (Compatibilidad con CROD) ---
+            'axial_force': axial_force_val,
+            'axial_stress': sigma_ax,
+            'torque': torque_val,
+            'torsional_stress': 0.0, # (Opcional: max shear stress)
+            
+            # --- CAMPOS ESPECÍFICOS DE VIGA ---
             'axial_strain': axial_strain,
             'twist_rate': twist_rate,
-            'axial_stress': sigma_ax,
-            'torque': torque,
             'forces_n1': forces_n1,
             'forces_n2': forces_n2,
             'stress_points': stress_results

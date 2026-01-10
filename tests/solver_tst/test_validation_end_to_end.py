@@ -263,6 +263,84 @@ VALIDATION_DATA = [
     # --- CASO 12: Cadena 3D con Desplazamientos Impuestos (Ej12.dat) ---
     # PENDIENTE INPLEMENTAR LECTURA DE DESPLAZAMIENTOS IMPUESTOS (SPC)
 
+
+    # --- CASO 13: Voladizo CBAR (Flexion+Axil) ---
+    # Validacion del elemento Viga con flexion plana y axil combinado.
+    {
+        "case_name": "Ej13_CBAR_Cantilever_2D",
+        "folder": "case_13",
+        "filename": "Ej13.dat",
+        "expected_displacements": {
+            # Node 2: Extension (x), Deflexion (y), Deflexion (z), Giro (z)
+            2: {0: 1.190476E-03, 1: 1.190481E-01, 2:0.0, 5: 3.571443E-03}
+        },
+        "expected_reactions": {
+            # Node 1: Empotramiento. Reacciones Fx, Fy, Fz y Momento Mz
+            1: {0: -5.000000E+02, 1: -5.000000E+02, 2:0.0, 5: -2.500000E+04}
+        },
+        "expected_element_forces": {
+            101: {
+                "axial_force": 5.000000E+02,
+                "axial_stress": 5.000000E+00,
+                # En CBAR, nastran reporta 'BEND-MOMENT END-A PLANE 1' que es Mz
+                # Usamos notacion de punto para acceder a sub-diccionarios en el test
+
+############### REVISAR BIEN LOS SIGNOS DE LOS MOMENTOSPQ NASTRAN LO DA EN POSITIVO
+                # --- END A (Node 1) - Reactions ---
+                "forces_n1.Mz": -2.500000E+04, # Reaction Moment (Clockwise)
+                "forces_n1.Fy": -5.000000E+02, # Reaction Shear (Down)
+                
+                # --- END B (Node 2) - Free End ---
+                "forces_n2.Mz": 0.0,           # Zero Moment at tip
+                "forces_n2.Fy": 5.000000E+02,  # Shear transmitted
+                "forces_n2.Fx": 5.000000E+02   # Axial transmitted
+            }
+        },
+        "description": "CBAR Cantilever with combined Axial and Tip Load (Bending)."
+    },
+
+    # --- CASO 14: CBAR 3D  ---
+    {
+        "case_name": "Ej14_CBAR_3D",
+        "folder": "case_14",
+        "filename": "Ej14.dat",
+        "expected_displacements": {
+            2: {
+                0: -2.225381E-05,
+                1: 6.369073E-04,
+                2: -3.776155E-05,
+                3: -1.056354E-04,
+                4: 4.194536E-06,
+                5: -7.441069E-05
+            }
+        },
+        "expected_reactions": {
+            1: {
+                0: -1.000000E+03, 1: -5.000000E+03, 2: 2.000000E+03,
+                3: 1.100000E+04, 4: 5.000000E+02, 5: 8.000000E+03
+            }
+        },
+        "expected_element_forces": {
+            # Nastran Internal at End A: 
+            #   Mz=1837, My=13478, Fy=492, Fz=4082, Torque=452, Axial=3618
+            # Solver 'forces_n1' (Reaction at Node 1 on Element) -> Signs Flipped vs Internal.
+            101: {
+                "axial_force": 3.618136E+03,
+                "axial_stress": 3.618136E+01, 
+                "torque": 4.522670E+02,
+                
+                # Local Forces at Node 1 (Check vs Nastran End A but flipped sign)
+                "forces_n1.Mz": -1.837117E+03, 
+                "forces_n1.My":  1.347852E+04,
+                "forces_n1.Fy": -4.923660E+02,
+                "forces_n1.Fz": -4.082483E+03,
+
+                "forces_n1.Mx": -4.522670E+02  # Torque Reaction
+            }
+        },
+        "description": "3D CBAR with biaxial bending, torsion and axial load. Validates full 12x12 matrix and 3D transformation."
+    }
+
 ]
 class TestNastranEndToEnd:
     """
@@ -356,11 +434,32 @@ class TestNastranEndToEnd:
             calc_data = elem_stresses[eid] # Dictionary {'axial_force': ..., 'axial_stress': ...}
             
             for qty_name, val_ref in quantities.items():
-                if qty_name not in calc_data:
+             
+                #--- UPDATE FOR NESTED DICTIONARIES (CBAR) ---
+                val_calc = calc_data
+                try:
+                    if "." in qty_name:
+                        keys = qty_name.split(".")
+                        for k in keys:
+                            # Verificamos si es indexable (dict o list) antes de acceder
+                            if not hasattr(val_calc, '__getitem__'):
+                                raise ValueError(f"Cannot access key '{k}' in scalar value: {val_calc}")
+                            val_calc = val_calc[k]
+                    else:
+                        val_calc = calc_data[qty_name]
+                except (KeyError, IndexError, ValueError, TypeError) as e:
+                    pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {e}")
+
+                # Verificamos que sea un número (float o numpy scalar)
+                assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
+                    f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
+                
+'''                if qty_name not in calc_data:
                     pytest.fail(f"Quantity '{qty_name}' not found for Element {eid}")
                 
                 val_calc = calc_data[qty_name]
                 
                 assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
+                    '''
 
