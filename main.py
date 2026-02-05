@@ -31,6 +31,7 @@ except ImportError as e:
 INPUT_DIR = PROJECT_ROOT / "input"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
+
 def main():
     # 1. Setup Arguments
     parser = argparse.ArgumentParser(description="PyFEM Solver - Linear Static Analysis")
@@ -163,7 +164,7 @@ def write_report(path: Path, job_name: str, model, results, solver):
         for nid in sorted(model.nodes.keys()):
             try:
                 # Use Mapper to get the 6 indices for this node
-                indices = solver.mapper.get_dof_indices(nid)
+                indices = solver.dof_mapper.get_dof_indices(nid)
                 u = displacements[indices] # 6 DOFs
                 
                 f.write(f"{nid:<10} {u[0]:.4e}   {u[1]:.4e}   {u[2]:.4e}   {u[3]:.4e}   {u[4]:.4e}   {u[5]:.4e}\n")

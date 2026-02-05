@@ -22,10 +22,16 @@ import warnings
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
 from .utilities import DofMapper
+
+# --- ELEMENT SOLVERS ---
 from .elements.rod_element_v2 import RodElementSolverV2
+from .elements.bar_element import BarElementSolver
+
+# --- DATA MODEL ---
 from src.preprocessing.data_model import (
     FEMModel, 
-    RodElement,       
+    RodElement,
+    BarElement,       
     SinglePointLoad,  
     SinglePointMoment,
     SPCConstraint
@@ -40,17 +46,17 @@ class LinearStaticSolver:
 
     def __init__(self, model: FEMModel):
         """
-        @brief Initializes the solver with a FEM Model.
-        @param model The database containing nodes, elements, materials, etc.
+        @brief Initialize the solver with a parsed FEM Model.
+        @param model The database containing nodes, elements, materials, loads, etc.
         """
         self.model = model
-        
+
         # 1. Initialize DOF Mapping
         # We convert keys to a list to ensure deterministic ordering.
         node_ids = list(self.model.nodes.keys())
-        self.mapper = DofMapper(node_ids, dofs_per_node=self.DOFS_PER_NODE)
+        self.dof_mapper = DofMapper(node_ids, dofs_per_node=self.DOFS_PER_NODE)
         
-        self.n_dofs = self.mapper.total_dofs
+        self.n_dofs = self.dof_mapper.total_dofs
         
         # 2. Initialize Matrices
         # 'lil_matrix' (list of list) is efficient for the incremental construction (Assembly phase)
@@ -71,10 +77,10 @@ class LinearStaticSolver:
         if isinstance(node_or_list, list):
             indices = []
             for nid in node_or_list:
-                indices.extend(self.mapper.get_dof_indices(nid))
+                indices.extend(self.dof_mapper.get_dof_indices(nid))
             return indices
         else:
-            return self.mapper.get_dof_indices(node_or_list)
+            return self.dof_mapper.get_dof_indices(node_or_list)
 
    
     # ================= ASSEMBLY PHASE =================
@@ -103,6 +109,9 @@ class LinearStaticSolver:
 
             if isinstance(element, RodElement):
                 k_elem_global, node_ids = self._solve_rod_element(element)
+            
+            elif isinstance(element, BarElement):
+                k_elem_global, node_ids = self._solve_bar_element(element)
             
             # Placeholder for future elements (Beam, Plate, Solid)
             # FUTURE: elif isinstance(element, BeamElement): ...
@@ -136,7 +145,26 @@ class LinearStaticSolver:
         
         return elem_solver.get_stiffness_matrix(), [n1.nid, n2.nid]
 
+    def _solve_bar_element(self, element: BarElement) -> tuple:
+        """
+        @brief Computes the 12x12 stiffness matrix for a CBAR element in global coordinates.
+        """
+        n1 = self.model.get_node(element.nodes[0])
+        n2 = self.model.get_node(element.nodes[1])
+        prop = self.model.properties[element.prop_id]
+        mat = self.model.materials[prop.mat_id]
+        
+        # Validate Orientation (Crucial for Beam Physics)
+        orientation = element.orientation_vector
+        if not orientation or np.linalg.norm(orientation) < 1e-6:
+             # Fallback to Y-axis if missing (though Reader usually checks this)
+             orientation = [0.0, 1.0, 0.0]
+
+        solver = BarElementSolver(n1, n2, prop, mat, orientation=orientation)
+        return solver.get_stiffness_matrix(), [n1.nid, n2.nid]
     
+    # --- CORE ASSEMBLY & SOLVE LOGIC ---
+
     def _add_element_stiffness(self, node_ids: list, k_elem: np.ndarray):
         """
         @brief Maps and adds the local element matrix into the global system matrix.
@@ -312,7 +340,13 @@ class LinearStaticSolver:
             {
                 "displacements": np.ndarray,
                 "reactions": { NodeID: np.ndarray(6) },
-                "stresses": { ElemID: { 'axial_force': float, ... } }
+                "stresses": { 
+                    ElemID: { 
+                    'type': str('CROD', 'CBAR')
+                    'axial_force': float, 
+                    ...
+                            }
+                            }
             }
         """
         print("[Solver] Post-processing results (Reactions & Stresses)...")
@@ -343,6 +377,20 @@ class LinearStaticSolver:
         # --- B. ELEMENT STRESSES ---
         for eid, element in self.model.elements.items():
             
+            # ---------------------------------------------------------
+            # 0. FAIL-FAST CHECK
+            # ---------------------------------------------------------
+            # If the element is not supported -> abort
+            if not isinstance(element, (RodElement, BarElement)):
+                elem_type = type(element).__name__
+                raise NotImplementedError(
+                    f"[Error] Element Type '{elem_type}' (EID: {eid}) is not supported for stress recovery. "
+                    "Analysis stopped to prevent misleading results."
+                )
+            
+            # ---------------------------------------------------------
+            # 1. CASO CROD (Rod Element)
+            # ---------------------------------------------------------
             if isinstance(element, RodElement):
                 # TODO: Optimization - Retrieve cached ElementSolver instead of re-instantiating.
                 # Currently, geometry and T matrix are re-computed here.
@@ -354,7 +402,27 @@ class LinearStaticSolver:
                 elem_solver = RodElementSolverV2(n1, n2, prop, mat)
                 
                 # Call the specific stress recovery method
-                stress_data = elem_solver.calculate_stresses(self.displacements, self.mapper)
+                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data['type'] = 'CROD'  # Etiqueta identificativa
+
+                results["stresses"][eid] = stress_data
+            
+            # ---------------------------------------------------------
+            # 2. CASO CBAR (Bar Element)
+            # ---------------------------------------------------------
+            elif isinstance(element, BarElement):
+                n1 = self.model.get_node(element.nodes[0])
+                n2 = self.model.get_node(element.nodes[1])
+                prop = self.model.properties[element.prop_id]
+                mat = self.model.materials[prop.mat_id]
+                
+                orientation = element.orientation_vector if element.orientation_vector else [0.0, 1.0, 0.0]
+
+                elem_solver = BarElementSolver(n1, n2, prop, mat, orientation=orientation)
+
+                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data['type'] = 'CBAR'  # Etiqueta identificativa
+
                 results["stresses"][eid] = stress_data
         
         return results 

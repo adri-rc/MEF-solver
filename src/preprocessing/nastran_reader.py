@@ -7,8 +7,10 @@ from .data_model import (
     FEMModel, 
     Node, 
     IsotropicMaterial, 
-    RodProperty, 
-    RodElement, 
+    RodProperty,
+    BarProperty,
+    RodElement,
+    BarElement,
     SinglePointLoad, 
     SinglePointMoment, 
     SPCConstraint
@@ -153,6 +155,78 @@ def _read_crod(fields: list[str], model: FEMModel):
     
     model.elements[eid] = RodElement(eid=eid, prop_id=pid, nodes=[n1, n2])
 
+
+def _read_cbar(fields: list[str], model: FEMModel):
+    # CBAR EID PID GA GB X1/G0 X2 X3 OFFT PA PB W1A W2A W3A W1B W2B W3B
+    eid = _req_int(fields, 1, "CBAR EID")
+    pid = _req_int(fields, 2, "CBAR PID")
+    n1 = _req_int(fields, 3, "CBAR Node A")
+    n2 = _req_int(fields, 4, "CBAR Node B")
+    
+    # --- CBAR Orientation Logic (Field 6: X1 or G0 ¿?) ---
+    raw_field_6 = _safe_get(fields, 5)
+    
+    orientation_vec = None
+    g0_node = None
+    
+    # Detect whether it is Integer (G0) or Float (X1)
+    # Nastran criteria: integer value -> G0. If float(decimal point) -> X1.
+    # Case A: Defined by Vector (real fields or decimal point)
+    if '.' in raw_field_6 or 'E' in raw_field_6.upper() or 'D' in raw_field_6.upper() or raw_field_6 == '0':
+        # vector(X1, X2, X3)
+        v1 = _parse_nastran_number(raw_field_6) or 0.0
+        v2 = _opt_float(fields, 6, 0.0)
+        v3 = _opt_float(fields, 7, 0.0)
+        if v1 == 0.0 and v2 == 0.0 and v3 == 0.0:
+            raise ValueError(f"[ERROR] CBAR eid {eid}: The orientation vector is (0,0,0). Define a valid direction.")
+        orientation_vec = [v1, v2, v3]
+    
+    # Case B: Defined by Node G0 (Integer)
+    elif raw_field_6.strip():
+        try:
+            g0_node = int(raw_field_6)
+            if g0_node == 0:
+                 raise ValueError(f"[ERROR] CBAR eid {eid}: G0 can not be 0.")
+        except ValueError:
+             # strange text that is neither float nor int
+             raise ValueError(f"[ERROR] CBAR eid {eid}: Orientation field '{raw_field_6}' not valid.")
+             
+    # Case C: Empty field -> ERROR
+    else:
+        raise ValueError(f"[ERROR] CBAR ied {eid}: The orientation (Vector v or Node G0) needs to be defined.")
+
+    # --- Optional Fields (OFFT, PA, PB, Offsets) ---
+    offt = _safe_get(fields, 8).strip() or 'GGG'
+    pa = _opt_int(fields, 9, 0)
+    pb = _opt_int(fields, 10, 0)
+    
+    # Offset vectors: WA:(11, 12, 13) & WB:(14, 15, 16)
+    wa = [
+        _opt_float(fields, 11, 0.0),
+        _opt_float(fields, 12, 0.0),
+        _opt_float(fields, 13, 0.0)
+    ]
+    
+    wb = [
+        _opt_float(fields, 14, 0.0),
+        _opt_float(fields, 15, 0.0),
+        _opt_float(fields, 16, 0.0)
+    ]
+    
+    model.elements[eid] = BarElement(
+        eid=eid, 
+        prop_id=pid, 
+        nodes=[n1, n2], 
+        orientation_vector=orientation_vec,
+        g0=g0_node,
+        offt=offt,
+        pa=pa,
+        pb=pb,
+        wa=wa,
+        wb=wb
+    )
+
+
 def _read_prod(fields: list[str], model: FEMModel):
     # PROD(0) PID(1) MID(2) A(3) J(4) C(5) NSM(6)
     pid = _req_int(fields, 1, "PROD PID")
@@ -163,6 +237,48 @@ def _read_prod(fields: list[str], model: FEMModel):
     NSM = _opt_float(fields, 6, 0.0)
     
     model.properties[pid] = RodProperty(pid=pid, mat_id=mid, A=A, J=J, C=C, NSM=NSM)
+
+def _read_pbar(fields: list[str], model: FEMModel):
+    pid = _req_int(fields, 1, "PBAR PID")
+    mid = _req_int(fields, 2, "PBAR MID")
+    
+    A = _opt_float(fields, 3, 0.0)
+    I1 = _opt_float(fields, 4, 0.0) 
+    I2 = _opt_float(fields, 5, 0.0)
+    J = _opt_float(fields, 6, 0.0)
+    nsm = _opt_float(fields, 7, 0.0)
+
+    K1 = _opt_float(fields, 16, 0.0)
+    K2 = _opt_float(fields, 17, 0.0)
+    I12 = _opt_float(fields, 18, 0.0)
+    
+    # -- Stress Recovery Points (Fields: 9 to 16) 
+    # Nastran: C(y,z), D(y,z), E(y,z), F(y,z)
+    # Index (pythgo starts in 0): C1=8, C2=9, D1=10, D2=11...
+    
+    points = []
+    # From 8 to 15 in steps of 2
+    for i in range(8, 16, 2):
+        # We try to read the pair (y, z). 
+        y_coord = _parse_nastran_number(_safe_get(fields, i))
+        z_coord = _parse_nastran_number(_safe_get(fields, i+1))
+        
+        # We only save the point if both coordinates are defined.
+        # (NOTE: 0.0 is a valid value, None is empty)
+        if y_coord is not None and z_coord is not None:
+            points.append((y_coord, z_coord))
+        elif y_coord is not None or z_coord is not None:
+             # Case: Y defined but Z not defined. We assume 0 for robustness.
+             val_y = y_coord if y_coord is not None else 0.0
+             val_z = z_coord if z_coord is not None else 0.0
+             points.append((val_y, val_z))
+
+    
+    model.properties[pid] = BarProperty(
+        pid=pid, mat_id=mid, A=A, I1=I1, I2=I2, J=J, NSM=nsm,
+        I12=I12, K1=K1, K2=K2, stress_points=points
+    )
+
 
 def _read_mat1(fields: list[str], model: FEMModel):
     # MAT1(0) MID(1) E(2) G(3) NU(4) RHO(5)
@@ -193,6 +309,35 @@ def _read_spc1(fields: list[str], model: FEMModel):
             )
         except ValueError:
             pass # Ignore THRU for now
+
+def _read_spc(fields: list[str], model: FEMModel):
+    """
+    @brief SPC card reader (Single Point Constraint with (Enforced Displacements)).
+    @details Formato: SPC(0) SID(1) G(2) C(3) D(4) G(5) C(6) D(7) ...
+    Able to set enforced displacements, D != 0.
+    """
+    sid = _req_int(fields, 1, "SPC SID")
+    
+    # Los datos vienen en grupos de 3: Grid ID (G), Componentes (C), Desplazamiento (D)
+    # Empezamos en el índice 2
+    idx = 2
+    while idx < len(fields):
+        if not fields[idx]: 
+            break
+        try:
+            nid = int(fields[idx])
+            comps = _safe_get(fields, idx+1)
+            val_d = _opt_float(fields, idx+2, 0.0) # Valor del desplazamiento (D)
+            
+            if comps:
+                model.constraints.append(
+                    SPCConstraint(sid=sid, node_id=nid, components=comps, value=val_d)
+                )
+            idx += 3 # move on to the next group (G, C, D)
+            
+        except ValueError:
+            break
+
 
 def _read_force(fields: list[str], model: FEMModel):
     # FORCE(0) SID(1) G(2) CID(3) F(4) N1(5) N2(6) N3(7)
@@ -235,8 +380,11 @@ _CARD_HANDLERS: dict[str, Callable[[list[str], FEMModel], None]] = {
     'PROD': _read_prod,
     'MAT1': _read_mat1,
     'SPC1': _read_spc1,
+    'SPC': _read_spc,
     'FORCE': _read_force,
-    'MOMENT': _read_moment
+    'MOMENT': _read_moment,
+    'PBAR': _read_pbar,
+    'CBAR': _read_cbar
 }
 
 # endregion --- RELATIONSHIP DICTIONARIES ---
@@ -248,39 +396,57 @@ def _process_file(filepath: Path, model: FEMModel) -> None:
         raise FileNotFoundError(f"[ERROR] file not found: {filepath}")
 
     with open(filepath, 'r') as f:
-        for line_idx, line in enumerate(f):
-            line_raw = line.strip()
-            if not line_raw or line_raw.startswith('$'):
-                continue
-            
-            # INCLUDE management (special recursive case)
-            if line_raw.upper().startswith('INCLUDE'):
-                quote = "'" if "'" in line_raw else '"'
-                parts = line_raw.split(quote)
-                if len(parts) >= 2:
-                    inc_path = filepath.parent / parts[1]
-                    _process_file(inc_path, model)
-                continue
+        lines = f.readlines()
+    
+    # --- BULK DATA Section Detection ---
+    # Complete files have a header that ends with “BEGIN BULK.”, everithing above that line ignored.
+    start_index = 0
+    found_bulk = False
 
-            # Get fields and card name
-            fields = _get_entry_fields(line)
-            if not fields: continue
-            
-            card_name = fields[0].upper()
+    for i, line in enumerate(lines):
+        if "BEGIN BULK" in line.upper():
+            start_index = i + 1
+            found_bulk = True
+            print(f"[INFO] 'BEGIN BULK' found at line {i+1}. Skipping header.")
+            break
 
-            
-            if card_name in _CARD_HANDLERS: # Search for known  NASTRAN cards.
-                try:
-                    _CARD_HANDLERS[card_name](fields, model)
-                except Exception as e:
-                    print(f"[ERROR] Error in line {line_idx+1} ({filepath.name}): {e}")
-                    print(f"        Line content: {line_raw}")
-                    # Aquí decides si haces 'raise' para abortar o 'continue' para intentar seguir
-                    raise e 
-            else:
-                print(f"[DEBUG] Card not supported or ignored: {card_name}")
-                print(f"        Line {line_idx+1} ({filepath.name})")
-                pass
+    for line_idx in range(start_index, len(lines)):
+        line = lines[line_idx]
+        line_raw = line.strip()
+
+        if not line_raw or line_raw.startswith('$'):
+            continue
+        
+        if line_raw.upper().startswith('ENDDATA'):
+            break
+        
+        # INCLUDE management (special recursive case)
+        if line_raw.upper().startswith('INCLUDE'):
+            quote = "'" if "'" in line_raw else '"'
+            parts = line_raw.split(quote)
+            if len(parts) >= 2:
+                inc_path = filepath.parent / parts[1]
+                _process_file(inc_path, model)
+            continue
+
+        # Get fields and card name
+        fields = _get_entry_fields(line)
+        if not fields: continue
+        
+        card_name = fields[0].upper()
+
+        
+        if card_name in _CARD_HANDLERS: # Search for known  NASTRAN cards.
+            try:
+                _CARD_HANDLERS[card_name](fields, model)
+            except Exception as e:
+                print(f"[ERROR] Error in line {line_idx+1} ({filepath.name}): {e}")
+                print(f"        Line content: {line_raw}")
+                raise e 
+        else:
+            print(f"[DEBUG] Card not supported or ignored: {card_name}")
+            print(f"        Line {line_idx+1} ({filepath.name})")
+            pass
 
 def parse_nastran_input(entry_file_path: str) -> FEMModel:
     """

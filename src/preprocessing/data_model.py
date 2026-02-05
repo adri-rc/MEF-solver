@@ -157,6 +157,36 @@ class RodProperty(Property):
     C: float     #: Coefficient for calculating torsional stresses
     NSM: float   #: Non-structural mass per unit length
 # endregion RodProperty(Property)
+
+# region BarProperty(Property)
+@dataclass
+class BarProperty(Property):
+    '''
+    @class BarProperty
+    @brief Geometric properties for the beam element (PBAR).
+    @details Defines the area, inertia, and torsional constant.
+    '''
+    mat_id: int         #: ID from asociated material.
+    A: float            #: Transverse section area.
+    I1: float           #: Moment of inertia of area around plane 1 (local z) - XY bending
+    I2: float           #: Moment of inertia of area around plane 2 (and local) - Bending XZ
+    J: float            #: Torsion constant
+    I12: float = 0.0    #: Producto de inercia (Iyz). Default 0 (sección simétrica)
+    K1: float = 0.0     #: Area factor for shear, plane 1. Default 0 (Euler-Bernoulli)
+    K2: float = 0.0     #: Area factor for shear, plane 2. Default 0 (Euler-Bernoulli)
+    NSM: float = 0.0    #: Non-structural mass per unit length
+    
+    # Stress Recovery Points
+    # List of tuples [(y_c, z_c), (y_d, z_d), (y_e, z_e), (y_f, z_f)]
+    # If the list is empty, it will be calculated only at the centroid (0,0) or default endpoints.
+    stress_points: List[tuple] = field(default_factory=list)
+    
+    def __post_init__(self):
+        # physical consistency validation (Teorema de ejes paralelos/Mohr)
+        # I1 * I2 must be greater than I12^2 for the section to be physically real.
+        if (self.I1 * self.I2) < (self.I12 ** 2):
+            raise ValueError(f"Inconsistent inertial properties in BarProperty with id: {self.pid}")
+# endregion BarProperty(Property)
 # endregion Property Classes
 
 
@@ -174,6 +204,35 @@ class RodElement(Element):
     @brief 2-node bar (CROD).
     @details Defines a tension-compression-torsion element"""
     pass
+
+@dataclass
+class BarElement(Element):
+    """
+    @class BarElement
+    @brief 2-node prismatic beam element (CBAR).
+    @details 
+    Supports traction, torsion, and bending in two planes.
+    Includes support for vector or node orientation, 
+    offsets (eccentricities), and releases (pin flags).
+    """
+    # --- Orientation ---
+    # Can be defined by vector (v) or by auxiliary node (g0).
+    # Both are saved and solver will decide which one to use (priority to g0 if it exists).
+    orientation_vector: Optional[List[float]] = None 
+    g0: Optional[int] = None
+
+    # --- Offsets
+    offt: str = 'GGG' # offset type: 'GGG', 'B', 'LOC'. Default Global.
+    wa: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0]) # Offset Node A
+    wb: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0]) # Offset Node B
+
+    # --- Releases (Joints/Pin Flags) ---
+    # Integers representing the released DOFs (e.g., 456).
+    pa: int = 0 # Default: 0 = Clamped (fully fixed), complete continuity between elements.
+    pb: int = 0 # Default: 0 = Clamped (fully fixed), complete continuity between elements.
+    
+
+
 
 @dataclass
 class QUADElement(Element):
@@ -267,7 +326,7 @@ class FEMModel:
                 # Future user coordinate systems will be implemented
                 #self.coords: Dict[int, CoordSystem] = {}    #: Sistemas de Coordenadas definidos por usuario
         
-        # Loads and restrictions are stored in lists because different sucase can count with the same load_id or SPC_id multiple times,
+        # Loads and restrictions are stored in lists because different subcase can count with the same load_id or SPC_id multiple times,
         # therefor in a dictionary they can be overwritten.
         self.constraints: List[Constraint] = []     
         self.loads: List[LoadCase] = []

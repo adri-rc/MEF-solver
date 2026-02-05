@@ -5,7 +5,9 @@ from src.preprocessing.data_model import (
     IsotropicMaterial, # Material
     FEMModel,
     Property,
+    BarProperty,
     RodElement,        # Element
+    BarElement,
     SPCConstraint,     # Constraint
     SinglePointLoad,   # LoadCase
     )
@@ -328,9 +330,88 @@ class TestFEMModel:
 
 
 
+class TestBarProperty:
+    """
+    @class TestBarProperty
+    @brief Specific tests for bar properties (PBAR).
+    @details Checks correct initialization and physical validations (inertia).
+    """
+
+    def test_full_initialization(self):
+        """
+        @test BarProperty inicialization
+        @brief Checks that the beam property correctly stores all coefficients
+        extended (I12, K1, K2) and the stress recovery points.
+        """
+        stress_points = [(0.1, 0.1), (0.1, -0.1), (-0.1, -0.1), (-0.1, 0.1)]
+        
+        prop = BarProperty(
+            pid=10, 
+            mat_id=1, 
+            A=0.05, 
+            I1=1e-4, 
+            I2=2e-4, 
+            J=5e-5, 
+            NSM=1.0,
+            I12=1e-6,   
+            K1=0.85,
+            K2=0.85,
+            stress_points=stress_points
+        )
+
+        assert prop.pid == 10
+        assert prop.I12 == 1e-6
+        assert prop.K1 == 0.85
+        assert prop.NSM == 1.0
+        assert prop.J == 5e-5
+        assert len(prop.stress_points) == 4
+        assert prop.stress_points[1] == (0.1, -0.1)
+        assert prop.stress_points[3] == (-0.1, 0.1)
+
+    def test_physical_inconsistency(self):
+        """
+        @test Checks physics consistency (Mohr's circle).
+        @brief Verify that a ValueError is raised if I12^2 > I1*I2.
+        """
+        # Case: I1*I2 = 4. If I12=10 -> 100 > 4 -> Physically impossible.
+        with pytest.raises(ValueError) as excinfo:
+            BarProperty(
+                pid=99, mat_id=1, A=1.0, J=1.0,
+                I1=2.0, I2=2.0, 
+                I12=10.0 
+            )
+        assert "Inconsistent inertial properties" in str(excinfo.value)
 
 
+class TestBarElement:
+    """
+    @class TestBarElement
+    @brief Tests suite for the beam element entity (CBAR).
+    """
+    def test_full_initialization(self):
+        """
+        @test BarProperty inicialization
+        @brief Checks the initialization of a CBAR element with advanced options
+        (Offset, Orientation, Pin Flags).
+        """
+        elem = BarElement(
+            eid=200,
+            prop_id=10,
+            nodes=[1, 2],
+            orientation_vector=[0.0, 1.0, 0.0],
+            g0=None,
+            offt='GGG',
+            pa=45,          # Pin Flag in node A (free Rx, Ry)
+            pb=0,
+            wa=[0.0, 0.05, 0.0], # Offset in A
+            wb=[0.0, 0.05, 0.0]  # Offset in B
+        )
 
+        assert elem.eid == 200
+        assert elem.pa == 45
+        assert elem.pb == 0
+        assert elem.wa[1] == 0.05
+        assert elem.orientation_vector == [0.0, 1.0, 0.0]
 
 
 

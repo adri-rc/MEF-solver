@@ -11,7 +11,8 @@ import pytest
 import numpy as np
 from src.solver.linear_static_solver import LinearStaticSolver
 from src.preprocessing.data_model import (
-    FEMModel, Node, IsotropicMaterial, RodProperty, RodElement, 
+    FEMModel, Node, IsotropicMaterial, RodProperty, RodElement,
+    BarProperty, BarElement, 
     SPCConstraint, SinglePointLoad, SinglePointMoment
 )
 
@@ -69,7 +70,7 @@ class TestLinearStaticSolverIntegration:
         displacements = results['displacements']
         
         # 3. Validate
-        dofs_n2 = solver.mapper.get_dof_indices(2)
+        dofs_n2 = solver.dof_mapper.get_dof_indices(2)
         u_x_n2 = displacements[dofs_n2[0]] # Index for Tx
         
         expected_u = 2.0 # metres
@@ -111,7 +112,7 @@ class TestLinearStaticSolverIntegration:
         displacements = results['displacements']
 
         # Check Node 2 X displacement
-        dofs_n2 = solver.mapper.get_dof_indices(2)
+        dofs_n2 = solver.dof_mapper.get_dof_indices(2)
         u_x_n2 = displacements[dofs_n2[0]]
 
         assert u_x_n2 == pytest.approx(0.01, abs=1e-9)
@@ -284,8 +285,8 @@ class TestLinearStaticSolverIntegration:
             u = results['displacements']
 
             # Validation
-            idx_u2 = solver.mapper.get_dof_indices(2)[0] # Tx node 2
-            idx_u3 = solver.mapper.get_dof_indices(3)[0] # Tx node 3
+            idx_u2 = solver.dof_mapper.get_dof_indices(2)[0] # Tx node 2
+            idx_u3 = solver.dof_mapper.get_dof_indices(3)[0] # Tx node 3
             
             u2_calc = u[idx_u2]
             u3_calc = u[idx_u3]
@@ -405,7 +406,7 @@ class TestLinearStaticSolverIntegration:
         expected_ux = F_load / det_sys
         expected_uy = -(Kxy / Kyy) * expected_ux
         
-        idx_n2 = solver.mapper.get_dof_indices(2)
+        idx_n2 = solver.dof_mapper.get_dof_indices(2)
         ux_calc = u[idx_n2[0]]
         uy_calc = u[idx_n2[1]]
         
@@ -612,7 +613,7 @@ class TestLinearStaticSolverIntegration:
         # Projection: delta = u_x * cos(theta_x) = u_x * (3/13)
         # u_x = 1.3 * 13 / 3 = 16.9 / 3 = 5.6333...
         
-        idx_n2 = solver.mapper.get_dof_indices(2)
+        idx_n2 = solver.dof_mapper.get_dof_indices(2)
         u = results['displacements']
         
         expected_ux = 16.9 / 3.0
@@ -620,3 +621,114 @@ class TestLinearStaticSolverIntegration:
         assert u[idx_n2[1]] == pytest.approx(0.0, abs=1e-9) # Ty (Constrained)
         assert u[idx_n2[2]] == pytest.approx(0.0, abs=1e-9) # Tz (Constrained)
         
+
+class TestBarElementIntegration:
+    """
+    @class TestBarElementIntegration
+    @brief Integration tests specific to the CBAR (Beam) element.
+    """
+
+    def test_solve_cantilever_beam_tip_load(self):
+        """
+        @test Cantilever Beam (Bending XY).
+        @brief Validates displacement v = PL^3 / 3EI.
+        @details
+        Model:
+            - Node 1 (0,0,0): Fully Fixed.
+            - Node 2 (L,0,0): Loaded F_y.
+            - Element: Bar along X.
+        """
+        model = FEMModel()
+        L = 2.0
+        E = 210e9
+        I1 = 1.0e-5 # Izz
+        
+        # Nodes
+        model.nodes[1] = Node(1, 0, 0., 0., 0., 0, "", 0) # Fix
+        model.nodes[1].x, model.nodes[1].y, model.nodes[1].z = 0., 0., 0.
+        
+        model.nodes[2] = Node(2, 0, L, 0., 0., 0, "", 0) # Tip
+        model.nodes[2].x, model.nodes[2].y, model.nodes[2].z = L, 0., 0.
+
+        # Properties
+        model.materials[1] = IsotropicMaterial(mid=1, E=E, nu=0.3)
+        # BarProperty: A=1, I1=Izz, I2=Iyy, J=1
+        model.properties[1] = BarProperty(pid=1, mat_id=1, A=0.1, I1=I1, I2=1e-5, J=1e-5)
+
+        # Element (Bar along X, Orientation Y)
+        # Orientation Vector [0, 1, 0] defines local Y axis.
+        model.elements[10] = BarElement(eid=10, prop_id=1, nodes=[1, 2], orientation_vector=[0., 1., 0.])
+
+        # BC: Fix Node 1
+        model.constraints.append(SPCConstraint(sid=1, node_id=1, components="123456", value=0.0))
+        
+        # Load: Fy = -1000 N at Node 2
+        Fy = -1000.0
+        model.loads.append(SinglePointLoad(sid=1, appnode_id=2, module=Fy, vector=[0.0, 1.0, 0.0]))
+
+        # Solve
+        solver = LinearStaticSolver(model)
+        solver.assemble()
+        res = solver.solve()
+        
+        # Validation: v = P*L^3 / (3*E*I)
+        # P = -1000
+        expected_v = (Fy * L**3) / (3 * E * I1)
+        
+        dofs_n2 = solver.dof_mapper.get_dof_indices(2)
+        v_calc = res['displacements'][dofs_n2[1]] # Ty
+        
+        assert v_calc == pytest.approx(expected_v, rel=1e-4)
+        
+        # Stress Check
+        # Max Moment at Root (Node 1) = P * L = -1000 * 2 = -2000
+        # Solver convention: Reaction Moment at Node 1
+        stresses = res['stresses'][10]
+        assert stresses['type'] == 'CBAR'
+        
+        mz_n1 = stresses['forces_n1']['Mz'] # Reaction
+        # Reaction should balance external moment -> +2000
+        assert mz_n1 == pytest.approx(-Fy * L, rel=1e-4)
+
+    def test_solve_torsion_bar(self):
+        """
+        @test Torsion of a Bar.
+        @brief Validates rotation theta = TL / GJ.
+        """
+        model = FEMModel()
+        L = 1.0
+        G = 80e9
+        J = 1.0e-4
+        
+        model.nodes[1] = Node(1, 0, 0., 0., 0., 0, "", 0)
+        model.nodes[1].x, model.nodes[1].y, model.nodes[1].z = 0., 0., 0.
+        model.nodes[2] = Node(2, 0, L, 0., 0., 0, "", 0)
+        model.nodes[2].x, model.nodes[2].y, model.nodes[2].z = L, 0., 0.
+
+        model.materials[1] = IsotropicMaterial(mid=1, E=200e9, G=G, nu=0.3)
+        model.properties[1] = BarProperty(pid=1, mat_id=1, A=0.1, I1=1e-4, I2=1e-4, J=J)
+        
+        model.elements[20] = BarElement(eid=20, prop_id=1, nodes=[1, 2], orientation_vector=[0., 1., 0.])
+
+        # BC: Fix Node 1
+        model.constraints.append(SPCConstraint(sid=1, node_id=1, components="123456", value=0.0))
+        
+        # Load: Moment Mx = 500 Nm at Node 2
+        Mx = 500.0
+        model.loads.append(SinglePointMoment(sid=1, appnode_id=2, module=Mx, vector=[1.0, 0.0, 0.0]))
+        
+        solver = LinearStaticSolver(model)
+        solver.assemble()
+        res = solver.solve()
+        
+        # Validation: theta = T*L / (G*J)
+        expected_theta = (Mx * L) / (G * J)
+        
+        dofs_n2 = solver.dof_mapper.get_dof_indices(2)
+        theta_calc = res['displacements'][dofs_n2[3]] # Rx
+        
+        assert theta_calc == pytest.approx(expected_theta, rel=1e-4)
+        
+        # Check Torque Result
+        stresses = res['stresses'][20]
+        assert stresses['torque'] == pytest.approx(Mx, rel=1e-4)
