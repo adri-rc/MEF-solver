@@ -145,6 +145,35 @@ INCLUDE '{include_file2.name}'"""
         
         # Check master nodes
         assert 101 in model.nodes
+    
+    def test_pbar_stress_points_parsing(self, tmp_path):
+        """
+        @test PBAR Stress Points (C, D, E, F).
+        @brief Verifies that stress recovery points are correctly mapped to BarProperty.
+        """
+        # Definition:
+        # PBAR, PID=1, MID=1, A=10., I1=20., I2=20., J=10.
+        # Continuation line (+): C(1.,1.), D(1.,-1.), E(-1.,-1.), F(-1.,1.)
+        # Format PBAR fields 9-16 correspond to C1,C2, D1,D2...
+        
+        bdf_content = """
+MAT1, 1, 2.1E11, , 0.3
+PBAR, 100, 1, 10.0, 20.0, 20.0, 10.0, 0.0
+, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0
+        """
+        p = tmp_path / "pbar_stress.bdf"
+        p.write_text(bdf_content)
+
+        model = parse_nastran_input(str(p))
+        
+        prop = model.properties[100]
+        
+        # Check that we have 4 points
+        assert len(prop.stress_points) == 4
+        # Check values (Point C)
+        assert prop.stress_points[0] == pytest.approx((1.0, 1.0))
+        # Check values (Point E)
+        assert prop.stress_points[2] == pytest.approx((-1.0, -1.0))
       
 # endregion --- Dummy Nastran texts Tests --
 

@@ -183,11 +183,69 @@ READER_VALIDATION_CASES = [
         }
     }, 
 
-    # --- PENDIENTE DE AÑADIR: CASO 15: Vigas en Serie con Stress Points ---
+    # --- CASO 15: Vigas en Serie con Stress Points ---
     # Descripcion: Dos vigas (CBAR) alineadas en eje Y global.
     #              Cargas combinadas en extremo (Fx, Fy, Fz, Mx, My, Mz).
     #              Validacion de Puntos de Tension (C, D, E, F) definidos en PBAR.
-    
+    {
+        "case_name": "Ej15_Series_Beams_StressPoints",
+        "folder": "case_15", # Asegúrate de crear esta carpeta y mover los archivos .dat/.bdf ahí
+        "filename": "Ej15.dat",
+        "expected_counts": {
+            "nodes": 3, 
+            "elements": 2, 
+            "properties": 2, 
+            "materials": 1,
+            "loads": 2, 
+            "constraints": 1
+        },
+        "checks": {
+            "nodes": {
+                1: [0.0, 0.0, 0.0],
+                2: [0.0, 2.0, 0.0],
+                3: [0.0, 5.0, 0.0]
+            },
+            "elements": {
+                101: {"nodes": [1, 2], "pid": 401, "expected_class": BarElement},
+                102: {"nodes": [2, 3], "pid": 402, "expected_class": BarElement}
+            },
+            # --- VALIDACIÓN CLAVE: STRESS POINTS ---
+            "properties": {
+                # PBAR 401: Definidos C(10,0) y D(0,10). E y F no definidos (Defaults a 0,0).
+                401: {
+                    "A": 100.0, 
+                    "I1": 1000.0,
+                    "stress_points": [
+                        (10.0, 0.0),  # Point C
+                        (0.0, 10.0),  # Point D
+                        (0.0, 0.0),   # Point E (Default)
+                        (0.0, 0.0)    # Point F (Default)
+                    ]
+                },
+                # PBAR 402: Definidos C(5,5) y D(-5,-5).
+                402: {
+                    "A": 50.0, 
+                    "I1": 200.0,
+                    "stress_points": [
+                        (5.0, 5.0),   # Point C
+                        (-5.0, -5.0), # Point D
+                        (0.0, 0.0),   # Point E (Default)
+                        (0.0, 0.0)    # Point F (Default)
+                    ]
+                }
+            },
+            "loads": [
+                # FORCE 701 en nodo 3. Mag=1.0, Vector=[1., 2., 4.]
+                {"type": "FORCE", "sid": 701, "node": 3, "mag": 1.0, "vec": [1., 2., 4.]},
+                # MOMENT 701 en nodo 3. Mag=1.0, Vector=[-1., -3., -2.]
+                {"type": "MOMENT", "sid": 701, "node": 3, "mag": 1.0, "vec": [-1., -3., -2.]}
+            ],
+            "constraints": [
+                {"sid": 201, "node": 1, "comps": "123456"}
+            ]
+        }
+    },
+
     # --- CASO 16: Estructura Marco 3D (5 Barras) ---
     {
         "case_name": "Ej16_3D_Frame_5_Bars",

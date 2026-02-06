@@ -86,20 +86,27 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
         
         # --- PBAR Mapping ---
         elif isinstance(prop, PBAR):
-            # Recuperar puntos de recuperación de tensión (C, D, E, F)
-            # pyNastran almacena esto en iterables o atributos directos.
-            stress_points = []
-            # C, D, E, F son tuplas (y, z) en pyNastran PBAR si existen
-            # Nota: pyNastran puede devolver None o 0.0. Revisamos existencia.
-            # (Simplificación: accedemos a los atributos directos de la tarjeta)
+            # EXTRACTION OF STRESS RECOVERY POINTS (C, D, E, F)
+            # pyNastran stores them in attributes .c, .d, .e, .f 
+            # c1, c2 -> Y, Z coordinates  of point C
+            # d1, d2 -> Y, Z coordinates  of point D, etc.
             
-            # Iteramos sobre los posibles puntos definidos en pyNastran
-            # PBAR tiene atributos c, d, e, f que pueden ser None.
-            # Sin embargo, la API estándar usa métodos get_...
-            # Accedemos a los campos raw parseados por seguridad:
-            pass # Puntos de estrés requieren lógica detallada de atributos
+            extracted_points = []
             
-            # Construimos la propiedad
+            # Helper para extraer tupla (y, z) de forma segura
+            def get_stress_point(prefix: str):
+                # Intentamos leer prop.c1 y prop.c2 (por ejemplo)
+                # Usamos getattr por seguridad, aunque suelen existir con default 0.0
+                y = getattr(prop, f"{prefix}1", 0.0) or 0.0
+                z = getattr(prop, f"{prefix}2", 0.0) or 0.0
+                return (float(y), float(z))
+
+            extracted_points = []
+            # Iteramos ordenadamente C, D, E, F
+            for char in ['c', 'd', 'e', 'f']:
+                extracted_points.append(get_stress_point(char))
+            
+            # build the property class
             model.properties[pid] = BarProperty(
                 pid=pid,
                 mat_id=prop.Mid(),
@@ -114,8 +121,8 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
                 # Nota: pyNastran a veces los llama k1, k2.
                 # Validamos si existen atributos, si no 0.0
                 K1=getattr(prop, 'k1', 0.0) or 0.0,
-                K2=getattr(prop, 'k2', 0.0) or 0.0
-                # TODO: Mapear stress_points si es crítico para el solver.
+                K2=getattr(prop, 'k2', 0.0) or 0.0,
+                stress_points=extracted_points
             )
 
 def _map_nodes(bdf_model: BDF, model: FEMModel):
