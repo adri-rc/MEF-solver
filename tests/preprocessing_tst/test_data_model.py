@@ -166,20 +166,21 @@ class TestIsotropicMaterial:
 
     # --- CASOS DE CONSISTENCIA (Warning) ---
 
-    def test_consistency_warning(self, capsys: pytest.CaptureFixture[str]):
+    def test_consistency_error(self):
         """
-        @test Physical consistency warning.
+        @test Physical consistency error.
         @brief If the user provides E, G, and nu, but they do not match the formula,
-                a warning is raised.
+                a ValueError is raised (Fail Fast).
         """
         # Non real material (E=200 y nu=0.0-> Should have G=100.) but G is forced to 50. (50% Error)
-        IsotropicMaterial(mid=20, E=200.0, nu=0.0, G=50.0)
+    
+        with pytest.raises(ValueError) as excinfo:
+            IsotropicMaterial(mid=20, E=200.0, nu=0.0, G=50.0)
         
-        captured = capsys.readouterr()
-        
-        assert "Review inputs in material id: '20'" in captured.out
-        assert "consistent" in captured.out
-        assert "E theoretical" in captured.out
+        # Check if expected error is raised
+        error_msg = str(excinfo.value)
+        assert "physically inconsistent" in error_msg
+        assert "Difference is > 5%" in error_msg
 
     def test_consistency_ok_no_warning(self, capsys: pytest.CaptureFixture[str]):
         """
