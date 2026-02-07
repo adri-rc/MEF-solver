@@ -122,9 +122,13 @@ class IsotropicMaterial(Material):
                 
                 
                 if error > 0.05: # If the error is greater than 5%, it´s notified (engineering tolerance).
-                    print(f"Review inputs in material id: '{self.mid}'\n"
-                          "The parameters entered are not consistent. "
-                        f"E theoretical: {E_calculated:.2e}, E introduced: {self.E:.2e}")
+                    raise ValueError(
+                        f"Material ID '{self.mid}' is physically inconsistent. \n"
+                        f"        Calculated E based on G/nu: {E_calculated:.2e}\n"
+                        f"        User input E:               {self.E:.2e}\n"
+                        f"        Difference is > 5% ({error:.1%}). Review material inputs."
+                    )
+                    
 
     def __repr__(self):
         # Usamos 'or 0' por seguridad en el f-string, aunque post_init asegura valores
