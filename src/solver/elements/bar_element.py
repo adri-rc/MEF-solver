@@ -210,7 +210,7 @@ class BarElementSolver:
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
         @brief Recovers internal forces and stresses at specific points.
-        @return Dict with keys 'forces' (dict) and 'stress_points' (dict).
+        @return Dict with keys 'forces', 'stress_points', 'max_total_stress', 'min_total_stress'.
         """
         # 1. Get Global Displacements
         idxs_n1 = dof_mapper.get_dof_indices(self.node1.nid)
@@ -258,7 +258,7 @@ class BarElementSolver:
        
        
        
-        # 5. STRESS RECOVERY AT POINTS (Navier's Formula) REVIEW-REFACTOR
+        # 5. STRESS RECOVERY AT POINTS (Navier's Formula)
         # --------------------------------------------------------
             # Sigma = Fx/A - (Mz * y)/I1 + (My * z)/I2
             # Tau   = Mx * r / J  (Simplified torsion)
@@ -283,34 +283,11 @@ class BarElementSolver:
         # If no points defined, use default point (0,0)
         points_to_calc = self.prop.stress_points if self.prop.stress_points else [(0.0, 0.0)]
 
-
-        ''' OLD IMPLEMENTATION:
-        stress_results = {}
-        # If no points defined, use default point (0,0)
-        points_to_calc = self.prop.stress_points if self.prop.stress_points else [(0.0, 0.0)]
-
-        # Bending moment calculation at node 1
-        # We retrieve the local nodal forces previously calculated (f_loc = K_loc * u_loc).
-        # These forces represent the "External Reactions" required at the nodes to maintain equilibrium.
-        
-        # Sign Logic (Case Mz - XY Plane):
-        # 1. FEM Convention: A positive Mz at Node 1 is a Counter-Clockwise rotation.
-        # 2. Physical Effect: A Counter-Clockwise rotation at the left end lifts the beam,
-        #    creating a positive curvature ("Smile" / Sagging shape).
-        # 3. Navier Formula: sigma = - (Mz * y) / I
-        #    - If we input a positive Mz (+) and evaluate at the top fiber where y is positive (+):
-        #    - Result: sigma = - (+) * (+) = (-) -> COMPRESSION.
-        #
-        # Conclusion: The raw sign from the FEM matrix is compatible with the standard formula.
-        # The sign MUST NOT be inverted.
-        
-        M_y = f_local[4] # Moment Y at Node 1 (reaction)
-        M_z = f_local[5] # Moment Z at Node 1 (reaction)
-        '''
+        # List to collect all total stresses for Max/Min calculation
+        computed_total_stresses = []
         
         for i, (y, z) in enumerate(points_to_calc):
             # Normal Stress = (Axial + Bending)
-            # Normal Stress = Axial + Bending
             
             #1. Pure Bending
             # Navier Formula: Sigma = -Mz*y/I1 + My*z/I2
@@ -321,6 +298,9 @@ class BarElementSolver:
 
             #2. Combined Total -> What is normally used for Yield Check
             sigma_tot = sigma_ax + sigma_bending_total
+
+            # Collect for max/min calculation
+            computed_total_stresses.append(sigma_tot)
             
             # Shear Stress (Torsion)
             r = np.sqrt(y**2 + z**2)
@@ -333,9 +313,13 @@ class BarElementSolver:
                 'tau_xy': tau_tor, # simplified
                 'y': y, 'z': z
             }
+        
+        # Calculate Max and Min Total Stress (Equivalent to SA-MAX / SA-MIN from .f06  CBAR results)
+        max_total_stress = max(computed_total_stresses) if computed_total_stresses else 0.0
+        min_total_stress = min(computed_total_stresses) if computed_total_stresses else 0.0
 
         return {
-            # --- CAMPOS UNIFICADOS (Compatibilidad con CROD) ---
+            # --- CAMPOS UNIFICADOS (CROD compatibility) ---
             'axial_force': axial_force_val,
             'axial_stress': sigma_ax,
             'torque': torque_val,
@@ -346,5 +330,9 @@ class BarElementSolver:
             'twist_rate': twist_rate,
             'forces_n1': forces_n1,
             'forces_n2': forces_n2,
-            'stress_points': stress_results
+            'stress_points': stress_results,
+
+            # --- EXTREMES (Comparison with SA-MAX / SA-MIN from .f06  CBAR results) ---
+            'max_total_stress': max_total_stress,
+            'min_total_stress': min_total_stress
         }
