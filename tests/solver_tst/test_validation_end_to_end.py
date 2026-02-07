@@ -387,6 +387,7 @@ VALIDATION_DATA = [
                 # Axial=2.0, Torque=-3.0, M_Plane1(Mz)=7.0, M_Plane2(My)=-19.0
                 # Solver 'forces_n1' are Nodal Reactions -> Opposite signs to Internal
                 "axial_force": 2.000000E+00,
+                "axial_stress": 2.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -7.000000E+00, 
                 "forces_n1.My": -1.900000E+01, #DEBO CAMBIAR EL SIGNO !?!?!?!?!?
@@ -400,14 +401,26 @@ VALIDATION_DATA = [
                 # SA2 = Stress at Point D, End A. Val =  1.90E-01
                 # En el solver, el orden viene dado por la lista en PBAR:
                 # P0 = C, P1 = D.
-                #"stress_points.P0.sigma_x": -7.000000E-02, # Point C
-                #"stress_points.P1.sigma_x":  1.900000E-01  # Point D
+                # --- P0 (Punto C: y=10.0, z=0.0) ---
+                # Nastran SA1 = -7.00E-02. (Pure bending?)
+                "stress_points.P0.sigma_bending": -7.000000E-02, # Point C
+                "stress_points.P0.sigma_axial":    2.000000E-02, # Point C
+                # Total = -0.07 + 0.02 = -0.05
+                "stress_points.P0.sigma_total":   -5.000000E-02, # Point C
+
+                # --- P1 (Punto D: y=0.0, z=10.0) ---
+                # Nastran SA2 = 1.90E-01. (Pure bending?)
+                "stress_points.P1.sigma_bending":  1.900000E-01, # Point D
+                "stress_points.P1.sigma_axial":    2.000000E-02, # Point D
+                # Total = 0.19 + 0.02 = 0.21
+                "stress_points.P1.sigma_total":    2.100000E-01  # Point D
             },
 
             # --- ELEMENT 102 ---
             102: {
                 # Internal Forces at End A (Node 2) from Nastran:                
                 "axial_force": 2.000000E+00,
+                "axial_stress": 4.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -5.000000E+00,
                 "forces_n1.My": -1.100000E+01,
@@ -416,10 +429,17 @@ VALIDATION_DATA = [
  ############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # PBAR 402 define puntos C(5,5) y D(-5,-5)
-                # SA1 (Point C, End A):  1.50E-01
-                # SA2 (Point D, End A): -1.50E-01
-                # "stress_points.P0.sigma_x":  1.500000E-01, # Point C
-                # "stress_points.P1.sigma_x": -1.500000E-01  # Point D
+                # SA1 (Point C, End A):  1.50E-01 (Pure bending?)
+                "stress_points.P0.sigma_bending":  1.500000E-01, # Point C
+                "stress_points.P0.sigma_axial":   4.000000E-02,  # Point C
+                # Total = 0.15 + 0.04 = 0.19
+                "stress_points.P0.sigma_total":   1.900000E-01,  # Point C
+                
+                # SA2 (Point D, End A): -1.50E-01 (Pure bending?)
+                "stress_points.P1.sigma_bending": -1.500000E-01, # Point D
+                "stress_points.P1.sigma_axial":    4.000000E-02, # Point D
+                # Total = -0.15 + 0.04 = -0.11
+                "stress_points.P1.sigma_total":   -1.100000E-01 # Point D
             }
         },
         "description": "Two CBARs in series (Y-axis). Validates Stress Recovery at specific points (C, D) defined in PBAR."
@@ -582,7 +602,6 @@ VALIDATION_DATA = [
         },
         "description": "Hybrid assembly (CBAR legs + CROD post). Validates coupling of different element types and stiffness matrices."
     }
-
 
 ]
 class TestNastranEndToEnd:

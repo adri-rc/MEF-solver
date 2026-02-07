@@ -221,7 +221,7 @@ class BarElementSolver:
         u_loc = self.T @ u_elem_global
         
         
-        # 2. Calculate Internal Forces via Stiffness: F_loc = K_loc * u_loc
+        # 3. Calculate Internal Forces via Stiffness: F_loc = K_loc * u_loc
         # This captures all coupled effects (if any) and correct signs.
         K_local = self._build_local_stiffness()
         f_local = K_local @ u_loc
@@ -239,7 +239,7 @@ class BarElementSolver:
             'Mx': f_local[9], 'My': f_local[10], 'Mz': f_local[11]
         }
         
-        # 3. KINEMATIC RECOVERY (Better for Constant Strain/Twist)
+        # 4. KINEMATIC RECOVERY (Better for Constant Strain/Twist)
         # --------------------------------------------------------
         
         # --- AXIAL ---
@@ -258,12 +258,33 @@ class BarElementSolver:
        
        
        
-        # 4. STRESS RECOVERY AT POINTS (Navier's Formula) REVIEW-REFACTOR
+        # 5. STRESS RECOVERY AT POINTS (Navier's Formula) REVIEW-REFACTOR
         # --------------------------------------------------------
             # Sigma = Fx/A - (Mz * y)/I1 + (My * z)/I2
             # Tau   = Mx * r / J  (Simplified torsion)
+            # Mz positive compress +y fiber.
+            # My positive compress +z fiber.
         # --------------------------------------------------------
+        # Convention Conversion:
+        # f_local contains NODAL forces.
+        # Internal Section Forces at End A = - (Nodal Forces at End A)
+        # Internal Section Forces at End B = + (Nodal Forces at End B)
 
+        # We calculate stresses usually at End A (or we could interpolate).
+        # Here we use End A Internal Forces:
+        M_y_int = -f_local[4]  # Internal Bending Moment Plane 2 (about local y)
+        M_z_int = -f_local[5]  # Internal Bending Moment Plane 1 (about local z)
+        
+        # Note regarding Axial contribution:
+        # We use sigma_ax calculated kinematically above for consistency,
+        # but technically P/A = (-f_local[0]) / A.
+        
+        stress_results = {}
+        # If no points defined, use default point (0,0)
+        points_to_calc = self.prop.stress_points if self.prop.stress_points else [(0.0, 0.0)]
+
+
+        ''' OLD IMPLEMENTATION:
         stress_results = {}
         # If no points defined, use default point (0,0)
         points_to_calc = self.prop.stress_points if self.prop.stress_points else [(0.0, 0.0)]
@@ -285,23 +306,30 @@ class BarElementSolver:
         
         M_y = f_local[4] # Moment Y at Node 1 (reaction)
         M_z = f_local[5] # Moment Z at Node 1 (reaction)
+        '''
         
         for i, (y, z) in enumerate(points_to_calc):
             # Normal Stress = (Axial + Bending)
             # Normal Stress = Axial + Bending
-            # Navier Formula: Sigma = -Mz*y/I1 + My*z/I2
-
-            sigma_bend_z = -(M_z * y) / self.prop.I1 if self.prop.I1 else 0
-            sigma_bend_y = (M_y * z) / self.prop.I2 if self.prop.I2 else 0
             
-            sigma_tot = sigma_ax + sigma_bend_z + sigma_bend_y
+            #1. Pure Bending
+            # Navier Formula: Sigma = -Mz*y/I1 + My*z/I2
+            sigma_bend_z = -(M_z_int * y) / self.prop.I1 if self.prop.I1 else 0
+            sigma_bend_y = (M_y_int * z) / self.prop.I2 if self.prop.I2 else 0
+            
+            sigma_bending_total = sigma_bend_z + sigma_bend_y
+
+            #2. Combined Total -> What is normally used for Yield Check
+            sigma_tot = sigma_ax + sigma_bending_total
             
             # Shear Stress (Torsion)
             r = np.sqrt(y**2 + z**2)
             tau_tor = (torque_val * r) / self.prop.J if self.prop.J else 0
             
             stress_results[f"P{i}"] = {
-                'sigma_x': sigma_tot,
+                'sigma_total': sigma_tot,             # Axial + Bending
+                'sigma_bending': sigma_bending_total, # Pure bending (equivalen to to SA1 value in .f06)
+                'sigma_axial': sigma_ax,              # Pure Axil (equivalent to AXIAL STRESS 'SA' in .f06)
                 'tau_xy': tau_tor, # simplified
                 'y': y, 'z': z
             }
