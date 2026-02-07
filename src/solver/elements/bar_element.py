@@ -258,7 +258,7 @@ class BarElementSolver:
        
        
        
-        # 4. STRESS RECOVERY AT POINTS (Navier's Formula)
+        # 4. STRESS RECOVERY AT POINTS (Navier's Formula) REVIEW-REFACTOR
         # --------------------------------------------------------
             # Sigma = Fx/A - (Mz * y)/I1 + (My * z)/I2
             # Tau   = Mx * r / J  (Simplified torsion)
