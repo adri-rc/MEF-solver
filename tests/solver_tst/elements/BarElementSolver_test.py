@@ -232,7 +232,7 @@ class TestBarElementSolver:
     def test_stress_recovery_bending_curvature(self):
         """
         @test Bending Stress distribution (Sigma = -My/I).
-        @brief Verifies Tension/Compression symmetry in a bent beam.
+        @brief Verifies Tension/Compression symmetry and component breakdown (Axial vs Bending).
         """
         n1, n2 = MockNode(1, [0,0,0]), MockNode(2, [1,0,0])
         
@@ -243,20 +243,54 @@ class TestBarElementSolver:
         mat = MockMat(E=200e9, G=0)
         solver = BarElementSolver(n1, n2, prop, mat, [0,1,0])
         
-        # Case: Constant Curvature ("Smile" shape)
-        # Rotate Node 1 (+theta) and Node 2 (-theta) around Z
+        # Case: Constant Curvature ("Smile" shape / Sagging)
+        # To get a "Smile" (Positive Curvature), Ends must rotate UPwards relative to center.
+        # Node 1 (Left): Slope down (-theta)
+        # Node 2 (Right): Slope up (+theta)
         theta = 0.001
         u_global = np.zeros(12)
-        u_global[5] = theta    # Rz1
-        u_global[11] = -theta  # Rz2
+        u_global[5] = -theta  # Rz1 (Slope down \ )
+        u_global[11] = theta  # Rz2 (Slope up   / )
         
         mapper = MockDofMapper()
         res = solver.calculate_stresses(u_global, mapper)
+
+        # Retrieve result dictionaries for each point
+        r_neutral = res['stress_points']['P0'] # y=0.0
+        r_top     = res['stress_points']['P1'] # y=0.1
+        r_bot     = res['stress_points']['P2'] # y=-0.1
         
-        s_neutral = res['stress_points']['P0']['sigma_x']
-        s_top = res['stress_points']['P1']['sigma_x']
-        s_bot = res['stress_points']['P2']['sigma_x']
+        # --- 1. AXIAL COMPONENT VALIDATION ---
+        # Since only rotation is applied, Axial Stress must be effectively zero.
+        assert r_neutral['sigma_axial'] == pytest.approx(0.0, abs=1e-9)
+        assert r_top['sigma_axial']     == pytest.approx(0.0, abs=1e-9)
         
+        # --- 2. BENDING COMPONENT VALIDATION ---
+        # Neutral axis (y=0) must have zero bending stress.
+        assert r_neutral['sigma_bending'] == pytest.approx(0.0, abs=1e-5)
+        
+        # Top fiber (y > 0) -> Compression (Negative) given positive curvature ("Smile" shape).
+        assert r_top['sigma_bending'] < 0
+        
+        # Bottom fiber (y < 0) -> Tension (Positive).
+        assert r_bot['sigma_bending'] > 0
+        
+        # Symmetry check: Magnitude at Top and Bottom should be equal.
+        assert abs(r_top['sigma_bending']) == pytest.approx(abs(r_bot['sigma_bending']))
+
+        # --- 3. TOTAL STRESS VALIDATION (Superposition) ---
+        # Verify that Total Stress is exactly the sum of Bending + Axial.
+        # sigma_total = sigma_axial + sigma_bending
+        val_total_top = r_top['sigma_bending'] + r_top['sigma_axial']
+        val_total_bot = r_bot['sigma_bending'] + r_bot['sigma_axial']
+
+        assert r_top['sigma_total'] == pytest.approx(val_total_top)
+        assert r_bot['sigma_total'] == pytest.approx(val_total_bot)
+        '''
+        s_neutral = res['stress_points']['P0']['sigma_total']
+        s_top = res['stress_points']['P1']['sigma_total']
+        s_bot = res['stress_points']['P2']['sigma_total']
+
         # 1. Neutral axis stress should be 0 (Pure Bending)
         assert s_neutral == pytest.approx(0.0, abs=1e-5)
         
@@ -268,6 +302,7 @@ class TestBarElementSolver:
         
         # 4. Symmetry check
         assert abs(s_top) == pytest.approx(abs(s_bot))
+        '''
 
     # --- BLOCK 4: ERROR HANDLING ---
 

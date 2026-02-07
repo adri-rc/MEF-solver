@@ -387,6 +387,7 @@ VALIDATION_DATA = [
                 # Axial=2.0, Torque=-3.0, M_Plane1(Mz)=7.0, M_Plane2(My)=-19.0
                 # Solver 'forces_n1' are Nodal Reactions -> Opposite signs to Internal
                 "axial_force": 2.000000E+00,
+                "axial_stress": 2.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -7.000000E+00, 
                 "forces_n1.My": -1.900000E+01, #DEBO CAMBIAR EL SIGNO !?!?!?!?!?
@@ -400,14 +401,30 @@ VALIDATION_DATA = [
                 # SA2 = Stress at Point D, End A. Val =  1.90E-01
                 # En el solver, el orden viene dado por la lista en PBAR:
                 # P0 = C, P1 = D.
-                #"stress_points.P0.sigma_x": -7.000000E-02, # Point C
-                #"stress_points.P1.sigma_x":  1.900000E-01  # Point D
+                # --- P0 (Punto C: y=10.0, z=0.0) ---
+                # Nastran SA1 = -7.00E-02. (Pure bending?)
+                "stress_points.P0.sigma_bending": -7.000000E-02, # Point C
+                "stress_points.P0.sigma_axial":    2.000000E-02, # Point C
+                # Total = -0.07 + 0.02 = -0.05
+                "stress_points.P0.sigma_total":   -5.000000E-02, # Point C
+
+                # --- P1 (Punto D: y=0.0, z=10.0) ---
+                # Nastran SA2 = 1.90E-01. (Pure bending?)
+                "stress_points.P1.sigma_bending":  1.900000E-01, # Point D
+                "stress_points.P1.sigma_axial":    2.000000E-02, # Point D
+                # Total = 0.19 + 0.02 = 0.21
+                "stress_points.P1.sigma_total":    2.100000E-01,  # Point D
+                
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                "max_total_stress":  2.100000E-01, # Matches SA-MAX
+                "min_total_stress": -5.000000E-02  # Matches SA-MIN
             },
 
             # --- ELEMENT 102 ---
             102: {
                 # Internal Forces at End A (Node 2) from Nastran:                
                 "axial_force": 2.000000E+00,
+                "axial_stress": 4.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -5.000000E+00,
                 "forces_n1.My": -1.100000E+01,
@@ -416,10 +433,20 @@ VALIDATION_DATA = [
  ############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # PBAR 402 define puntos C(5,5) y D(-5,-5)
-                # SA1 (Point C, End A):  1.50E-01
-                # SA2 (Point D, End A): -1.50E-01
-                # "stress_points.P0.sigma_x":  1.500000E-01, # Point C
-                # "stress_points.P1.sigma_x": -1.500000E-01  # Point D
+                # SA1 (Point C, End A):  1.50E-01 (Pure bending?)
+                "stress_points.P0.sigma_bending":  1.500000E-01, # Point C
+                "stress_points.P0.sigma_axial":   4.000000E-02,  # Point C
+                # Total = 0.15 + 0.04 = 0.19
+                "stress_points.P0.sigma_total":   1.900000E-01,  # Point C
+                
+                # SA2 (Point D, End A): -1.50E-01 (Pure bending?)
+                "stress_points.P1.sigma_bending": -1.500000E-01, # Point D
+                "stress_points.P1.sigma_axial":    4.000000E-02, # Point D
+                # Total = -0.15 + 0.04 = -0.11
+                "stress_points.P1.sigma_total":   -1.100000E-01, # Point D
+
+                "max_total_stress":  1.900000E-01, # Matches SA-MAX
+                "min_total_stress": -1.100000E-01  # Matches SA-MIN
             }
         },
         "description": "Two CBARs in series (Y-axis). Validates Stress Recovery at specific points (C, D) defined in PBAR."
@@ -581,10 +608,249 @@ VALIDATION_DATA = [
             }
         },
         "description": "Hybrid assembly (CBAR legs + CROD post). Validates coupling of different element types and stiffness matrices."
+    }, 
+
+    # --- CASO 18: Tripode Hibrido con todos los Stress Points definidos posibles (C-F) ---
+    # Descripcion: Variante del caso 17 pero validando tensiones en 4 puntos (C,D,E,F).
+    #              Valida la recuperacion de tensiones en esquinas de secciones CBAR.
+    {
+        "case_name": "Ej18_Hybrid_Tripod_Stress_Recovery_Points",
+        "folder": "case_18",
+        "filename": "Ej18.dat",
+        "description": "Hybrid tripod structure with defined PBAR stress points. Validates detailed stress recovery at cross-section corners (C, D, E, F) and total stress envelopes.",
+        "expected_displacements": {
+            # Node 3
+            3: {
+                0:  0.0, # T1
+                1:  0.0, # T2
+                2:  0.0, # T3
+                3:  0.0, # R1
+                4:  0.0, # R2
+                5:  0.0  # R3
+            },
+            # Node 4 (Union Central) - Valores extraidos de ej18.f06 (PAGE 11)
+            4: {
+                0:  1.786003E-04, # T1
+                1: -9.267777E-05, # T2
+                2:  5.951593E-04, # T3
+                3:  3.652847E-05, # R1
+                4:  1.530955E-04, # R2
+                5:  1.264375E-04  # R3
+            },
+            # Node 5 (Top CROD)
+            5: {
+                1:  0.0,           # T1
+                2:  2.023731E-03,  # T3 (Elongacion axial dominante)
+                5:  1.264375E-04   # R3 
+            }
+        },
+        "expected_reactions": {
+            1: {
+                0: -2.768665E+02,
+                1:  3.374797E+02,
+                2: -1.393156E+03,
+                3: -2.676242E+03,
+                4: -2.106779E+03,
+                5: 4.265762E+01
+            }, 
+            3: {
+                0: 6.290351E+01,
+                1:  3.530363E+01,
+                2: -7.565560E+01,
+                3: 1.832815E+02,
+                4: -7.837672E-01, 
+                5: 1.058018E+02
+            }
+        },
+        "expected_element_forces": {
+            # --- ELEMENT 101 (CBAR Pata 1) ---
+            101: {
+                "axial_force":  1.008341E+03,
+                "axial_stress": 2.016681E+01, # AXIAL STRESS column
+                "torque":       2.982355E+02,
+                
+                # Validation Points (SA columns in f06 = Bending Only in this solution)
+                # P0 (Point C), P1 (Point D), P2 (Point E), P3 (Point F)
+                "stress_points.P0.sigma_bending":  1.195720E+02, # SA1
+                "stress_points.P1.sigma_bending": -9.727516E+00, # SA2
+                "stress_points.P2.sigma_bending": -1.195720E+02, # SA3
+                "stress_points.P3.sigma_bending":  9.727516E+00, # SA4
+                
+                # Check Total (Axial + Bending) for Point C
+                # Total = 20.17 + 119.57 = 139.74
+                "stress_points.P0.sigma_total":    1.397388E+02, # Total Point C (=SA-MAX)
+
+                # Check Total (Axial + Bending) for Point D
+                # Total = 20.17 + (-9.727) = 10.439
+                "stress_points.P1.sigma_total":    1.0439294E+01, # Total Point D
+
+                # Check Total (Axial + Bending) for Point E
+                # Total = 20.17 + (-119.572) = -99.402
+                "stress_points.P2.sigma_total":    -9.940515E+01, # Total Point E (=SA-MIN)
+
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                "max_total_stress":  1.397388E+02, # Matches SA-MAX column
+                "min_total_stress": -9.940515E+01  # Matches SA-MIN column
+            },
+
+            102: {
+                "axial_force": 4.694745E+02,
+                "axial_stress": 1.564915E+01, # AXIAL STRESS column
+                "torque":       3.775480E+01,
+                
+                # Validation Points (SA columns in f06 = Bending Only in this solution)
+                # P0 (Point C), P1 (Point D), P2 (Point E), P3 (Point F)
+                "stress_points.P0.sigma_bending":  8.467422E+01, # SA1
+                "stress_points.P1.sigma_bending": -8.467422E+01, # SA2
+                "stress_points.P2.sigma_bending": -2.327506E+01, # SA3
+                "stress_points.P3.sigma_bending":  2.327506E+01, # SA4
+                
+                # Check Total (Axial + Bending) for Point C
+                # Total = 15.64 + 84.67 = 139.74
+                "stress_points.P0.sigma_total":    1.003234E+02, # Total Point C (=SA-MAX)
+
+                # Check Total (Axial + Bending) for Point E
+                # Total = 15.64 + (-23.27506) = 139.74
+                "stress_points.P2.sigma_total":    -7.62591E+00, # Total Point E
+
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                "max_total_stress":  1.003234E+02, # Matches SA-MAX column
+                "min_total_stress": -6.902507E+01  # Matches SA-MIN column
+            },
+            
+            # --- ELEMENT 103 (CBAR Pata 3) ---
+            103: {
+                "axial_force":  8.132725E+01,
+                "axial_stress": 8.132725E+00,
+                "torque":       -7.479646E+00,
+
+                # SA1 and SA2
+                "stress_points.P0.sigma_bending": -2.214997E+01, # SA1
+                "stress_points.P1.sigma_bending":  4.019926E+01, # SA2
+                "stress_points.P2.sigma_bending":  0.0, # SA3
+                "stress_points.P3.sigma_bending":  0.0, # SA4
+                # Check Total (Axial + Bending) for Point C
+                # Total = 8.13 + (-22.15) = -14.02
+                "stress_points.P0.sigma_total":    -1.401725E+01, # Total Point C (=SA-MIN)
+
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                "max_total_stress":  4.833198E+01, # Matches SA-MAX
+                "min_total_stress": -1.401725E+01  # Matches SA-MIN
+            },
+            
+            # --- ELEMENT 104 (CROD) ---
+            104: {
+                "axial_force":  2.000000E+03,
+                "torque":       7.105427E-15,
+                "axial_stress": 1.000000E+02
+            }
+        }
+    },
+
+    # --- CASO 19: Helice Irregular 3D (Complex 3D Helix) ---
+    # Descripcion: 11 Elementos, 3 Tipos de PBAR, 2 Materiales.
+    #              Geometria espiral sin alineacion con ejes globales.
+    #              Cargas combinadas en punta (Fuerza + Momento).
+    #              Valida: Matrices de rotacion complejas y stres recovery points (SA-MAX/MIN).
+    {
+        "case_name": "Ej19_Complex_Helix_Stress_Recovery_Points",
+        "folder": "case_19",
+        "filename": "Ej19.dat",
+        "description": "Complex 3D helix with mixed materials and variable cross-sections. Validates general 3D coordinate transformations and stress recovery under asymmetric loading.",
+        "expected_displacements": {
+
+            1:{0:0.0, 1:0.0, 4:0.0, 5:0.0},
+
+            7: {0: -5.443371E-05,
+                1: -1.857526E-04,
+                2: -2.951618E-04,
+                3: -5.901665E-07,
+                4: 2.317618E-04,
+                5: -1.219883E-04
+            },
+            # Node 12 (Tip)
+            12: {
+                0:  1.347035E-02, # T1
+                1:  6.321326E-03, # T2
+                2: -1.308450E-02, # T3
+                3: -3.590305E-04, # R1
+                4:  2.037043E-04, # R2
+                5: -3.121635E-04  # R3
+            }
+        },
+        "expected_reactions": {
+            # Node 1 (Base Empotrada)
+            1: {
+                0: -1.000000E+02,
+                1:  2.000000E+02,
+                2:  5.000000E+02,
+                3: -4.500000E+03,
+                4: -5.500000E+03,
+                5:  1.500000E+03
+            }
+        },
+        "expected_element_forces": {
+            # --- ELEMENT 101 (Base - Heavy Steel) ---
+            101: {
+                "axial_force": -1.341641E+02,
+                "axial_stress": -5.366563E-02,
+                "torque":        3.354102E+03,
+                
+                # Stress Points (PBAR 401: Symmetric Section)
+                # SA Columns = Pure Bending in this case
+                "stress_points.P0.sigma_bending":  1.031682E-01, # SA1
+                "stress_points.P1.sigma_bending": -4.256780E-01, # SA2
+                "stress_points.P2.sigma_bending": -1.031682E-01, # SA3
+                "stress_points.P3.sigma_bending":  4.256780E-01, # SA4
+                
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                # Max = Axial(-0.053) + SA4(+0.425) = 0.372
+                "max_total_stress":  3.720123E-01, # Matches SA-MAX
+                "min_total_stress": -4.793436E-01  # Matches SA-MIN
+            },
+            
+            # --- ELEMENT 106 (Mid - Light Steel - Rotated Y) ---
+            # PBAR 403: Asymmetric Section
+            106: {
+                "axial_stress": -8.944272E-02,
+                "torque":       -8.720665E+03,
+
+                # SA Columns (Bending Only)
+                "stress_points.P0.sigma_bending": -3.881966E-01, # SA1
+                "stress_points.P1.sigma_bending":  6.683282E-01, # SA2
+                "stress_points.P2.sigma_bending":  1.381966E-01, # SA3   
+                "stress_points.P3.sigma_bending": -4.447214E-01, # SA4
+                  
+                
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                # Max = Axial(-0.089) + SA2(+0.668) = 0.579
+                "max_total_stress":  5.788854E-01, # Matches SA-MAX
+                # Min = Axial(-0.089) + SA4(-0.444) = -0.534
+                "min_total_stress": -5.341641E-01  # Matches SA-MIN
+            },
+            
+            # --- ELEMENT 111 (Tip - Mixed Props) ---
+            # High bending stresses close to load application
+            111: {
+                "axial_stress": -5.059644E-01,
+                "torque":       -9.486833E+02,
+                
+                "stress_points.P0.sigma_bending":  7.869626E+00, # SA1
+                "stress_points.P1.sigma_bending": -3.512897E+00, # SA2
+                "stress_points.P2.sigma_bending": -4.369626E+00, # SA3
+                "stress_points.P3.sigma_bending":  5.252149E+00, # SA4
+                
+                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
+                # Max = Axial(-0.505) + SA1(+7.869) = 7.363
+                "max_total_stress":  7.363662E+00, # Matches SA-MAX
+                # Min = Axial(-0.505) + SA3(-4.369) = -4.875
+                "min_total_stress": -4.875591E+00  # Matches SA-MIN
+            }
+        }
     }
 
-
 ]
+
 class TestNastranEndToEnd:
     """
     @class TestNastranEndToEnd
