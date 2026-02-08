@@ -176,5 +176,63 @@ class TestCoordinateTransformation:
         np.testing.assert_array_equal(block_off_2, expected_zeros, err_msg="Transformation T matrix is not 0 block diagonal.")
         np.testing.assert_array_equal(block_off_3, expected_zeros, err_msg="Transformation T matrix is not 0 block diagonal.")
         np.testing.assert_array_equal(block_off_4, expected_zeros, err_msg="Transformation T matrix is not 0 block diagonal.")
+        np.testing.assert_array_equal(block_off_4, expected_zeros, err_msg="Transformation T matrix is not 0 block diagonal.")
         np.testing.assert_array_equal(block_off_5, expected_zeros, err_msg="Transformation T matrix is not 0 block diagonal.")
+
+    # --- BLOCK 2: TRIANGULAR ELEMENT AXES ---
+
+    def test_compute_local_axes_triangle_standard(self):
+        """
+        @test Local Axes for Triangle (Standard 3-4-5).
+        @brief Validates X along N1-N2, Z normal to plane.
+        """
+        n1 = np.array([0.0, 0.0, 0.0])
+        n2 = np.array([3.0, 0.0, 0.0])
+        n3 = np.array([0.0, 4.0, 0.0])
+        
+        vx, vy, vz = CoordinateTransformation.compute_local_axes_triangle(n1, n2, n3)
+        
+        # X: Along N1->N2 = (1,0,0)
+        np.testing.assert_allclose(vx, [1,0,0], atol=1e-9)
+        
+        # Z: Normal to plane XY = (0,0,1)
+        np.testing.assert_allclose(vz, [0,0,1], atol=1e-9)
+        
+        # Y: Cross(Z, X) = (0,1,0)
+        np.testing.assert_allclose(vy, [0,1,0], atol=1e-9)
+
+    def test_compute_local_axes_triangle_orthogonality_random(self):
+        """
+        @test Orthogonality for Random Triangle.
+        """
+        np.random.seed(99)
+        for _ in range(20):
+            n1 = np.random.rand(3)
+            n2 = np.random.rand(3)
+            n3 = np.random.rand(3)
+            
+            # Avoid collinearity crudely
+            if np.linalg.norm(np.cross(n2-n1, n3-n1)) < 1e-4: continue
+            
+            vx, vy, vz = CoordinateTransformation.compute_local_axes_triangle(n1, n2, n3)
+            
+            # Checks norms
+            assert np.linalg.norm(vx) == pytest.approx(1.0)
+            assert np.linalg.norm(vy) == pytest.approx(1.0)
+            assert np.linalg.norm(vz) == pytest.approx(1.0)
+            
+            # Check orthogonality
+            assert np.dot(vx, vy) == pytest.approx(0.0, abs=1e-9)
+            assert np.dot(vx, vz) == pytest.approx(0.0, abs=1e-9)
+            assert np.dot(vy, vz) == pytest.approx(0.0, abs=1e-9)
+
+    def test_compute_local_axes_triangle_collinear_error(self):
+        """@test Error on collinear nodes."""
+        n1 = np.array([0,0,0])
+        n2 = np.array([1,0,0])
+        n3 = np.array([2,0,0]) # Collinear along X
+        
+        with pytest.raises(ValueError, match="collinear"):
+            CoordinateTransformation.compute_local_axes_triangle(n1, n2, n3)
+
 

@@ -23,6 +23,39 @@ class CoordinateTransformation:
     """
 
     @staticmethod
+    def compute_local_axes_triangle(node1_coords: np.ndarray, node2_coords: np.ndarray, node3_coords: np.ndarray):
+        """
+        @brief Computes local axes for a triangular element (CTRIA3).
+        @details
+        Origin at Node 1.
+        X-axis: Along N1->N2.
+        Z-axis: Normal to the plane N1-N2-N3.
+        Y-axis: Complete RHS (in the plane).
+        """
+        # 1. Vector N1->N2 (Local X)
+        v12 = node2_coords - node1_coords
+        L = np.linalg.norm(v12)
+        if L < 1e-12:
+             raise ValueError("Zero length edge N1-N2")
+        x_axis = v12 / L
+
+        # 2. Vector N1->N3 (For Plane definition)
+        v13 = node3_coords - node1_coords
+        
+        # 3. Normal to Plane (Local Z)
+        z_axis = np.cross(x_axis, v13)
+        norm_z = np.linalg.norm(z_axis)
+        if norm_z < 1e-12:
+            raise ValueError("Nodes are collinear, cannot define a triangle plane.")
+        z_axis = z_axis / norm_z
+
+        # 4. Local Y (In Plane, orthogonal to X)
+        y_axis = np.cross(z_axis, x_axis) 
+        
+        return x_axis, y_axis, z_axis
+
+    
+    @staticmethod
     def compute_local_axes(node1_coords: np.ndarray, node2_coords: np.ndarray, orientation_vector: np.ndarray = None):
         """
         @brief Generate the 3 unit vectors (vx, vy, vz) of the local system.

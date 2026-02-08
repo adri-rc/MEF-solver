@@ -1,0 +1,149 @@
+
+"""
+@file CTRIA3ElementSolver_test.py
+@brief Unit tests for the CTRIA3 Element Solver (Membrane stiffness).
+@details
+Validates the physics of the Triangular Shell element:
+1. Stiffness Matrix Assembly (Membrane - CST).
+2. Geometric Transformations (Local axes computation).
+3. Stress Recovery (Von Mises, Principal Stresses).
+4. Error Handling (Zero area).
+"""
+
+import pytest
+import numpy as np
+from src.solver.elements.ctria3_element import CTRIA3ElementSolver
+
+# --- MOCKS (Data Objects Simulation) ---
+class MockNode:
+    def __init__(self, nid, coords):
+        self.nid = nid
+        self._coords = np.array(coords, dtype=float)
+    def get_coords(self):
+        return self._coords
+
+class MockMat:
+    def __init__(self, E, nu):
+        self.E = E
+        self.nu = nu
+
+class MockProp:
+    def __init__(self, t, mat_id=1):
+        self.pid = 1
+        self.t = t
+        self.mat_id = mat_id
+
+class MockDofMapper:
+    """Simulates the global-to-local index mapping."""
+    def get_dof_indices(self, nid):
+        # Maps Node ID to a block of 6 indices
+        # Node 1 -> [0..5], Node 2 -> [6..11] ...
+        start = (nid - 1) * 6
+        return list(range(start, start + 6))
+
+# --- TESTS ---
+
+class TestCTRIA3ElementSolver:
+    """
+    @class TestCTRIA3ElementSolver
+    @brief Comprehensive test suite for CTRIA3 element.
+    """
+
+    def test_initialization_and_geometry(self):
+        """
+        @test Validate Geometry Calculations.
+        @brief Checks Area and Local Axes for a 3-4-5 Triangle.
+        """
+        # N1 at origin, N2 at (3,0,0), N3 at (0,4,0)
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [3,0,0])
+        n3 = MockNode(3, [0,4,0])
+        
+        prop = MockProp(t=0.001)
+        mat = MockMat(E=70e9, nu=0.33)
+        
+        elem = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        
+        # Area = 0.5 * 3 * 4 = 6.0
+        assert elem.A == pytest.approx(6.0)
+        
+        # Local Axes
+        np.testing.assert_allclose(elem.local_x_axis, [1,0,0], atol=1e-7)
+        np.testing.assert_allclose(elem.local_y_axis, [0,1,0], atol=1e-7)
+        np.testing.assert_allclose(elem.local_z_axis, [0,0,1], atol=1e-7)
+
+    def test_stiffness_matrix_shape(self):
+        """
+        @test Validate Stiffness Matrix Shape & Symmetry.
+        """
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [1,0,0])
+        n3 = MockNode(3, [0,1,0])
+        prop = MockProp(t=1.0)
+        mat = MockMat(E=1e5, nu=0.3)
+        
+        elem = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        K = elem.get_stiffness_matrix()
+        
+        assert K.shape == (18, 18)
+        
+        # Symmetry Check
+        diff = K - K.T
+        assert np.all(np.abs(diff) < 1e-8)
+
+    def test_constant_strain_patch_x_tension(self):
+        """
+        @test Patch Test (Constant Strain).
+        @brief Apply uniform uniaxial tension in X and verify Stress = E*strain.
+        """
+        # Right Isosceles Triangle
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [1,0,0])
+        n3 = MockNode(3, [0,1,0])
+        
+        prop = MockProp(t=1.0)
+        mat = MockMat(E=1000.0, nu=0.3)
+        
+        elem = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        
+        # Apply displacements for constant strain eps_x
+        # u = x * eps_x
+        # v = -y * nu * eps_x
+        eps_x = 0.001
+        eps_y = -mat.nu * eps_x
+        
+        # Node 1 (0,0): u=0, v=0
+        # Node 2 (1,0): u=eps_x, v=0
+        # Node 3 (0,1): u=0, v=eps_y
+        
+        u_global = np.zeros(18)
+        
+        # N2 DOFs (Indices 6-11)
+        u_global[6] = eps_x # u2
+        
+        # N3 DOFs (Indices 12-17)
+        u_global[13] = eps_y # v3
+        
+        mapper = MockDofMapper()
+        res = elem.calculate_stresses(u_global, mapper)
+        
+        # Expected Stress Sigma_x = E * eps_x (in Plane Stress with compatible Poisson contraction)
+        # Sigma_y should be 0.
+        
+        expected_sig_x = mat.E * eps_x # 1000 * 0.001 = 1.0
+        
+        assert res['sigma_x'] == pytest.approx(expected_sig_x, rel=1e-5)
+        assert res['sigma_y'] == pytest.approx(0.0, abs=1e-5)
+        assert res['tau_xy'] == pytest.approx(0.0, abs=1e-5)
+        assert res['von_mises'] == pytest.approx(expected_sig_x, rel=1e-5)
+
+    def test_zero_area_error(self):
+        """@test Ensure ValueError on collinear nodes."""
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [1,0,0])
+        n3 = MockNode(3, [2,0,0]) # Collinear
+        prop = MockProp(t=1.0)
+        mat = MockMat(E=1e5, nu=0.3)
+        
+        with pytest.raises(ValueError):
+            CTRIA3ElementSolver(n1, n2, n3, prop, mat)

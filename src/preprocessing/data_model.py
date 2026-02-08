@@ -191,6 +191,23 @@ class BarProperty(Property):
         if (self.I1 * self.I2) < (self.I12 ** 2):
             raise ValueError(f"Inconsistent inertial properties in BarProperty with id: {self.pid}")
 # endregion BarProperty(Property)
+
+# region ShellProperty(Property)
+@dataclass
+class ShellProperty(Property):
+    """
+    @class ShellProperty
+    @brief Properties for Shell elements (PSHELL).
+    @details Defines thickness and material IDs for membrane and bending.
+    """
+    mat_id: int          #: Material ID for Membrane
+    t: float             #: Thickness
+    mat_id_bending: int = -1 #: Material ID for Bending (Default: same as membrane if -1)
+    
+    def __post_init__(self):
+        if self.mat_id_bending == -1:
+            self.mat_id_bending = self.mat_id
+# endregion ShellProperty(Property)
 # endregion Property Classes
 
 
@@ -246,6 +263,13 @@ class QUADElement(Element):
     """
     pass
 
+@dataclass
+class CTRIA3Element(Element):
+    """
+    @brief 3-node Triangular Shell Element (CTRIA3).
+    @details Supports membrane and bending stiffness.
+    """
+    theta: float = 0.0 # Material coordinate system orientation
 # endregion Element Classes
 
 
