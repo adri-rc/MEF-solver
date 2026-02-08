@@ -213,6 +213,15 @@ class CTRIA3ElementSolver:
         K_local[5, 5] += k_diag_small
         K_local[11, 11] += k_diag_small
         K_local[17, 17] += k_diag_small
+
+        # Bending Stabilization (Tz, Rx, Ry) to avoid singularity in 3D
+        # This is a temporary measure until Bending stiffness is implemented.
+        for i_node in range(3):
+            base = i_node * 6
+            K_local[base + 2, base + 2] += k_diag_small  # Tz
+            K_local[base + 3, base + 3] += k_diag_small  # Rx
+            K_local[base + 4, base + 4] += k_diag_small  # Ry
+
         
         return K_local
 
@@ -259,9 +268,47 @@ class CTRIA3ElementSolver:
         # sig_vm = sqrt(sig_x^2 - sig_x*sig_y + sig_y^2 + 3*tau^2)
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
         
+        # 5. Principal Stresses (Major/Minor)
+        # avg = (sig_x + sig_y) / 2
+        # R = sqrt( ((sig_x - sig_y)/2)^2 + tau_xy^2 )
+        # s1 = avg + R
+        # s2 = avg - R
+        sig_avg = (sig_x + sig_y) / 2.0
+        sig_diff = (sig_x - sig_y) / 2.0
+        R = np.sqrt(sig_diff**2 + tau_xy**2)
+        
+        s_major = sig_avg + R
+        s_minor = sig_avg - R
+
+        # 6. Element Forces (Membrane Only for CST)
+        # Membrane Force = Stress * Thickness
+        t = self.prop.t
+        f_x = sig_x * t
+        f_y = sig_y * t
+        f_xy = tau_xy * t
+        
+        # Bending Moments and Shear Forces (Not yet implemented for CST)
+        m_x = 0.0
+        m_y = 0.0
+        m_xy = 0.0
+        q_x = 0.0
+        q_y = 0.0
+        
         return {
             'sigma_x': sig_x,
             'sigma_y': sig_y,
             'tau_xy': tau_xy,
-            'von_mises': vm_stress
+            'von_mises': vm_stress,
+            'major_principal': s_major,
+            'minor_principal': s_minor,
+            
+            # Forces
+            'membrane_force_x': f_x,
+            'membrane_force_y': f_y,
+            'membrane_force_xy': f_xy,
+            'bending_moment_x': m_x,
+            'bending_moment_y': m_y,
+            'bending_moment_xy': m_xy,
+            'shear_force_x': q_x,
+            'shear_force_y': q_y
         }

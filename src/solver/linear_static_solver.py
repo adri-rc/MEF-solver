@@ -26,12 +26,15 @@ from .utilities import DofMapper
 # --- ELEMENT SOLVERS ---
 from .elements.rod_element_v2 import RodElementSolverV2
 from .elements.bar_element import BarElementSolver
+from .elements.ctria3_element import CTRIA3ElementSolver
+
 
 # --- DATA MODEL ---
 from src.preprocessing.data_model import (
     FEMModel, 
     RodElement,
-    BarElement,       
+    BarElement,
+    CTRIA3Element,
     SinglePointLoad,  
     SinglePointMoment,
     SPCConstraint
@@ -112,6 +115,10 @@ class LinearStaticSolver:
             
             elif isinstance(element, BarElement):
                 k_elem_global, node_ids = self._solve_bar_element(element)
+
+            elif isinstance(element, CTRIA3Element):
+                k_elem_global, node_ids = self._solve_ctria3_element(element)
+
             
             # Placeholder for future elements (Beam, Plate, Solid)
             # FUTURE: elif isinstance(element, BeamElement): ...
@@ -162,6 +169,21 @@ class LinearStaticSolver:
 
         solver = BarElementSolver(n1, n2, prop, mat, orientation=orientation)
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid]
+
+    def _solve_ctria3_element(self, element: CTRIA3Element) -> tuple:
+        """
+        @brief Computes the 18x18 stiffness matrix for a CTRIA3 element in global coordinates.
+        """
+        n1 = self.model.get_node(element.nodes[0])
+        n2 = self.model.get_node(element.nodes[1])
+        n3 = self.model.get_node(element.nodes[2])
+        prop = self.model.properties[element.prop_id]
+        mat = self.model.materials[prop.mat_id]
+        
+        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        
+        return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
+
     
     # --- CORE ASSEMBLY & SOLVE LOGIC ---
 
@@ -381,7 +403,8 @@ class LinearStaticSolver:
             # 0. FAIL-FAST CHECK
             # ---------------------------------------------------------
             # If the element is not supported -> abort
-            if not isinstance(element, (RodElement, BarElement)):
+            if not isinstance(element, (RodElement, BarElement, CTRIA3Element)):
+
                 elem_type = type(element).__name__
                 raise NotImplementedError(
                     f"[Error] Element Type '{elem_type}' (EID: {eid}) is not supported for stress recovery. "
@@ -424,6 +447,24 @@ class LinearStaticSolver:
                 stress_data['type'] = 'CBAR'  # Etiqueta identificativa
 
                 results["stresses"][eid] = stress_data
+
+            # ---------------------------------------------------------
+            # 3. CASO CTRIA3 (Shell Element)
+            # ---------------------------------------------------------
+            elif isinstance(element, CTRIA3Element):
+                n1 = self.model.get_node(element.nodes[0])
+                n2 = self.model.get_node(element.nodes[1])
+                n3 = self.model.get_node(element.nodes[2])
+                prop = self.model.properties[element.prop_id]
+                mat = self.model.materials[prop.mat_id]
+                
+                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+                
+                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data['type'] = 'CTRIA3'
+
+                results["stresses"][eid] = stress_data
+
         
         return results 
 

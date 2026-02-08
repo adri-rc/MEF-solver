@@ -10,7 +10,10 @@ try:
     from pyNastran.bdf.cards.properties.bars import PBAR
     from pyNastran.bdf.cards.elements.rods import CROD
     from pyNastran.bdf.cards.elements.bars import CBAR
+    from pyNastran.bdf.cards.properties.shell import PSHELL
+    from pyNastran.bdf.cards.elements.shell import CTRIA3
 except ImportError:
+
     print("[ERROR] 'pyNastran' library is not installed.")
     print("        Please install it using: pip install pyNastran")
     sys.exit(1)
@@ -25,8 +28,11 @@ from .data_model import (
     BarElement,
     SinglePointLoad, 
     SinglePointMoment, 
-    SPCConstraint
+    SPCConstraint,
+    ShellProperty,
+    CTRIA3Element
 )
+
 
 """
 @file nastran_reader_v2.py
@@ -125,6 +131,21 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
                 stress_points=extracted_points
             )
 
+        # --- PSHELL Mapping ---
+        elif isinstance(prop, PSHELL):
+            mid2_val = prop.Mid2()
+            if mid2_val == 0:
+                mid2_val = -1
+                
+            model.properties[pid] = ShellProperty(
+                pid=pid,
+                mat_id=prop.Mid1(),
+                t=prop.t,
+                mat_id_bending=mid2_val
+            )
+
+
+
 def _map_nodes(bdf_model: BDF, model: FEMModel):
     """
     @brief Translates pyNastran nodes to Node project class.
@@ -208,6 +229,16 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 wa=wa,
                 wb=wb
             )
+
+        # --- CTRIA3 ---
+        elif isinstance(elem, CTRIA3):
+            model.elements[eid] = CTRIA3Element(
+                eid=eid,
+                prop_id=elem.Pid(),
+                nodes=elem.node_ids,
+                theta=elem.theta_mcid
+            )
+
         # --- CATCH-ALL FOR UNSUPPORTED ELEMENTS ---
         else:
             # store the type of element (e.g., 'CTRIA3', 'CQUAD4', 'CTETRA')

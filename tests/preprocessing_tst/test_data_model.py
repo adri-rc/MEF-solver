@@ -10,7 +10,10 @@ from src.preprocessing.data_model import (
     BarElement,
     SPCConstraint,     # Constraint
     SinglePointLoad,   # LoadCase
+    ShellProperty,
+    CTRIA3Element
     )
+
 
 """
 @file test_data_model.py
@@ -413,6 +416,33 @@ class TestBarElement:
         assert elem.pb == 0
         assert elem.wa[1] == 0.05
         assert elem.orientation_vector == [0.0, 1.0, 0.0]
+
+
+class TestShellProperty:
+    """
+    @class TestShellProperty
+    @brief Test suite for ShellProperty (PSHELL).
+    """
+    def test_initialization(self):
+        prop = ShellProperty(pid=1, mat_id=10, t=0.005, mat_id_bending=10)
+        assert prop.pid == 1
+        assert prop.t == 0.005
+        assert prop.mat_id == 10
+        assert prop.mat_id_bending == 10
+
+
+class TestCTRIA3Element:
+    """
+    @class TestCTRIA3Element
+    @brief Test suite for CTRIA3Element.
+    """
+    def test_initialization(self):
+        elem = CTRIA3Element(eid=100, prop_id=1, nodes=[1, 2, 3], theta=30.0)
+        assert elem.eid == 100
+        assert elem.nodes == [1, 2, 3]
+        assert elem.prop_id == 1
+        assert elem.theta == 30.0
+
 
 
 
