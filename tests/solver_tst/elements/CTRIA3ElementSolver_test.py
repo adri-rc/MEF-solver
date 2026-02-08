@@ -147,3 +147,63 @@ class TestCTRIA3ElementSolver:
         
         with pytest.raises(ValueError):
             CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+
+    def test_bending_stiffness_generated(self):
+        """
+        @test Validate Bending Stiffness contribution (DKT).
+        @brief Checks that stiffness matrix has non-zero terms for bending DOFs (Tz, Rx, Ry).
+        """
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [1,0,0])
+        n3 = MockNode(3, [0,1,0])
+        
+        # Thicker plate to make bending significant
+        prop = MockProp(t=0.1) 
+        mat = MockMat(E=1e7, nu=0.3)
+        
+        elem = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        K = elem.get_stiffness_matrix()
+        
+        # Membrane DOFs: 0,1, 6,7, 12,13 (Tx, Ty)
+        # Bending DOFs: 2,3,4, 8,9,10, 14,15,16 (Tz, Rx, Ry)
+        
+        # Check that we have non-zero stiffness in Bending DOFs
+        # e.g., K[2,2] (Tz1-Tz1)
+        assert abs(K[2,2]) > 1.0, "Bending stiffness K_zz should be non-zero (and formulated)"
+        
+        # Check D-matrix for Bending
+        D_b = elem._get_D_bending()
+        # D_bending = E*t^3 / 12(1-nu^2) * ...
+        # D_membrane = E*t / (1-nu^2) * ...
+        # Ratio roughly t^2 / 12
+        D_m = elem._get_D_membrane()
+        
+        ratio_theoretical = (prop.t**3) / 12.0
+        # D_b[0,0] vs D_m[0,0]
+        assert D_b[0,0] == pytest.approx(D_m[0,0] * ratio_theoretical, rel=1e-5)
+
+    def test_bending_rigid_body_z(self):
+        """
+        @test Rigid Body Translation in Z.
+        @brief Ensure zero stress for constant w translation.
+        """
+        n1 = MockNode(1, [0,0,0])
+        n2 = MockNode(2, [1,0,0])
+        n3 = MockNode(3, [0,1,0])
+        prop = MockProp(t=0.1)
+        mat = MockMat(E=1e7, nu=0.3)
+        elem = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+        
+        # Apply uniform w=0.1 at all nodes, zero rotations
+        u_global = np.zeros(18)
+        u_global[2] = 0.1 # w1
+        u_global[8] = 0.1 # w2
+        u_global[14] = 0.1 # w3
+        
+        mapper = MockDofMapper()
+        res = elem.calculate_stresses(u_global, mapper)
+        
+        # Should have zero bending moments and stresses
+        assert res['bending_moment_x'] == pytest.approx(0.0, abs=1e-5)
+        assert res['stress_fiber_top_x'] == pytest.approx(0.0, abs=1e-5)
+
