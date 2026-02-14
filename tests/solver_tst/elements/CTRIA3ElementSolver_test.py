@@ -41,6 +41,27 @@ class MockDofMapper:
         start = (nid - 1) * 6
         return list(range(start, start + 6))
 
+
+# --- FIXTURES ---
+@pytest.fixture
+def standard_ctria3():
+    """
+    @brief Sets up a standard right-isosceles triangle element.
+    @details
+    Material: Aluminum-like (E=70e9, nu=0.33).
+    Geometry: Legs of length 2.0 m.
+    Thickness: 0.1 m.
+    """
+    node1 = MockNode(1, [0.0, 0.0, 0.0])
+    node2 = MockNode(2, [2.0, 0.0, 0.0]) 
+    node3 = MockNode(3, [0.0, 2.0, 0.0]) 
+    
+    mat = MockMat(E=70e9, nu=0.33)
+    prop = MockProp(t=0.1)
+    
+    solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
+    return solver
+
 # --- TESTS ---
 
 class TestCTRIA3ElementSolver:
@@ -91,6 +112,53 @@ class TestCTRIA3ElementSolver:
         diff = K - K.T
         assert np.all(np.abs(diff) < 1e-8)
 
+    def test_stiffness_symmetry(self):
+        """
+        @brief Checks if the Stiffness Matrix is symmetric.
+        @details K_ij must equal K_ji. Asymmetry implies a violation of energy conservation.
+        """
+        node1 = MockNode(1, [0.0, 0.0, 0.0])
+        node2 = MockNode(2, [2.0, 0.0, 0.0]) 
+        node3 = MockNode(3, [0.0, 1.0, 3.0]) 
+        
+        mat = MockMat(E=70e9, nu=0.33)
+        prop = MockProp(t=0.1)
+    
+        solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
+        
+        K = solver.get_stiffness_matrix()
+        # 1. Calculamos la asimetría absoluta
+        diff = K - K.T
+        # 2. Obtenemos el valor máximo de la matriz para referencia (Escala)
+        max_val = np.max(np.abs(K))
+        max_diff = np.max(np.abs(diff))
+        # 3. Definimos una tolerancia relativa (ej. 1e-10 veces el valor más grande)
+        # Si max_val es 1e10, la tolerancia será 1.0 (absoluta).
+        tolerance = max_val * 1e-12 
+    
+        assert max_diff < tolerance, \
+            f"Stiffness matrix is not symmetric. Max asymmetry: {max_diff} (Tolerance: {tolerance})"
+
+    
+    def test_area_calculation(self):
+        """
+        @brief Validates the internal area calculation.
+        """
+        # Triangle N1(0,0,0), N2(2,0,0), N3(0,1,3) -> Base=2, Height=2 -> Area = 2
+        node1 = MockNode(1, [0.0, 0.0, 0.0])
+        node2 = MockNode(2, [2.0, 0.0, 0.0]) 
+        node3 = MockNode(3, [0.0, 1.0, 3.0]) 
+        
+        mat = MockMat(E=70e9, nu=0.33)
+        prop = MockProp(t=0.1)
+    
+        solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
+        
+        expected_area = np.sqrt(10) # aprox 3.16227766
+        
+        assert solver.A == pytest.approx(expected_area, abs=1e-6), \
+            f"El área calculada es incorrecta. Esperada: {expected_area}, Obtenida: {solver.A}"
+        
     def test_constant_strain_patch_x_tension(self):
         """
         @test Patch Test (Constant Strain).
@@ -148,6 +216,34 @@ class TestCTRIA3ElementSolver:
         with pytest.raises(ValueError):
             CTRIA3ElementSolver(n1, n2, n3, prop, mat)
 
+    def test_membrane_bending_decoupling(self):
+        """
+        @brief Checks that Membrane and Bending actions are decoupled in Local System.
+        @details
+        For an isotropic flat plate, in-plane forces (Tx, Ty) should not cause
+        out-of-plane deformations (Tz, Rx, Ry).
+        """
+        node1 = MockNode(1, [0.0, 0.0, 0.0])
+        node2 = MockNode(2, [2.0, 0.0, 0.0]) 
+        node3 = MockNode(3, [0.0, 1.0, 3.0]) 
+        
+        mat = MockMat(E=70e9, nu=0.33)
+        prop = MockProp(t=0.1)
+    
+        solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
+        
+        K_local = solver._build_local_stiffness()
+        
+        # Local DOF mapping:
+        # Membrane: 0(x), 1(y)
+        # Bending:  2(z), 3(rx), 4(ry)
+        
+        # Check coupling between Node 1 Tx (0) and Node 1 Tz (2)
+        k_cross = K_local[0, 2]
+        
+        assert k_cross == pytest.approx(0.0, abs=1e-9), \
+            "Coupling detected between Membrane (x) and Bending (z). Check B-matrices."
+      
     def test_bending_stiffness_generated(self):
         """
         @test Validate Bending Stiffness contribution (DKT).
@@ -206,4 +302,31 @@ class TestCTRIA3ElementSolver:
         # Should have zero bending moments and stresses
         assert res['bending_moment_x'] == pytest.approx(0.0, abs=1e-5)
         assert res['stress_fiber_top_x'] == pytest.approx(0.0, abs=1e-5)
+    
+    
+    def test_rigid_body_modes(self):
+        """
+        @brief Verifies the existence of Rigid Body Modes (Eigenvalues ~ 0).
+        @details
+        A free 3D element should have 6 RBMs (3 translation + 3 rotation).
+        However, due to the artificial 'Drilling' stiffness, the rotation about Z-local
+        will not be exactly zero, but small compared to structural stiffness.
+        We strictly check the 3 Translational modes.
+        """
+        node1 = MockNode(1, [0.0, 0.0, 0.0])
+        node2 = MockNode(2, [2.0, 0.0, 0.0]) 
+        node3 = MockNode(3, [0.0, 1.0, 3.0]) 
+        
+        mat = MockMat(E=70e9, nu=0.33)
+        prop = MockProp(t=0.1)
+    
+        solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
+        
+        K = solver.get_stiffness_matrix()
+        eigenvalues = np.linalg.eigvalsh(K) # Returns sorted eigenvalues
+        
+        # The first 3 modes (Translations) must be effectively zero
+        translational_modes = eigenvalues[:3]
+        assert np.all(np.abs(translational_modes) < 1e-4), \
+            f"Translational Rigid Body Modes are not zero: {translational_modes}"
 

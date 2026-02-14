@@ -464,10 +464,16 @@ class LinearStaticSolver:
                 prop = self.model.properties[element.prop_id]
                 mat = self.model.materials[prop.mat_id]
                 
-                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+                # Check for Bending Material (if property supports it)
+                mat_bending = None
+                # Check if attribute exists (it is a ShellProperty) and points to a valid material
+                if hasattr(prop, 'mat_id_bending') and prop.mat_id_bending in self.model.materials:
+                     mat_bending = self.model.materials[prop.mat_id_bending]
+
+                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending)
                 
                 stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
-                stress_data['type'] = 'CTRIA3'
+                stress_data['type'] = 'CTRIA3' 
 
                 results["stresses"][eid] = stress_data
 

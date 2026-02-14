@@ -234,5 +234,45 @@ class TestCoordinateTransformation:
         
         with pytest.raises(ValueError, match="collinear"):
             CoordinateTransformation.compute_local_axes_triangle(n1, n2, n3)
+    
+    def test_transformation_matrix_energy_conservation(self):
+        """
+        @brief Verifies T matrix orthogonality (T.T @ T = I).
+        @details Critical for energy conservation in FEM.
+        """
+        n1 = np.array([1.0, 1.0, 1.0])
+        n2 = np.array([4.0, 1.0, 1.0]) # Vector 1-2 defines Local X
+        n3 = np.array([2.0, 4.0, 1.0]) # Defines Plane XY
 
+        vx, vy, vz = CoordinateTransformation.compute_local_axes_triangle(n1, n2, n3)
+        
+        R = CoordinateTransformation.get_rotation_matrix_3x3(vx, vy, vz)
+        T = CoordinateTransformation.build_full_transformation_matrix(R, nodes_count=3, dofs_per_node=6)
 
+        # Check dimensions for CTRIA3 (18x18)
+        assert T.shape == (18, 18)
+
+        # Check Orthogonality: T.T @ T must be Identity
+        I_calc = T.T @ T
+        I_expected = np.eye(18)
+
+        np.testing.assert_allclose(
+            I_calc, 
+            I_expected, 
+            atol=1e-12, 
+            err_msg="Transformation matrix T is not orthogonal. Energy will leak!"
+        )
+
+    def test_right_hand_rule(self):
+        """
+        @brief Verifies the local Z axis follows the right-hand rule.
+        """
+        # Triangle in global XY plane
+        # N1(0,0), N2(1,0) -> Local X is (1,0,0)
+        # N3(0,1) -> Y is up. Cross(X, Y_vec) -> Z should be (0,0,1)
+        vx, vy, vz = CoordinateTransformation.compute_local_axes_triangle(
+            np.array([0,0,0]), np.array([1,0,0]), np.array([0,1,0])
+        )
+        
+        expected_z = np.array([0.0, 0.0, 1.0])
+        np.testing.assert_allclose(vz, expected_z, atol=1e-12)
