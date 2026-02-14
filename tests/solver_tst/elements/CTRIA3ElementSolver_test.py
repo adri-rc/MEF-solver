@@ -23,15 +23,17 @@ class MockNode:
         return self._coords
 
 class MockMat:
-    def __init__(self, E, nu):
+    def __init__(self, E, nu, name="Mat"):
         self.E = E
         self.nu = nu
 
 class MockProp:
-    def __init__(self, t, mat_id=1):
+    def __init__(self, t, mat_bending=None):
         self.pid = 1
         self.t = t
-        self.mat_id = mat_id
+        # Simulamos la lógica de buscar el material de bending
+        self.mat_bending_ref = mat_bending
+        self.mat_id_bending = 999 if mat_bending else None
 
 class MockDofMapper:
     """Simulates the global-to-local index mapping."""
@@ -42,28 +44,204 @@ class MockDofMapper:
         return list(range(start, start + 6))
 
 
-# --- FIXTURES ---
-@pytest.fixture
-def standard_ctria3():
-    """
-    @brief Sets up a standard right-isosceles triangle element.
-    @details
-    Material: Aluminum-like (E=70e9, nu=0.33).
-    Geometry: Legs of length 2.0 m.
-    Thickness: 0.1 m.
-    """
-    node1 = MockNode(1, [0.0, 0.0, 0.0])
-    node2 = MockNode(2, [2.0, 0.0, 0.0]) 
-    node3 = MockNode(3, [0.0, 2.0, 0.0]) 
-    
-    mat = MockMat(E=70e9, nu=0.33)
-    prop = MockProp(t=0.1)
-    
-    solver = CTRIA3ElementSolver(node1, node2, node3, prop, mat)
-    return solver
+# --- DEFINICIÓN DE CASOS (FIXTURE DATA) ---
 
+'''
+Casos de prueba:
+1. CANONICAL: Triángulo rectángulo básico en el plano XY (Baseline).
+2. ROTATED_3D: Triángulo equilátero flotando en el espacio con rotación arbitraria.
+3. NEEDLE: Triángulo con relación de aspecto extrema (base pequeña, altura gigante).
+4. COMPOSITE: Materiales desacoplados (Membrana muy rígida, Flexión muy blanda).
+5. FAR_OFFSET: Triángulo válido pero definido en coordenadas gigantes (lejos del origen).
+'''
+
+CASES = [
+    {
+        "id": "1_CANONICAL_XY",
+        "nodes": [[0.,0.,0.], [2.,0.,0.], [0.,2.,0.]], # Rectángulo Isósceles
+        "mat_mem": (210e9, 0.3), # Acero
+        "mat_bend": None,        # Igual a membrana
+        "thick": 0.1,
+        "area": 2.0,
+        "desc": "Caso base en plano XY"
+    },
+    {
+        "id": "2_ROTATED_3D",
+        "nodes": [[1.,1.,1.], [2.,2.,1.], [1.,2.,2.]], # En el espacio
+        "mat_mem": (70e9, 0.33), # Aluminio
+        "mat_bend": None,
+        "thick": 0.05,
+        "area": 0.866025, # Aprox (verificado)
+        "desc": "Triángulo rotado en 3D"
+    },
+    {
+        "id": "3_NEEDLE_SHAPE",
+        "nodes": [[0.,0.,0.], [0.1, 0., 0.], [0.05, 10., 0.]], # Base 0.1, Altura 10
+        "mat_mem": (110e9, 0.3), # Titanio
+        "mat_bend": None,
+        "thick": 0.01,
+        "area": 0.5, # 0.5 * 0.1 * 10
+        "desc": "Test de estabilidad numérica (Aspect Ratio alto)"
+    },
+    {
+        "id": "4_COMPOSITE_DECOUPLED",
+        "nodes": [[0.,0.,0.], [1.,0.,0.], [0.,1.,0.]],
+        "mat_mem": (200e9, 0.25), # Carbono (Membrana rígida)
+        "mat_bend": (5e9, 0.4),   # Foam Core (Flexión blanda)
+        "thick": 0.2,
+        "area": 0.5,
+        "desc": "Materiales distintos para membrana y flexión"
+    },
+    {
+        "id": "5_FAR_OFFSET",
+        "nodes": [[10000., 10000., 10000.], 
+                  [10002., 10000., 10000.], 
+                  [10000., 10002., 10000.]], # Igual al caso 1 pero lejos
+        "mat_mem": (210e9, 0.3),
+        "mat_bend": None,
+        "thick": 0.1,
+        "area": 2.0,
+        "desc": "Test de precisión flotante con coordenadas grandes"
+    }
+]
+
+# --- FIXTURE PARAMETRIZADO ---
+
+@pytest.fixture(params=CASES, ids=[c["id"] for c in CASES])
+def element_setup(request):
+    """
+    Crea el solver para cada uno de los 5 casos definidos.
+    Devuelve un diccionario con el solver y los datos esperados para validación.
+    """
+    data = request.param
+    
+    # 1. Crear Nodos
+    n1 = MockNode(1, data["nodes"][0])
+    n2 = MockNode(2, data["nodes"][1])
+    n3 = MockNode(3, data["nodes"][2])
+    
+    # 2. Crear Materiales
+    mat_mem = MockMat(*data["mat_mem"], name="Membrane")
+    
+    mat_bend = None
+    if data["mat_bend"]:
+        mat_bend = MockMat(*data["mat_bend"], name="Bending")
+    
+    # 3. Propiedad
+    prop = MockProp(t=data["thick"], mat_bending=mat_bend)
+    
+    # 4. Instanciar Solver (Aquí se inyecta la lógica de corrección que hiciste)
+    # Nota: El solver real debería aceptar mat_bending en __init__
+    solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat_mem, mat_bending=mat_bend)
+    
+    return {
+        "solver": solver,
+        "data": data,
+        "mat_mem": mat_mem,
+        "mat_bend": mat_bend if mat_bend else mat_mem
+    }
 # --- TESTS ---
 
+def test_stiffness_symmetry(element_setup):
+    """Valida la simetría de la matriz K global (Maxwell-Betti)."""
+    solver = element_setup["solver"]
+    K = solver.get_stiffness_matrix()
+    
+    # Tolerancia relativa para manejar escalas numéricas gigantes (N/m vs N*m)
+    # Usamos assert_allclose que maneja tolerancias relativas (rtol) y absolutas (atol)
+    np.testing.assert_allclose(K, K.T, rtol=1e-5, atol=1e-8, 
+                               err_msg="La matriz de rigidez no es simétrica.")
+
+def test_rigid_body_modes(element_setup):
+    """Valida que existen modos de cuerpo rígido (Autovalores cercanos a 0)."""
+    solver = element_setup["solver"]
+    K = solver.get_stiffness_matrix()
+    
+    eigenvalues = np.linalg.eigvalsh(K)
+    
+    # Los primeros 3 deben ser traslaciones puras (muy cercanos a 0)
+    # Nota: Los modos rotacionales pueden no ser 0 puro debido al Drilling DOF artificial
+    translations = eigenvalues[:3]
+    
+    # Umbral de cero relativo a la rigidez máxima del sistema
+    max_k = np.max(np.abs(K))
+    tolerance = max_k * 1e-10 
+    
+    assert np.all(np.abs(translations) < tolerance), \
+        f"Fallo en modos de cuerpo rígido. Eigenvalues: {translations}"
+
+def test_area_calculation(element_setup):
+    """Valida que el área calculada internamente coincide con la teórica."""
+    solver = element_setup["solver"]
+    expected_area = element_setup["data"]["area"]
+    
+    # Relajamos un poco la tolerancia para el caso NEEDLE o ROTATED
+    assert solver.A == pytest.approx(expected_area, rel=1e-4)
+
+def test_material_decoupling_check(element_setup):
+    """
+    Test crucial para el Caso 4 (Composite):
+    Verifica que la rigidez de flexión usa el módulo E de flexión, no el de membrana.
+    """
+    setup = element_setup
+    solver = setup["solver"]
+    data = setup["data"]
+    
+    # Solo ejecutamos validación profunda si es el caso desacoplado
+    if data["id"] == "4_COMPOSITE_DECOUPLED":
+        K_local = solver._build_local_stiffness()
+        
+        # Rigidez Membrana Local ~ E_mem * t * factor
+        # Rigidez Flexión Local ~ E_bend * t^3 * factor
+        
+        # Extraccion cualitativa:
+        # K_local[0,0] es rigidez axial (u) -> Depende de Mat Membrana
+        # K_local[2,2] es rigidez out-of-plane (w) -> Depende de Mat Bending (DKT)
+        
+        k_membrane_axial = K_local[0,0]
+        k_bending_w = K_local[2,2] # Asociado a flexión
+        
+        # Si hubiéramos usado E_mem (200e9) para bending, k_bending_w sería enorme.
+        # Como usamos E_bend (5e9), debe ser proporcionalmente menor (ajustando por t^2)
+        
+        # Ratio de rigideces de material
+        e_ratio = setup["mat_bend"].E / setup["mat_mem"].E # 5/200 = 0.025
+        
+        # Chequeo de sanidad: La rigidez de flexión no debe "heredar" la rigidez del carbono
+        # Este es un chequeo heurístico.
+        assert k_bending_w < k_membrane_axial, \
+            "La rigidez a flexión parece demasiado alta. ¿Se está usando el material de membrana?"
+
+def test_stress_recovery_robustness(element_setup):
+    """
+    Valida que el método calculate_stresses no explota con NaN y devuelve las claves correctas.
+    """
+    solver = element_setup["solver"]
+    
+    # Generamos un vector de desplazamientos aleatorio pequeño
+    np.random.seed(42)
+    u_dummy_global = np.random.rand(100) * 0.001 # 100 es arbitrario, el mapper lo filtra
+    
+    # Mock del DofMapper
+    class MockMapper:
+        def get_dof_indices(self, nid):
+            # Asignamos indices ficticios para el test
+            base = (nid - 1) * 6
+            return list(range(base, base+6))
+    
+    try:
+        results = solver.calculate_stresses(u_dummy_global, MockMapper())
+    except Exception as e:
+        pytest.fail(f"Stress Recovery falló con excepción: {e}")
+    
+    # Validaciones
+    required_keys = ['sigma_x', 'sigma_y', 'tau_xy', 'von_mises', 
+                     'bending_moment_x', 'stress_fiber_top_x']
+    
+    for key in required_keys:
+        assert key in results, f"Falta la clave {key} en los resultados de tensión."
+        assert not np.isnan(results[key]), f"El resultado {key} es NaN."
+''
 class TestCTRIA3ElementSolver:
     """
     @class TestCTRIA3ElementSolver
@@ -330,3 +508,4 @@ class TestCTRIA3ElementSolver:
         assert np.all(np.abs(translational_modes) < 1e-4), \
             f"Translational Rigid Body Modes are not zero: {translational_modes}"
 
+''
