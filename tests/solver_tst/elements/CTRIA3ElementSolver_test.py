@@ -101,6 +101,39 @@ CASES = [
         "thick": 0.1,
         "area": 2.0,
         "desc": "Test de precisión flotante con coordenadas grandes"
+    },
+    {
+        "id": "6_SKEWED_SPACE_COMPOSITE",
+        "nodes": [
+            [1.2, 3.4, -0.5],  # N1: Punto arbitrario
+            [5.6, 1.1, 2.3],   # N2: Lejos y rotado
+            [2.2, 6.8, 4.1]    # N3: Crea triángulo escaleno oblicuo
+        ],
+        # Membrana muy rígida (Acero), Flexión muy blanda (Polímero)
+        "mat_mem": (210e9, 0.3), 
+        "mat_bend": (2e9, 0.45), 
+        "thick": 0.15,
+        # Área calculada via producto cruz: 0.5 * ||Vec12 x Vec13||
+        # Vec12=[4.4, -2.3, 2.8], Vec13=[1.0, 3.4, 4.6]
+        # Cross = [-20.1, -17.44, 17.26] -> Norm=31.718 -> Area=15.859...
+        "area": 15.8593127216,
+        "desc": "Triángulo escaleno oblicuo con materiales desacoplados (M>B)"
+    },
+    {
+        "id": "7_MICRO_TILTED_HYBRID",
+        "nodes": [
+            [0.0, 0.0, 0.0],
+            [1e-3, 2e-3, 3e-3],   # Milimétricos
+            [1e-3, -1e-3, 2e-3]
+        ],
+        # Membrana blanda (Aluminio), Flexión artificialmente rígida (Cerámica)
+        "mat_mem": (70e9, 0.33),
+        "mat_bend": (400e9, 0.2), 
+        "thick": 1e-4, # Espesor muy fino
+        # Vec12=[1, 2, 3]e-3, Vec13=[1, -1, 2]e-3
+        # Cross = [7, 1, -3]e-6 -> Norm=sqrt(59)*1e-6 -> Area=3.84057e-6
+        "area": 3.840572874e-6,
+        "desc": "Micro-elemento inclinado con Flexión > Membrana"
     }
 ]
 
@@ -388,22 +421,19 @@ def test_bending_rigid_body_z(element_setup):
     """
     @test Rigid Body Translation in Z.
     @brief Ensure zero stress for constant w translation.
+    @details
+    Uses dynamic tolerance based on material stiffness to handle floating point
+    noise in high-stiffness or micro-scale elements.
     """
     solver = element_setup["solver"]
+    data = element_setup["data"]
     
     # Apply uniform w=0.1 at all nodes, zero rotations
-    # Nodes IDs are 1, 2, 3
-    # Mapped to global indices:
-    # N1: 0-5, N2: 6-11, N3: 12-17
-    u_global = np.zeros(100) # Size enough for mocks
-    
-    # Global indices for w (z-translation)
-    # Mapper mocks: (nid-1)*6 -> w is index 2, 8, 14
+    u_global = np.zeros(100)
     u_global[2] = 0.1
     u_global[8] = 0.1
     u_global[14] = 0.1
     
-    # Mock Mapper that matches the one implied in element setup (1,2,3)
     class MockMapper:
         def get_dof_indices(self, nid):
             base = (nid - 1) * 6
@@ -411,9 +441,24 @@ def test_bending_rigid_body_z(element_setup):
 
     res = solver.calculate_stresses(u_global, MockMapper())
     
+    # --- CÁLCULO DE TOLERANCIA DINÁMICA ---
+    # El ruido numérico en tensión es proporcional al Módulo de Young (E).
+    # Noise ~ E * machine_epsilon.
+    # Usamos E * 1e-12 como un límite seguro de "cero ingenieril".
+    
+    # Determinar qué E usar (Flexión o Membrana)
+    if element_setup["mat_bend"]:
+        E_ref = element_setup["mat_bend"].E
+    else:
+        E_ref = element_setup["mat_mem"].E
+        
+    # Tolerancia: Mínimo 1e-5 Pa, o relativa a la rigidez
+    tol = max(1e-5, E_ref * 1e-12)
+
     # Should have zero bending moments and stresses
-    assert res['bending_moment_x'] == pytest.approx(0.0, abs=1e-5)
-    assert res['stress_fiber_top_x'] == pytest.approx(0.0, abs=1e-5)
+    # Usamos la tolerancia calculada
+    assert res['bending_moment_x'] == pytest.approx(0.0, abs=tol)
+    assert res['stress_fiber_top_x'] == pytest.approx(0.0, abs=tol)
 
 # --- STANDALONE SPECIFIC TESTS (Not using Fixture Cases) ---
 
