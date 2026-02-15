@@ -707,6 +707,10 @@ class CTRIA3ElementSolver:
             'bending_moment_xy': m_xy,
             'stress_fiber_top_x': sig_x_top,
             'stress_fiber_bot_x': sig_x_bot,
+            'stress_fiber_top_y': sig_y_top,
+            'stress_fiber_bot_y': sig_y_bot,
+            'tau_fiber_top_y': tau_xy_top,
+            'tau_fiber_bot_y': tau_xy_bot,
             
             # Forces
             'membrane_force_x': f_x,
