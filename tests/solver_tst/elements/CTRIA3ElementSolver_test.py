@@ -43,7 +43,6 @@ class MockDofMapper:
         start = (nid - 1) * 6
         return list(range(start, start + 6))
 
-
 # --- DEFINICIÓN DE CASOS (FIXTURE DATA) ---
 
 '''
@@ -140,7 +139,76 @@ def element_setup(request):
         "mat_mem": mat_mem,
         "mat_bend": mat_bend if mat_bend else mat_mem
     }
-# --- TESTS ---
+
+
+# --- FUNCIONES AUXILIARES DE VALIDACIÓN (ORÁCULOS MATEMÁTICOS) ---
+
+def _calculate_cst_analytical_local(solver, data):
+    """
+    Calcula la matriz de rigidez de membrana (CST) teórica usando las 
+    coordenadas LOCALES detectadas por el solver.
+    Esto permite validar casos en 3D (Rotados) y Offset.
+    """
+    # 1. Datos
+    # Nota: Usamos mat_mem para membrana
+    E, nu = data["mat_mem"] 
+    t = data["thick"]
+    # Extraemos la geometría local ya procesada por el solver
+    # Esto asegura que validamos la matriz K para la forma del triángulo
+    # independientemente de su orientación global.
+    x2 = solver.x2
+    x3 = solver.x3
+    y3 = solver.y3
+    Area = solver.A
+    
+    # Definición de Nodos en Sistema Local
+    # N1: (0,0)
+    # N2: (x2, 0)
+    # N3: (x3, y3)
+    
+    # Fórmulas CST Estándar:
+    # b_i = y_j - y_k
+    # g_i = x_k - x_j
+    
+    # Nodo 1 (j=2, k=3)
+    y2 = 0.0
+    b1 = y2 - y3
+    g1 = x3 - x2
+    
+    # Nodo 2 (j=3, k=1)
+    x1, y1 = 0.0, 0.0
+    b2 = y3 - y1
+    g2 = x1 - x3
+    
+    # Nodo 3 (j=1, k=2)
+    b3 = y1 - y2
+    g3 = x2 - x1
+    
+    # Ensamblaje Matriz B (Strain-Displacement)
+    # Factor 1/(2A)
+    factor_B = 1.0 / (2.0 * Area)
+    
+    # Rows: eps_x, eps_y, gam_xy
+    # Cols: u1, v1, u2, v2, u3, v3
+    B = factor_B * np.array([
+        [b1, 0,  b2, 0,  b3, 0],
+        [0,  g1, 0,  g2, 0,  g3],
+        [g1, b1, g2, b2, g3, b3]
+    ])
+    
+    # Matriz Constitutiva D (Plane Stress)
+    factor_D = E / (1 - nu**2)
+    D = factor_D * np.array([
+        [1,  nu, 0],
+        [nu, 1,  0],
+        [0,  0, (1-nu)/2]
+    ])
+    
+    # Rigidez: Integral(B.T * D * B) dV -> Volume * B.T * D * B
+    # Volume = Area * t
+    K_mem = (Area * t) * (B.T @ D @ B)
+    
+    return K_mem
 
 # --- TESTS ---
 
@@ -405,3 +473,77 @@ def test_zero_area_error():
     
     with pytest.raises(ValueError):
         CTRIA3ElementSolver(n1, n2, n3, prop, mat)
+
+
+def test_membrane_stiffness_analytical_check(element_setup):
+    """
+    @test Validation of Membrane Stiffness Matrix (K_mem) against analytical CST formula.
+    @details
+    Valida que K_solver == K_analytical_CST.
+    Verifica término a término que la sub-matriz de membrana calculada por el solver
+    coincide con la solución teórica exacta para un triángulo CST.
+    
+    """
+    data = element_setup["data"]
+    solver = element_setup["solver"]
+    
+    # 1. Calcular Referencia Analítica usando Geometría Local
+    K_mem_ref = _calculate_cst_analytical_local(solver, data)
+    
+    # 2. Obtener K del Solver (Parte Local)
+    K_solver_full = solver._build_local_stiffness()
+    
+    mem_indices = [0, 1, 6, 7, 12, 13]
+    K_solver_mem = K_solver_full[np.ix_(mem_indices, mem_indices)]
+    
+    # 3. Comparación
+    # Ajustamos tolerancia para casos extremos si fuera necesario,
+    # pero 1e-5 suele ser suficiente para double precision estándar.
+    np.testing.assert_allclose(
+        K_solver_mem, K_mem_ref, rtol=1e-5, atol=1e-8,
+        err_msg=f"Fallo en K_membrana para caso {data['id']}"
+    )
+
+def test_bending_stiffness_integration_check(element_setup):
+    """
+    @test Validates Bending Stiffness (K_bend) integration logic.
+    Reconstruye la rigidez integrando B.T * D * B usando los materiales del test
+    y la geometría local (matriz B) generada por el propio solver.
+    Esto valida la física (Materiales + Integración) para cualquier geometría 3D.
+    """
+    data = element_setup["data"]
+    solver = element_setup["solver"]
+    
+    # Material de Referencia
+    if data["mat_bend"]:
+        E_ref, nu_ref = data["mat_bend"]
+    else:
+        E_ref, nu_ref = data["mat_mem"]
+    t_ref = data["thick"]
+    
+    D_bend_ref = (E_ref * t_ref**3) / (12 * (1 - nu_ref**2)) * np.array([
+        [1,  nu_ref, 0],
+        [nu_ref, 1,  0],
+        [0,  0, (1-nu_ref)/2]
+    ])
+    
+    # Reconstrucción de la Integral
+    hammer_pts = [(0.5, 0.5, 1/3), (0.0, 0.5, 1/3), (0.5, 0.0, 1/3)]
+    K_bend_ref = np.zeros((9, 9))
+    Area = solver.A # Usamos el área calculada por el solver
+    
+    for xi, eta, w in hammer_pts:
+        # Usamos la B geométrica del solver (se adapta automáticamente a la geometría local)
+        B_val = solver._compute_dkt_B_matrix_at(xi, eta)
+        term = B_val.T @ D_bend_ref @ B_val
+        K_bend_ref += w * Area * term
+
+    # Comparar con Solver
+    K_solver_full = solver._build_local_stiffness()
+    bend_indices = [2, 3, 4, 8, 9, 10, 14, 15, 16]
+    K_solver_bend = K_solver_full[np.ix_(bend_indices, bend_indices)]
+    
+    np.testing.assert_allclose(
+        K_solver_bend, K_bend_ref, rtol=1e-5, atol=1e-8,
+        err_msg=f"Fallo en K_bending para caso {data['id']}"
+    )
