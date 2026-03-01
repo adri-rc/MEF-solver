@@ -644,6 +644,7 @@ class CTRIA3ElementSolver:
         f_xy = tau_xy * t
         
         # Bending Moments
+        
         # M = D_b * kappa
         # We need kappa at centroid. 
         # Evaluate B_bending at centroid (xi=1/3, eta=1/3)

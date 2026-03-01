@@ -444,7 +444,8 @@ def test_bending_rigid_body_z(element_setup):
     # --- CÁLCULO DE TOLERANCIA DINÁMICA ---
     # El ruido numérico en tensión es proporcional al Módulo de Young (E).
     # Noise ~ E * machine_epsilon.
-    # Usamos E * 1e-12 como un límite seguro de "cero ingenieril".
+    # Usamos E * 1e-12 como un límite seguro de "cero 
+    # ingenieril".
     
     # Determinar qué E usar (Flexión o Membrana)
     if element_setup["mat_bend"]:
