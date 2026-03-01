@@ -6,3 +6,5 @@ __pycache__/
 draft_*
 .pytest_cache/
 output/
+*.f04
+*.op2
