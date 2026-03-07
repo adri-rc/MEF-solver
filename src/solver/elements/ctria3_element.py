@@ -1,12 +1,10 @@
-
 """
 @file ctria3_element.py
 @brief Finite Element Solver for the CTRIA3 (Triangular Shell) element.
 @details
 Implements the stiffness matrix calculation for a 3-node Triangular Shell.
-Currently implements:
-- Membrane Stiffness: Constant Strain Triangle (CST).
-- Bending Stiffness: Placeholder/Basic implementation (or zero with warnings).
+        - Membrane Stiffness: Constant Strain Triangle (CST).
+        - Bending Stiffness: Reissner-Mindlin Formulation (MIN3).
 """
 
 import numpy as np
@@ -30,7 +28,7 @@ class CTRIA3ElementSolver:
     
     Physics:
       - Membrane (In-plane): u (tx), v (ty). Formulation: CST (Linear shape functions).
-      - Bending (Out-of-plane): w (tz), theta_x, theta_y. 
+      - Bending (Out-of-plane) & Shear: w, theta_x, theta_y. Formulation: Reissner-Mindlin.
       - Drilling: theta_z. (Often needs artificial stiffness).
     """
 
@@ -74,6 +72,16 @@ class CTRIA3ElementSolver:
         v13 = self.n3_coords - self.n1_coords
         self.x3 = np.dot(v13, self.local_x_axis)
         self.y3 = np.dot(v13, self.local_y_axis)
+
+        # FIX TRANFORMATIONS (Casos 45 y 46): Forzar y3 positivo para las matrices B
+        if self.y3 < 0:
+            self.y3 = -self.y3
+            self.local_y_axis = -self.local_y_axis
+            self.local_z_axis = -self.local_z_axis
+            # Recompute Transformation matrix with corrected axes
+            R = CoordinateTransformation.get_rotation_matrix_3x3(self.local_x_axis, self.local_y_axis, self.local_z_axis)
+            self.T = CoordinateTransformation.build_full_transformation_matrix(R, 3, 6)
+        
         
         # Area of triangle
         self.A = 0.5 * self.x2 * self.y3
@@ -115,17 +123,9 @@ class CTRIA3ElementSolver:
         x2, y2 = self.x2, 0.0
         x3, y3 = self.x3, self.y3
         
-        # i=1, j=2, k=3
-        b1 = y2 - y3
-        g1 = x3 - x2
-        
-        # i=2, j=3, k=1
-        b2 = y3 - y1
-        g2 = x1 - x3
-        
-        # i=3, j=1, k=2
-        b3 = y1 - y2
-        g3 = x2 - x1
+        b1 = y2 - y3; g1 = x3 - x2
+        b2 = y3 - y1; g2 = x1 - x3
+        b3 = y1 - y2; g3 = x2 - x1
         
         # B matrix (3 rows x 6 cols)
         # [ u1 v1 u2 v2 u3 v3 ]
@@ -190,304 +190,80 @@ class CTRIA3ElementSolver:
         ])
         return D * factor
 
-    def _get_B_bending(self, xi: float, eta: float) -> np.ndarray:
-        return self._compute_dkt_B_matrix_at(xi, eta)
-
-    def _compute_dkt_B_matrix_at(self, xi, eta) -> np.ndarray:
+    def _get_B_bending_RM(self) -> np.ndarray:
         """
-        @brief Explicit implementation of DKT B-matrix at (xi, eta).
+        @brief Strain-Displacement matrix for Bending (Reissner-Mindlin).
         @details
-        Derived from Batoz (1982) / Felippa explicit shape functions.
-        Ref: Felippa, F.E.M. Linear Element, Chapter 22.
-        
+        kappa = [kap_x, kap_y, kap_xy]
         DOFs: [w1, thx1, thy1, w2, thx2, thy2, w3, thx3, thy3]
         """
-        # Node coordinates
         x1, y1 = 0.0, 0.0
         x2, y2 = self.x2, 0.0
         x3, y3 = self.x3, self.y3
         
-        # Geometry Auxiliaries (Side vectors)
-        # k=4 (Side 2-3), k=5 (Side 3-1), k=6 (Side 1-2) matching Felippa notation
-        x23 = x2 - x3; y23 = y2 - y3
-        x31 = x3 - x1; y31 = y3 - y1
-        x12 = x1 - x2; y12 = y1 - y2
+        b1 = y2 - y3; g1 = x3 - x2
+        b2 = y3 - y1; g2 = x1 - x3
+        b3 = y1 - y2; g3 = x2 - x1
+        inv2A = 1.0 / (2.0 * self.A)
         
-        l23_sq = x23**2 + y23**2
-        l31_sq = x31**2 + y31**2
-        l12_sq = x12**2 + y12**2
+        B_b = np.zeros((3, 9))
+        # Node 1
+        B_b[0, 1] = -b1 * inv2A; B_b[1, 2] = -g1 * inv2A
+        B_b[2, 1] = -g1 * inv2A; B_b[2, 2] = -b1 * inv2A
+        # Node 2
+        B_b[0, 4] = -b2 * inv2A; B_b[1, 5] = -g2 * inv2A
+        B_b[2, 4] = -g2 * inv2A; B_b[2, 5] = -b2 * inv2A
+        # Node 3
+        B_b[0, 7] = -b3 * inv2A; B_b[1, 8] = -g3 * inv2A
+        B_b[2, 7] = -g3 * inv2A; B_b[2, 8] = -b3 * inv2A
         
-        # DKT Geometric Coefficients (a_k, b_k, c_k, d_k, e_k)
-        # k=0 for Side 23, k=1 for Side 31, k=2 for Side 12
-        xk = [x23, x31, x12]
-        yk = [y23, y31, y12]
-        lk_sq = [l23_sq, l31_sq, l12_sq] # Using calculated lengths
+        return B_b
+
+    def _get_D_shear(self) -> np.ndarray:
+        """
+        @brief Constitutive Matrix for Transverse Shear.
+        """
+        E = self.mat_bending.E
+        nu = self.mat_bending.nu
+        G = E / (2.0 * (1.0 + nu))
+        t = self.prop.t
+        k = 5.0 / 6.0 # Shear correction factor
+        factor = k * G * t
         
-        a = [0.0]*3; b = [0.0]*3; c = [0.0]*3; d = [0.0]*3; e = [0.0]*3
+        D_s = np.array([
+            [1.0, 0.0],
+            [0.0, 1.0]
+        ])
+        return D_s * factor
+
+    def _get_B_shear_RM(self, N1: float, N2: float, N3: float) -> np.ndarray:
+        """
+        @brief Strain-Displacement matrix for Transverse Shear (Reissner-Mindlin).
+        @details
+        gamma = [gamma_xz, gamma_yz]
+        DOFs: [w1, thx1, thy1, w2, thx2, thy2, w3, thx3, thy3]
+        """
+        x1, y1 = 0.0, 0.0
+        x2, y2 = self.x2, 0.0
+        x3, y3 = self.x3, self.y3
         
-        for k in range(3):
-            val = 1.0 / lk_sq[k]
-            a[k] = -xk[k] * val
-            b[k] = 0.75 * xk[k] * yk[k] * val
-            c[k] = (0.25 * xk[k]**2 - 0.5 * yk[k]**2) * val
-            d[k] = -yk[k] * val
-            e[k] = (0.25 * yk[k]**2 - 0.5 * xk[k]**2) * val
-            
-        # Shape function derivatives w.r.t xi, eta (L1, L2)
-        # N functions are w.r.t L1, L2.
-        # Hx = [H_x1, H_x2 ... H_x9]
+        b1 = y2 - y3; g1 = x3 - x2
+        b2 = y3 - y1; g2 = x1 - x3
+        b3 = y1 - y2; g3 = x2 - x1
+        inv2A = 1.0 / (2.0 * self.A)
         
-        # Quasi-Explicit functions for curvature [k_x, k_y, k_xy]
-        # B = (1/2A) * [ ... ]
-        # Rows: 1-> d(beta_x)/dx
-        #       2-> d(beta_y)/dy
-        #       3-> d(beta_x)/dy + d(beta_y)/dx
+        B_s = np.zeros((2, 9))
+        # Node 1
+        B_s[0, 0] = b1 * inv2A; B_s[0, 1] = -N1
+        B_s[1, 0] = g1 * inv2A; B_s[1, 2] = -N1
+        # Node 2
+        B_s[0, 3] = b2 * inv2A; B_s[0, 4] = -N2
+        B_s[1, 3] = g2 * inv2A; B_s[1, 5] = -N2
+        # Node 3
+        B_s[0, 6] = b3 * inv2A; B_s[0, 7] = -N3
+        B_s[1, 6] = g3 * inv2A; B_s[1, 8] = -N3
         
-        # We define the terms explicitly associated with each DOF:
-        # [w1, tx1, ty1, w2, tx2, ty2, w3, tx3, ty3]
-        
-        # Correction: The explicit Batoz formulation is usually given 
-        # as B = [ ... ] * [w1, tx1, ty1... ]^T
-        
-        # Let's compute the vectors hx = d(Hx)/dxi etc.
-        # This is tedious.
-        
-        # Standard FEM approach:
-        # Evaluate Hx(xi, eta) and Hy(xi, eta) vectors (1x9)
-        # Then derivative w.r.t x, y using Jacobian.
-        # dH/dx = dH/dxi * L1_x + dH/deta * L2_x
-        # dH/dy = dH/dxi * L1_y + dH/deta * L2_y
-        
-        # So we need d(Hx)/dxi and d(Hx)/deta.
-        # Functions P4_k, P5_k, P6_k
-        # p4 = [ -6*xk[k]/lk_sq[k] for k in range(3) ]
-        # p5 = [ -6*yk[k]/lk_sq[k] for k in range(3) ]
-        # p6 = [ -3*xk[k]*yk[k]/lk_sq[k] for k in range(3) ]
-        # t4 = [ -3*yk[k]**2/lk_sq[k] for k in range(3) ]
-        # t5 = [ -3*xk[k]**2/lk_sq[k] for k in range(3) ]
-        # q, r terms follow...
-        
-        # Actually, simpler Batoz form:
-        # Hx = N^T * Q_x
-        # Hy = N^T * Q_y
-        # Where N are shape functions of 9-DOF element? No.
-        
-        # LET'S IMPLEMENT: "Evaluation of the DKT Element Stiffness Matrix" by F. Felippa
-        # Chapter 22, Table 22.2: "Shape functions for the DKT element"
-        
-        # Shape functions for rotation beta_x:
-        # Hx_1 = 1.5*(a6*N6 - a5*N5)
-        # etc.
-        # This relies on mid-side nodes (4,5,6). 
-        # N4 = 4 L1 L2
-        # N5 = 4 L2 L3
-        # N6 = 4 L3 L1
-        
-        # Area coords derivatives
-        # L1 = xi, L2 = eta, L3 = 1-xi-eta
-        # dN4/dxi = 4*eta; dN4/deta = 4*xi
-        # dN5/dxi = -4*eta; dN5/deta = 4*(1-xi-2*eta)
-        # dN6/dxi = 4*(1-2*xi-eta); dN6/deta = -4*xi
-        
-        # We need to construct Hx and Hy vectors (length 9).
-        # We only implement the non-zero parts to start.
-        
-        # But wait, user wants it checking "Ej21".
-        # I cannot use empty logic.
-        
-        # --- COMPACT IMPLEMENTATION ---
-        
-        # Derivatives of Shape functions N4, N5, N6 w.r.t xi, eta (L1, L2)
-        # L1=xi, L2=eta, L3=1-L1-L2
-        # N4 = 4 L1 L2 = 4 xi eta
-        # N5 = 4 L2 L3 = 4 eta (1-xi-eta)
-        # N6 = 4 L3 L1 = 4 (1-xi-eta) xi
-        
-        # Corrected N derivatives based on standard area coordinates (L1, L2, L3)
-        # N4 = 4*L1*L2
-        dN4_dxi = 4*eta
-        dN4_deta = 4*xi
-        
-        # N5 = 4*L2*L3 = 4*eta*(1-xi-eta)
-        dN5_dxi = -4*eta
-        dN5_deta = 4*(1-xi-2*eta)
-        
-        # N6 = 4*L3*L1 = 4*(1-xi-eta)*xi
-        dN6_dxi = 4*(1-2*xi-eta)
-        dN6_deta = -4*xi
-        
-        # Helper Coefficients (sides k=1,2,3 -> nodes 23, 31, 12, labeled 4,5,6 in mid-side logic)
-        # side 4 is (2-3) [k=0], side 5 is (3-1) [k=1], side 6 is (1-2) [k=2]
-        # a[k], b[k], c[k], d[k], e[k] computed above for k=0,1,2
-        
-        # Hx functions (9 terms) derivatives w.r.t xi, eta
-        # Hx = [H_x_w1, H_x_tx1, H_x_ty1, ... ]
-        
-        # Let's rename for clarity:
-        # nodes_456 = [0, 1, 2] # map to a,b,c indices
-        
-        # Derivatives of N4, N5, N6 w.r.t xi, eta
-        dN_dxi =  [dN4_dxi, dN5_dxi, dN6_dxi] # N4, N5, N6
-        dN_deta = [dN4_deta, dN5_deta, dN6_deta]
-        
-        # We need d(Hx)/dxi and d(Hx)/deta vectors (length 9)
-        dHx_dxi = np.zeros(9); dHx_deta = np.zeros(9)
-        dHy_dxi = np.zeros(9); dHy_deta = np.zeros(9)
-        
-        # Coefficients from Felippa Table 22.2
-        # w1 (dof 0), tx1 (dof 1), ty1 (dof 2)
-        # w2 (dof 3), tx2 (dof 4), ty2 (dof 5)
-        # w3 (dof 6), tx3 (dof 7), ty3 (dof 8)
-        
-        # --- Hx DERIVATIVES ---
-        # w1 (dof 0): 1.5 * (a6*N6 - a5*N5)
-        # a6 is a[2], N6 is N[2]
-        dHx_dxi[0] = 1.5 * (a[2]*dN_dxi[2] - a[1]*dN_dxi[1])
-        dHx_deta[0] = 1.5 * (a[2]*dN_deta[2] - a[1]*dN_deta[1])
-        
-        # tx1 (dof 1): b6*N6 + b5*N5
-        dHx_dxi[1] = b[2]*dN_dxi[2] + b[1]*dN_dxi[1]
-        dHx_deta[1] = b[2]*dN_deta[2] + b[1]*dN_deta[1]
-        
-        # ty1 (dof 2): c6*N6 + c5*N5
-        dHx_dxi[2] = c[2]*dN_dxi[2] + c[1]*dN_dxi[1]
-        dHx_deta[2] = c[2]*dN_deta[2] + c[1]*dN_deta[1]
-        
-        # w2 (dof 3): 1.5 * (a4*N4 - a6*N6) -> a4=a[0], N4=N[0]
-        dHx_dxi[3] = 1.5 * (a[0]*dN_dxi[0] - a[2]*dN_dxi[2])
-        dHx_deta[3] = 1.5 * (a[0]*dN_deta[0] - a[2]*dN_deta[2])
-        
-        # tx2 (dof 4): b4*N4 + b6*N6
-        dHx_dxi[4] = b[0]*dN_dxi[0] + b[2]*dN_dxi[2]
-        dHx_deta[4] = b[0]*dN_deta[0] + b[2]*dN_deta[2]
-        
-        # ty2 (dof 5): c4*N4 + c6*N6
-        dHx_dxi[5] = c[0]*dN_dxi[0] + c[2]*dN_dxi[2]
-        dHx_deta[5] = c[0]*dN_deta[0] + c[2]*dN_deta[2]
-        
-        # w3 (dof 6): 1.5 * (a5*N5 - a4*N4)
-        dHx_dxi[6] = 1.5 * (a[1]*dN_dxi[1] - a[0]*dN_dxi[0])
-        dHx_deta[6] = 1.5 * (a[1]*dN_deta[1] - a[0]*dN_deta[0])
-        
-        # tx3 (dof 7): b5*N5 + b4*N4
-        dHx_dxi[7] = b[1]*dN_dxi[1] + b[0]*dN_dxi[0]
-        dHx_deta[7] = b[1]*dN_deta[1] + b[0]*dN_deta[0]
-        
-        # ty3 (dof 8): c5*N5 + c4*N4
-        dHx_dxi[8] = c[1]*dN_dxi[1] + c[0]*dN_dxi[0]
-        dHx_deta[8] = c[1]*dN_deta[1] + c[0]*dN_deta[0]
-        
-        # --- Hy DERIVATIVES ---
-        # w1: 1.5 * (d6*N6 - d5*N5)
-        dHy_dxi[0] = 1.5 * (d[2]*dN_dxi[2] - d[1]*dN_dxi[1])
-        dHy_deta[0] = 1.5 * (d[2]*dN_deta[2] - d[1]*dN_deta[1])
-        
-        # tx1: e6*N6 + e5*N5
-        dHy_dxi[1] = e[2]*dN_dxi[2] + e[1]*dN_dxi[1]
-        dHy_deta[1] = e[2]*dN_deta[2] + e[1]*dN_deta[1]
-        
-        # ty1: -b6*N6 - b5*N5  (Note: Hy terms relate ty with -b)
-        # From Felippa: Hy_ty1 = -r6 N6 - r5 N5. where r_k = b_k? No.
-        # Checking definitions: 
-        # m_k = 3/4 * (xk yk / lk2) = -b_k ??
-        # Let's stick to consistent set.
-        # d_k and e_k above were for Hy.
-        # But for 'ty' terms in Hy, it often reuses 'b' terms??
-        # Usually symmetries exist.
-        
-        # To ensure correct signs:
-        # Hy_w: uses d_k
-        # Hy_tx: uses e_k
-        # Hy_ty: uses mixed?
-        # Let's assume the pattern form Batoz:
-        # Hx is associated with beta_x ~ -dw/dx
-        # Hy is associated with beta_y ~ -dw/dy
-        
-        # Correction from standard DKT:
-        # Hy_ty1 = -b[2]*N6 - b[1]*N5?
-        # Actually, let's look at the structure of b[k] and c[k].
-        # In Felippa notation, they are distinct p,q,r,t.
-        # Let's explicitly calculate the missing ones for Hy_ty if needed.
-        # Actually, typically Hy_ty uses -b.
-        
-        dHy_dxi[2] = -b[2]*dN_dxi[2] - b[1]*dN_dxi[1]
-        dHy_deta[2] = -b[2]*dN_deta[2] - b[1]*dN_deta[1]
-        
-        # w2 ...
-        dHy_dxi[3] = 1.5 * (d[0]*dN_dxi[0] - d[2]*dN_dxi[2])
-        dHy_deta[3] = 1.5 * (d[0]*dN_deta[0] - d[2]*dN_deta[2])
-        
-        dHy_dxi[4] = e[0]*dN_dxi[0] + e[2]*dN_dxi[2]
-        dHy_deta[4] = e[0]*dN_deta[0] + e[2]*dN_deta[2]
-        
-        dHy_dxi[5] = -b[0]*dN_dxi[0] - b[2]*dN_dxi[2]
-        dHy_deta[5] = -b[0]*dN_deta[0] - b[2]*dN_deta[2]
-        
-        # w3 ...
-        dHy_dxi[6] = 1.5 * (d[1]*dN_dxi[1] - d[0]*dN_dxi[0])
-        dHy_deta[6] = 1.5 * (d[1]*dN_deta[1] - d[0]*dN_deta[0])
-        
-        dHy_dxi[7] = e[1]*dN_dxi[1] + e[0]*dN_dxi[0]
-        dHy_deta[7] = e[1]*dN_deta[1] + e[0]*dN_deta[0]
-        
-        dHy_dxi[8] = -b[1]*dN_dxi[1] - b[0]*dN_dxi[0]
-        dHy_deta[8] = -b[1]*dN_deta[1] - b[0]*dN_deta[0]
-        
-        # --- CONSTRUCT B MATRIX ---
-        # Rows:
-        # 1: d(beta_x)/dx
-        # 2: d(beta_y)/dy
-        # 3: d(beta_x)/dy + d(beta_y)/dx
-        
-        B = np.zeros((3, 9))
-        
-        # Chain rule using L1_x etc.
-        # d/dx = d/dxi * L1_x + d/deta * L2_x ?? No.
-        # We have dN/dxi and dN/deta.
-        # df/dx = (df/dxi * y_eta - df/deta * y_xi) / detJ ??
-        # Inverse Jacobian is cleaner:
-        # [d/dx] = [J11* J12*] [d/dxi]
-        # [d/dy]   [J21* J22*] [d/deta]
-        
-        # J = [ dx/dxi  dy/dxi ]
-        #     [ dx/deta dy/deta]
-        # x = (1-xi-eta)x1 + xi*x2 + eta*x3 = x1 + xi(x2-x1) + eta(x3-x1)
-        # dx/dxi = x2-x1 = x21 (which is -c3)
-        # dx/deta = x3-x1 = x31 (which is -c2)
-        # dy/dxi = y2-y1 = y21 (which is -d3? No)
-        
-        J11 = x2 - x1 # x21
-        J12 = y2 - y1 # y21
-        J21 = x3 - x1 # x31
-        J22 = y3 - y1 # y31
-        
-        detJ = J11*J22 - J12*J21 # 2*Area
-        invDet = 1.0 / detJ
-        
-        # Inverse terms
-        j11 =  J22 * invDet
-        j12 = -J12 * invDet
-        j21 = -J21 * invDet
-        j22 =  J11 * invDet
-        
-        # d/dx = j11 * d/dxi + j12 * d/deta
-        # d/dy = j21 * d/dxi + j22 * d/deta
-        
-        for k in range(9):
-             # Row 1: dHx/dx
-             dHx_dx = j11 * dHx_dxi[k] + j12 * dHx_deta[k]
-             B[0, k] = dHx_dx
-             
-             # Row 2: dHy/dy
-             dHy_dy = j21 * dHy_dxi[k] + j22 * dHy_deta[k]
-             B[1, k] = dHy_dy
-             
-             # Row 3: dHx/dy + dHy/dx
-             dHx_dy = j21 * dHx_dxi[k] + j22 * dHx_deta[k]
-             dHy_dx = j11 * dHy_dxi[k] + j12 * dHy_deta[k]
-             B[2, k] = dHx_dy + dHy_dx
-             
-        return B
+        return B_s
 
     def _build_local_stiffness(self) -> np.ndarray:
         """
@@ -506,7 +282,6 @@ class CTRIA3ElementSolver:
         
         B_mem = self._get_B_membrane()
         D_mem = self._get_D_membrane()
-        t = self.prop.t
         
         # K_mem = t * A * B.T * D * B
         k_mem = (self.prop.t * self.A) * (B_mem.T @ D_mem @ B_mem)
@@ -516,63 +291,98 @@ class CTRIA3ElementSolver:
             for j, col_idx in enumerate(mem_indices_map):
                 K_local[row_idx, col_idx] += k_mem[i, j]
                 
-        # --- 2. BENDING STIFFNESS (DKT) ---
-        # DKT requires numerical integration (3-point Hammer rule for quadratic precision)
-        # B_b is linear in area coordinates -> B.T * D * B is quadratic -> 3 points exact.
+        # --- 2. BENDING & SHEAR STIFFNESS (MIN3) ---
+        has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
+        if has_bending:
+            # Matriz de Flexión (Kf) - Integración Exacta Constante
+            B_b = self._get_B_bending_RM()
+            D_b = self._get_D_bending()
+            K_b = (B_b.T @ D_b @ B_b) * self.A
+            
+            # Matriz de Cortadura (Kc)
+            D_s = self._get_D_shear()
+            
+            # Kc_1pt: Integración a 1 punto (Baricentro) -> Evita el Shear Locking
+            N_cent = 1.0 / 3.0
+            B_s_cent = self._get_B_shear_RM(N_cent, N_cent, N_cent)
+            K_s_1pt = (B_s_cent.T @ D_s @ B_s_cent) * self.A
+            
+            # Kc_3pt: Integración a 3 puntos (Lados) -> Aporta el rango matemático faltante
+            K_s_3pt = np.zeros((9, 9))
+            pts = [(0.5, 0.5, 0.0), (0.0, 0.5, 0.5), (0.5, 0.0, 0.5)]
+            for n1, n2, n3 in pts:
+                B_s_pt = self._get_B_shear_RM(n1, n2, n3)
+                K_s_3pt += (1.0/3.0) * (B_s_pt.T @ D_s @ B_s_pt)
+            K_s_3pt *= self.A
+            
+            # ESTABILIZACIÓN: Mezcla ambas matrices para sanear el mecanismo cinemático
+            eps = min(1.0, (self.prop.t**2) / self.A)
+            K_s = K_s_1pt + eps * (K_s_3pt - K_s_1pt)
+            
+            K_plate_RM = K_b + K_s
+            
+            # Mapeo Teórico RM a Nastran DOFs (w=Tz, th_x=Ry, th_y=-Rx)
+            T_node = np.array([
+                [1.0,  0.0,  0.0],
+                [0.0,  0.0,  1.0],
+                [0.0, -1.0,  0.0]
+            ])
+            T_map = np.kron(np.eye(3), T_node)
+            
+            K_plate_nastran = T_map.T @ K_plate_RM @ T_map
+            
+            # Ensamblar K_plate en la matriz local de 18x18
+            bend_indices_map = [2, 3, 4, 8, 9, 10, 14, 15, 16]
+            for i, row_idx in enumerate(bend_indices_map):
+                for j, col_idx in enumerate(bend_indices_map):
+                    K_local[row_idx, col_idx] += K_plate_nastran[i, j]
         
-        # Hammer 3-point integration scheme
-        # Points (L1, L2, L3) and weights (w)
-        # 1: (0.5, 0.5, 0.0), w=1/3
-        # 2: (0.0, 0.5, 0.5), w=1/3
-        # 3: (0.5, 0.0, 0.5), w=1/3
+        '''has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
         
+        B_b = self._get_B_bending()
+        D_bend = self._get_D_bending()
+        
+        if not has_bending:
+            D_bend = D_bend * 1e-8
+            
+        K_bend = (B_b.T @ D_bend @ B_b) * self.A
+        
+        # Transverse Shear Stiffness with Stabilized Hourglass Control
+        D_s = self._get_D_shear()
+        if not has_bending:
+            D_s = D_s * 1e-8
+            
+        # 1-point integration
+        B_s_cent = self._get_B_shear(1.0/3.0, 1.0/3.0)
+        K_shear_1pt = (B_s_cent.T @ D_s @ B_s_cent) * self.A
+        
+        # 3-point full integration
         int_points = [
             (0.5, 0.5, 1.0/3.0),
             (0.0, 0.5, 1.0/3.0),
             (0.5, 0.0, 1.0/3.0)
         ]
-        
-        D_bend = self._get_D_bending()
-        K_bend = np.zeros((9, 9))
-        
+        K_shear_3pt = np.zeros((9, 9))
         for xi, eta, w in int_points:
-            # Get B_bending at integration point
-            B_b = self._get_B_bending(xi, eta)
-            
-            # K += w * detJ * B.T * D * B
-            # Area of triangle is constant. detJ for area integration = 2*Area?
-            # Integration over area: Integral(f dA). 
-            # Formula: Area * sum(w_i * f(xi_i)) if w_i sum to 1.
-            
-            term = B_b.T @ D_bend @ B_b
-            K_bend += w * term
-            
-        K_bend *= self.A
+            B_s_pt = self._get_B_shear(xi, eta)
+            K_shear_3pt += w * (B_s_pt.T @ D_s @ B_s_pt)
+        K_shear_3pt *= self.A
         
-        # Scatter K_bend (9x9) into K_local (18x18)
-        # Bending DOFs Indices:
-        # N1: 2(z), 3(rx), 4(ry) -> global local 2,3,4
-        # N2: 8(z), 9(rx), 10(ry) -> global local 8,9,10
-        # N3: 14(z), 15(rx), 16(ry) -> global local 14,15,16
+        eps = min(1.0, (self.prop.t**2) / self.A)
+        K_shear = K_shear_1pt + eps * (K_shear_3pt - K_shear_1pt)
+        
+        K_plate = K_bend + K_shear
+        
+        # Scatter K_plate (9x9) into K_local (18x18)
         bend_indices_map = [2, 3, 4, 8, 9, 10, 14, 15, 16]
         
         for i, row_idx in enumerate(bend_indices_map):
             for j, col_idx in enumerate(bend_indices_map):
-                K_local[row_idx, col_idx] += K_bend[i, j]
-                
+                K_local[row_idx, col_idx] += K_plate[i, j]
+        '''
         # --- 3. STABILIZATION (Drilling ONLY) ---
-        # The artificial stiffness must be scaled relative to ROTATIONAL stiffness (N*m/rad),
-        # not translational stiffness (N/m).
-        # Membrane stiffness ~ E * t.
-        # Bending stiffness ~ E * t^3.
-        # Previous value (1e-6 * E * A) was in N*m (if A in m^2). E*A is N.
-        # Wait, E (N/m2) * A (m2) = N. This is Force.
-        # Rotational stiffness K_rot needs N*m. 
-        # So we should use something proportional to E * t^3 (which is N*m).
-        
-        # Scaling factor: 0.3845 * (E * t^3).
-        # Calibrated to match Nastran K6ROT=100 default for Validation Case 28.
-        k_diag_small = 0.3845 * self.mat.E * (self.prop.t**3)
+        G = self.mat.E / (2.0 * (1.0 + self.mat.nu))
+        k_diag_small = 1e-6 * G * self.prop.t * self.A
         
         # Drilling DOFs: 5, 11, 17 (Rz)
         K_local[5, 5] += k_diag_small
@@ -583,10 +393,14 @@ class CTRIA3ElementSolver:
 
     def get_stiffness_matrix(self) -> np.ndarray:
         """
-        @brief Computes K_global = T.T * K_local * T
+        @brief Computes K_global = T.T * K_local * T, 
+        where K_global = T.T * K_local * T and enforces symmetry.
         """
         K_loc = self._build_local_stiffness()
-        return self.T.T @ K_loc @ self.T
+        K_global = self.T.T @ K_loc @ self.T
+        # Forzar simetría matemática para eliminar ruido de coma flotante
+        K_global = 0.5 * (K_global + K_global.T)
+        return K_global
 
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
@@ -643,36 +457,46 @@ class CTRIA3ElementSolver:
         f_y = sig_y * t
         f_xy = tau_xy * t
         
-        # Bending Moments
+        # Bending Moments & Transverse Shear
+        # PARECE ES AQUI AL NO DEFINIR MAT 2 NO CALULA RIGIDEZ A FLEXIÓN Y POR ESO FALLA TOdO.
+        #has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
+        has_bending = self.prop.t > 0.0  # Si hay espesor, hay flexión
         
-        # M = D_b * kappa
-        # We need kappa at centroid. 
-        # Evaluate B_bending at centroid (xi=1/3, eta=1/3)
-        B_b_centroid = self._get_B_bending(1.0/3.0, 1.0/3.0)
-        
-        # Extract bending DOFs from u_loc
-        # Indices: 2,3,4 (Node 1), 8,9,10 (Node 2), 14,15,16 (Node 3)
-        # B_b expects [w1, thx1, thy1, w2, thx2, thy2, w3, thx3, thy3]
-        u_bend = np.array([
-            u_loc[2], u_loc[3], u_loc[4],
-            u_loc[8], u_loc[9], u_loc[10],
-            u_loc[14], u_loc[15], u_loc[16]
-        ])
-        
-        kappa = B_b_centroid @ u_bend # [kap_x, kap_y, kap_xy]
-        
-        # Calculate Moments
-        D_bend = self._get_D_bending()
-        moments = D_bend @ kappa # [Mx, My, Mxy]
-        
-        m_x = moments[0]
-        m_y = moments[1]
-        m_xy = moments[2]
-        
-        # Transverse Shear (Not calculated in DKT approx, usually recovered from equilibrium)
-        q_x = 0.0
-        q_y = 0.0
-        
+        if has_bending:
+            u_bend_nastran = np.array([
+                u_loc[2], u_loc[3], u_loc[4],
+                u_loc[8], u_loc[9], u_loc[10],
+                u_loc[14], u_loc[15], u_loc[16]
+            ])
+            
+            # Revertir mapeo de Nastran DOFs a Reissner-Mindlin DOFs [w, th_x, th_y]
+            T_node = np.array([
+                [1.0,  0.0,  0.0],
+                [0.0,  0.0,  1.0],
+                [0.0, -1.0,  0.0]
+            ])
+            T_map = np.kron(np.eye(3), T_node)
+            u_bend_RM = T_map @ u_bend_nastran
+            
+            # Curvaturas y Momentos
+            B_b = self._get_B_bending_RM()
+            kappa = B_b @ u_bend_RM
+            D_b = self._get_D_bending()
+            moments = D_b @ kappa
+            
+            m_x, m_y, m_xy = moments[0], moments[1], moments[2]
+            
+            # Esfuerzos de Cortadura Transversal
+            N_cent = 1.0 / 3.0
+            B_s_cent = self._get_B_shear_RM(N_cent, N_cent, N_cent)
+            gamma_s = B_s_cent @ u_bend_RM
+            D_s = self._get_D_shear()
+            shear_forces = D_s @ gamma_s
+            
+            q_x, q_y = shear_forces[0], shear_forces[1]
+        else:
+            m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
+            
         # Total Stresses at Top/Bottom Fibers
         # sigma_total = sigma_mem +/- sigma_bend
         # sigma_bend = 6*M / t^2

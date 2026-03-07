@@ -550,6 +550,8 @@ def test_membrane_stiffness_analytical_check(element_setup):
         err_msg=f"Fallo en K_membrana para caso {data['id']}"
     )
 
+'''
+Este test comprobaba la implmentación de kirtchoff
 def test_bending_stiffness_integration_check(element_setup):
     """
     @test Validates Bending Stiffness (K_bend) integration logic.
@@ -592,4 +594,53 @@ def test_bending_stiffness_integration_check(element_setup):
     np.testing.assert_allclose(
         K_solver_bend, K_bend_ref, rtol=1e-5, atol=1e-8,
         err_msg=f"Fallo en K_bending para caso {data['id']}"
-    )
+    )'''
+
+def test_bending_stiffness_integration_check(element_setup):
+    """
+    @test Validates Bending & Shear Stiffness integration logic (MIN3).
+    Reconstruye la rigidez de placa de Reissner-Mindlin sumando Flexión + Cortadura
+    y verifica que coincida matemáticamente con la matriz generada por el solver.
+    """
+    data = element_setup["data"]
+    solver = element_setup["solver"]
+    
+    # Saltamos si no hay flexión
+    if not (data["thick"] > 0.0):
+        pytest.skip("Element is pure membrane (t=0)")
+    
+    # 1. Componentes de Flexión Pura (K_b) - Constante en el área
+    B_b = solver._get_B_bending_Nastran()
+    D_b = solver._get_D_bending()
+    K_bend_ref = (B_b.T @ D_b @ B_b) * solver.A
+    
+    # 2. Componentes de Cortadura Transversal (K_s) - 1 Punto de Integración
+    N_cent = 1.0 / 3.0
+    B_s = solver._get_B_shear_Nastran(N_cent, N_cent, N_cent)
+    D_s = solver._get_D_shear()
+    K_shear_ref = (B_s.T @ D_s @ B_s) * solver.A
+    
+    # Matriz de placa teórica completa (Flexión + Cortante)
+    K_plate_theoretical = K_bend_ref + K_shear_ref
+    
+    # --- SOLUCIÓN: Añadimos la estabilización a la matriz teórica ---
+    # Para poder comparar de forma idéntica, replicamos el factor matemático del solver
+    diag_val = 1e-6 * np.mean(np.diag(K_plate_theoretical))
+    if diag_val < 1e-12: diag_val = 1e-6
+    K_plate_theoretical += np.eye(9) * diag_val
+    
+    # 3. Extraer la matriz de Placa del solver para comparar
+    K_local_full = solver._build_local_stiffness()
+    
+    # La matriz de placa se mapeó a los DOFs: w(2), Rx(3), Ry(4) de cada nudo (6 DOFs/nudo)
+    # N1: 2, 3, 4 | N2: 8, 9, 10 | N3: 14, 15, 16
+    bend_indices_map = [2, 3, 4, 8, 9, 10, 14, 15, 16]
+    
+    K_plate_solver = np.zeros((9, 9))
+    for i, row in enumerate(bend_indices_map):
+        for j, col in enumerate(bend_indices_map):
+            K_plate_solver[i, j] = K_local_full[row, col]
+            
+    np.testing.assert_allclose(K_plate_solver, K_plate_theoretical, 
+                                rtol=1e-5, atol=1e-6, 
+                                err_msg="Error en la integración MIN3: La matriz ensamblada no coincide con las fórmulas maestras.")

@@ -21,7 +21,7 @@ class CoordinateTransformation:
     @class CoordinateTransformation
     @brief Calculation of local coordinate systems and transformations to global ones.
     """
-
+    
     @staticmethod
     def compute_local_axes_triangle(node1_coords: np.ndarray, node2_coords: np.ndarray, node3_coords: np.ndarray):
         """
@@ -51,10 +51,42 @@ class CoordinateTransformation:
 
         # 4. Local Y (In Plane, orthogonal to X)
         y_axis = np.cross(z_axis, x_axis) 
+
+        # Comprobar dirección de v13 proyectada en Y
+        if np.dot(v13, y_axis) < 0:
+             y_axis = -y_axis
+             # Y si invertimos Y, debemos invertir Z para mantener mano derecha
+             z_axis = -z_axis
+
         
         return x_axis, y_axis, z_axis
-
     
+    # ELIMINADO POR COMPLETO:@staticmethod
+    # ELIMINADO POR COMPLETO:def compute_local_axes_triangle(node1_coords: np.ndarray, node2_coords: np.ndarray, node3_coords: np.ndarray):
+    # ELIMINADO POR COMPLETO:    # 1. Vector N1->N2 (Local X)
+    # ELIMINADO POR COMPLETO:    v12 = node2_coords - node1_coords
+    # ELIMINADO POR COMPLETO:    L12 = np.linalg.norm(v12)
+    # ELIMINADO POR COMPLETO:    vx = v12 / L12
+    # ELIMINADO POR COMPLETO:    
+    # ELIMINADO POR COMPLETO:    # 2. Vector N1->N3
+    # ELIMINADO POR COMPLETO:    v13 = node3_coords - node1_coords
+    # ELIMINADO POR COMPLETO:    
+    # ELIMINADO POR COMPLETO:    # 3. Normal to Plane (Local Z)
+    # ELIMINADO POR COMPLETO:    vz = np.cross(vx, v13)
+    # ELIMINADO POR COMPLETO:    L_z = np.linalg.norm(vz)
+    # ELIMINADO POR COMPLETO:    vz = vz / L_z
+    # ELIMINADO POR COMPLETO:    
+    # ELIMINADO POR COMPLETO:    # 4. Local Y (In Plane, orthogonal to X)
+    # ELIMINADO POR COMPLETO:    vy = np.cross(vz, vx)
+    # ELIMINADO POR COMPLETO:    
+    # ELIMINADO POR COMPLETO:    # GARANTIZAR que Y apunta "hacia" el Nodo 3 (interior del triángulo)
+    # ELIMINADO POR COMPLETO:    if np.dot(v13, vy) < 0:
+    # ELIMINADO POR COMPLETO:        vy = -vy
+    # ELIMINADO POR COMPLETO:        vz = -vz # Mantener regla de la mano derecha
+    # ELIMINADO POR COMPLETO:        
+    # ELIMINADO POR COMPLETO:    return vx, vy, vz
+
+
     @staticmethod
     def compute_local_axes(node1_coords: np.ndarray, node2_coords: np.ndarray, orientation_vector: np.ndarray = None):
         """
