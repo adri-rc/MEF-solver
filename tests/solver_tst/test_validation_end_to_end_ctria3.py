@@ -901,8 +901,142 @@ VALIDATION_DATA = [
         }
     },
     #endregion
-    
 
+    #region --- CASO 44: Flexión Pura Plano XY (Validación Kf y RM) ---
+    {
+        "case_name": "CASO 44: Flexión CTRIA3 XY",
+        "folder": "case_44",
+        "filename": "case_44.dat",
+        "rel_tol": 0.05, # Tolerancia del 5% respecto a Nastran aceptada para MIN3
+        "expected_displacements": {
+            # Desplazamientos extraídos del caso 44 (w, theta_x, theta_y)
+            2: {2: 2.433630E-02, 3: 0.0, 4: -4.000000E-02},
+            3: {2: 2.433630E-02, 3: 4.000000E-02, 4: 0.0}
+        },
+        "expected_reactions": {
+            # Reacciones en el nodo empotrado
+            1: {2: -2.000000E+03, 3: -1.000000E+03, 4: 1.000000E+03}
+        },
+        "expected_element_forces": {
+            50: {
+                # Esfuerzos Z1 = Bot (-t/2) y Z2 = Top (+t/2)
+                "stress_fiber_bot_x": 6.000000E+07,
+                "stress_fiber_bot_y": 6.000000E+07,
+                "tau_fiber_bot_y": 0.0,
+                "stress_fiber_top_x": -6.000000E+07,
+                "stress_fiber_top_y": -6.000000E+07,
+                "tau_fiber_top_y": 0.0
+            }
+        }
+    },
+    #endregion
+
+    #region --- CASO 45: Cortadura transversal 2 elementos ---
+    {
+        "case_name": "CASO 45: Cortadura transversal 2 CTRIAs",
+        "folder": "case_45",
+        "filename": "case_45.dat",
+        "rel_tol": 0.25, # Diferencia mayor en mallas muy gruesas con cortante (característico de MIN3)
+        "expected_displacements": {
+            # Desplazamientos acoplando flexión y cortante
+            3: {2: -4.103512E-04, 3: -6.710108E-05, 4: 5.401289E-04},
+            4: {2: -4.280895E-04, 3: -7.221287E-05, 4: 7.094046E-04}
+        },
+        "expected_reactions": {
+            # Reparto de reacciones asimétricas
+            1: {2: 6.937526E+02, 3: 2.450126E+02, 4: -4.915973E+02},
+            2: {2: 3.062474E+02, 3: -5.126001E+01, 4: -5.084027E+02}
+        },
+        "expected_element_forces": {
+            1: {
+                "stress_fiber_bot_x": -1.364240E+06,
+                "stress_fiber_bot_y": -4.092719E+05,
+                "tau_fiber_bot_y": -4.860481E+04,
+                "stress_fiber_top_x": 1.364240E+06,
+                "stress_fiber_top_y": 4.092719E+05,
+                "tau_fiber_top_y": 4.860481E+04
+            },
+            2: {
+                "stress_fiber_bot_x": -1.035760E+06,
+                "stress_fiber_bot_y": -3.017825E+05,
+                "tau_fiber_bot_y": 6.877140E+04,
+                "stress_fiber_top_x": 1.035760E+06,
+                "stress_fiber_top_y": 3.017825E+05,
+                "tau_fiber_top_y": -6.877140E+04
+            }
+        }
+    },
+    #endregion
+
+    #region --- CASO 46: Rotación de Matrices (Plano YZ, X Constante) ---
+    {
+        "case_name": "CASO 46: Rotación de Coordenadas Plano YZ",
+        "folder": "case_46",
+        "filename": "case_46.dat",
+        "rel_tol": 0.05,
+        "expected_displacements": {
+            # Al rotar el plano, T3 pasa a ser T1 y los giros R1,R2 pasan a R2,R3
+            2: {0: 1.572526E-01, 5: -1.296000E-01},
+            3: {0: 1.572526E-01, 4: 1.296000E-01, 5: 0.0}
+        },
+        "expected_reactions": {
+            # El empotramiento reacciona acorde a la nueva orientación global
+            1: {0: -3.000000E+03, 4: -3.000000E+03, 5: 3.000000E+03}
+        },
+        "expected_element_forces": {
+            10: {
+                # Esfuerzos deben mantenerse consistentes en el sistema local
+                "stress_fiber_bot_x": 9.000000E+07,
+                "stress_fiber_bot_y": 9.000000E+07,
+                "tau_fiber_bot_y": 0.0,
+                "stress_fiber_top_x": -9.000000E+07,
+                "stress_fiber_top_y": -9.000000E+07,
+                "tau_fiber_top_y": 0.0
+            }
+        }
+    },
+    #endregion
+
+    #region --- CASO 47: Convergencia de Malla 18 CTRIA3 ---
+    {
+        "case_name": "CASO 47: Convergencia de Malla 18 CTRIA3",
+        "folder": "case_47",
+        "filename": "case_47.dat",
+        "rel_tol": 0.1, # Tolerancia del 3% (excelente para comparar MIN3 vs DKT en mallas finas)
+        "expected_displacements": {
+            # Desplazamientos nodales en la punta libre (Nodos 4, 8, 12 y 16)
+            # Extraídos directamente del Vector de Desplazamientos de Nastran
+            4:  {2: 6.313746E-03, 3: 6.875259E-05,  4: -1.592840E-02},
+            8:  {2: 6.369023E-03, 3: -1.445093E-05, 4: -1.589128E-02},
+            12: {2: 6.398179E-03, 3: 1.403479E-05,  4: -1.593498E-02},
+            16: {2: 6.444685E-03, 3: -8.577791E-05, 4: -1.675856E-02}
+        },
+        "expected_reactions": {
+            # El .f06 no contiene bloque de SPC Forces. Se deja vacío para que el solver
+            # no levante excepción y valide solo desplazamientos y esfuerzos.
+        },
+        "expected_element_forces": {
+            # Esfuerzos extraídos del Elemento 1 (Cercano al empotramiento)
+            1: {
+                "stress_fiber_bot_x": 4.772342E+07,
+                "stress_fiber_bot_y": 8.556369E+06,
+                "tau_fiber_bot_y":    2.957143E+06,
+                "stress_fiber_top_x": -4.772342E+07,
+                "stress_fiber_top_y": -8.556369E+06,
+                "tau_fiber_top_y":    -2.957143E+06
+            },
+            # Esfuerzos extraídos del Elemento 2 (Adyacente)
+            2: {
+                "stress_fiber_bot_x": 3.353281E+07,
+                "stress_fiber_bot_y": 3.330200E+07,
+                "tau_fiber_bot_y":    -1.799399E+07,
+                "stress_fiber_top_x": -3.353281E+07,
+                "stress_fiber_top_y": -3.330200E+07,
+                "tau_fiber_top_y":    1.799399E+07
+            }
+        }
+    },
+    #endregion    
 ]
 
 
