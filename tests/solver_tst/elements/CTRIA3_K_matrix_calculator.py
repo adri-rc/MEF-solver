@@ -11,7 +11,9 @@ class Material:
         self.G = E / (2.0 * (1.0 + nu))
         
 def matriz_constitutiva_membrana_tension_plana(E:float, nu:float):
-    """Devuelve la matriz D (3x3) para TENSIÓN PLANA."""
+    """
+    --- CHEQUEADA CON REFERENCIAS TFM (ref ec MEF-español (4.18)) ---
+    Devuelve la matriz D (3x3) para TENSIÓN PLANA."""
     
     factor = E / (1.0 - nu**2)
     return factor * np.array([
@@ -63,7 +65,9 @@ class CTRIA3:
     # 1. GEOMETRÍA Y TRANSFORMACIÓN
     # ==========================================================
     def _calcular_geometria_y_matriz_T(self):
-        """Calcula coordenadas locales, área y matriz de transformación T."""
+        """
+        Calcula coordenadas locales, área y matriz de transformación T.
+        """
         N1, N2, N3 = self.nodos[0], self.nodos[1], self.nodos[2]
         
         if self.sistema == 'local':
@@ -95,13 +99,24 @@ class CTRIA3:
         # Guardamos en atributos de clase para uso posterior
         self.x_loc = np.array([x1, x2, x3])
         self.y_loc = np.array([y1, y2, y3])
+        # La fórmula del siguinete área viene de la ecuación (ref ec MEF-español (4.35)) libro MEF español.
+        # A = 0.5*Det([1, x1, y1],[1, x2, y2],[1, x3, y3]) que si desarrollamos:
+        # 2*A = 1*(x_2 y_3 - x_3 y_2) - 1*(x_1 y_3 - x_3 y_1) + 1*(x_1 y_2 - x_2 y_1)
+        # como x1 = y1 = 0
+        # 2A = (x_2 * y_3 -x_3 y_2) - 0 - 0 + 0
+        # A = 0.5*(x_2 * y_3 -x_3 y_2)
+        # Dado que y2 =0 -> A = 0.5 * (x_2 * y_3) ((base*altura)/2)
+        # Pero se deja en la ecuación por si un usuario definen unas coordenadas locales donde y2 no sea 0.
         self.area = 0.5 * abs(x2*y3 - x3*y2)
 
     # ==========================================================
     # 2. FORMULACIÓN DE MEMBRANA (CST)
     # ==========================================================
     def _calcular_matriz_B_membrana(self):
-        """Calcula la matriz B (3x6) de deformación-desplazamiento para membrana."""
+        """
+        --- CHEQUEADA CON REFERENCIAS TFM (ref ec MEF-español (4.37)) ---
+        Calcula la matriz B (3x6) de deformación-desplazamiento para membrana.
+        """
         x1, x2, x3 = self.x_loc
         y1, y2, y3 = self.y_loc
         
@@ -117,7 +132,10 @@ class CTRIA3:
         return B
 
     def _calcular_k_membrana_local(self, B):
-        """Calcula la matriz de rigidez de membrana k_m (6x6)."""
+        """
+        --- CHEQUEADA CON REFERENCIAS TFM (ref ec MEF-español (4.41)) ---
+        Calcula la matriz de rigidez de membrana k_m (6x6).
+        """
         D = matriz_constitutiva_membrana_tension_plana(self.mat.E, self.mat.nu)
         k_m = self.t * self.area * np.dot(B.T, np.dot(D, B))
         return k_m
