@@ -172,6 +172,65 @@ class CTRIA3:
         D = matriz_constitutiva_membrana_tension_plana(self.mat_m.E, self.mat_m.nu)
         k_m = self.t * self.area * np.dot(B.T, np.dot(D, B))
         return k_m
+    
+    # ==========================================================
+    # 2A-BIS. FORMULACIÓN DE MEMBRANA (ISOPARAMÉTRICA)
+    # ==========================================================
+    def _calcular_k_membrana_isoparametrica(self):
+        """
+        NUEVO MÉTODO:
+        Calcula la matriz de rigidez de membrana usando coordenadas
+        naturales (xi, eta), sus derivadas, y el Jacobiano.
+        """
+        x = self.x_loc
+        y = self.y_loc
+        
+        # 1. Definición de las derivadas de las funciones de forma N_i respecto a xi y eta
+        # L1 = 1 - xi - eta;  L2 = xi;  L3 = eta
+        # N1 = L1, N2 = L2, N3 = L3
+        dN_dxi  = np.array([-1.0,  1.0,  0.0])
+        dN_deta = np.array([-1.0,  0.0,  1.0])
+        
+        # 2. Definición del Jacobiano (J)
+        # Relaciona el espacio normalizado (referencia) con el espacio físico local
+        dx_dxi  = np.dot(dN_dxi, x)
+        dy_dxi  = np.dot(dN_dxi, y)
+        dx_deta = np.dot(dN_deta, x)
+        dy_deta = np.dot(dN_deta, y)
+        
+        J = np.array([
+            [dx_dxi, dy_dxi],
+            [dx_deta, dy_deta]
+        ])
+        
+        detJ = np.linalg.det(J) # Para un CTRIA3, detJ = 2 * Area
+        J_inv = np.linalg.inv(J)
+        
+        # 3. Paso de derivadas del espacio natural al espacio físico (x, y locales)
+        dN_dnat = np.vstack((dN_dxi, dN_deta))  # Matriz 2x3
+        dN_dfis = np.dot(J_inv, dN_dnat)        # [dN/dx, dN/dy]^T
+        
+        dN_dx = dN_dfis[0, :]
+        dN_dy = dN_dfis[1, :]
+        
+        # 4. Construcción de la matriz B_iso (3x6)
+        B_iso = np.zeros((3, 6))
+        for i in range(3):
+            B_iso[0, 2*i]   = dN_dx[i]
+            B_iso[1, 2*i+1] = dN_dy[i]
+            B_iso[2, 2*i]   = dN_dy[i]
+            B_iso[2, 2*i+1] = dN_dx[i]
+            
+        # 5. Cálculo de K a través de integración numérica de Gauss (1 punto)
+        D = matriz_constitutiva_membrana_tension_plana(self.mat_m.E, self.mat_m.nu)
+        
+        # El peso del punto de Gauss para el triángulo maestro de lados 1 es W = 0.5
+        peso_gauss = 0.5 
+        
+        # Integral = t * det(J) * W * (B^T * D * B)
+        k_m_iso = self.t * detJ * peso_gauss * np.dot(B_iso.T, np.dot(D, B_iso))
+        
+        return k_m_iso
 
     # ==========================================================
     # 2B. FORMULACIÓN DE FLEXIÓN (MINDLIN-REISSNER)
@@ -257,9 +316,16 @@ class CTRIA3:
         B_flexion, B_cortante = self._calcular_matrices_B_flexion_cortante()
         
         # Paso 3: Calcular rigidez local de membrana 6x6 & Flexión + Cortante 9x9
+        # --- Cálculo Membrana Clásico ---
         k_m = self._calcular_k_membrana_local(B_membrana)
         k_f = self._calcular_k_flexion_local(B_flexion, B_cortante)
+
+        # --- Cálculo Membrana Isoparamétrico (Nuevo) ---
+        k_m_iso = self._calcular_k_membrana_isoparametrica()
         
+        # Puedes imprimir la diferencia para validar que es 0 (matemáticamente equivalente)
+        print("Diferencia entre métodos de membrana:", np.max(np.abs(k_m - k_m_iso)))
+
         # Paso 4: Ensamblar en matriz del elemento 18x18
         self._ensamblar_K_local(k_m, k_f)
         
@@ -310,16 +376,25 @@ print_matriz(elem_local.K_local, "Matriz K_local (Coordenadas Locales)")
 # ==========================================
 print("\n>>> CASO DE VALIDACIÓN XY")
 
-print("\n>>> CASO 1: Elemento definido en coordenadas LOCALES (2D)")
+print("\n>>> CASO: Elemento definido en coordenadas GLOBALES (3D)")
 # Cogemos el mismo triángulo, pero lo giramos 90 grados alrededor del eje X
-# Ahora el triángulo está en el plano XZ en lugar del XY
-nodos_globales = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
-elem_global = CTRIA3(nodos_globales, material_membrana=mat_m, t=50.0, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
+mat_m = Material(E=70e9, nu=0.3)
+mat_f = Material(E=70e9, nu=0.3)
+mat_c = Material(E=70e9, nu=0.3)
+
+
+nodos_globales_ej34 = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.866, 0.0]]
+thickness_ej34 = 0.001
+
+nodos_globales_ej36 = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
+thickness_ej36 = 50.0
+
+elem_global = CTRIA3(nodos_globales_ej34, material_membrana=mat_m, t=thickness_ej34, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
 elem_global.calcular_matrices()
 
-print_matriz(elem_global.K_local, "Matriz K_local (Interna del elemento inclinado)")
-print_matriz(elem_global.T, "Matriz de Transformación (T)")
-print_matriz(elem_global.K_global, "Matriz K_global (Vista desde el sistema general)")
+#print_matriz(elem_global.K_local, "Matriz K_local (Interna del elemento inclinado)")
+#print_matriz(elem_global.T, "Matriz de Transformación (T)")
+#print_matriz(elem_global.K_global, "Matriz K_global (Vista desde el sistema general)")
 
 
 
@@ -362,5 +437,5 @@ def exportar_matriz_csv(K, nombre_archivo):
 
 # 4. Exportamos las matrices a CSV
 #exportar_matriz_csv(elem_local.K_local, r"draft_benging_calculadora_K_Local_bueno2.csv")
-exportar_matriz_csv(elem_global.K_global, r"draft_benging_calculadora_K_Global_bueno3.csv")
+exportar_matriz_csv(elem_global.K_global, r"draft_calc_K_Global_copn_isoparametricas_ej34_bueno3.csv")
 #exportar_matriz_csv(elem_global.T, r"draft_benging_calculadora_Transformacion.csv")
