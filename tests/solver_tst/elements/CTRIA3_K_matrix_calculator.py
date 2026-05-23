@@ -129,6 +129,7 @@ class CTRIA3:
             for i in range(0, 18, 3):
                 self.T[i:i+3, i:i+3] = Lambda
 
+        print('Matriz rotación:\n',self.T)
         # Guardamos en atributos de clase para uso posterior
         self.x_loc = np.array([x1, x2, x3])
         self.y_loc = np.array([y1, y2, y3])
@@ -203,7 +204,8 @@ class CTRIA3:
             [dx_deta, dy_deta]
         ])
         
-        detJ = np.linalg.det(J) # Para un CTRIA3, detJ = 2 * Area
+        #detJ = np.linalg.det(J) # ANTES:detJ = np.linalg.det(J) # Para un CTRIA3, detJ = 2 * Area
+        detJ = np.abs(np.linalg.det(J)) # CORREGIDO
         J_inv = np.linalg.inv(J)
         
         # 3. Paso de derivadas del espacio natural al espacio físico (x, y locales)
@@ -241,10 +243,25 @@ class CTRIA3:
         """
         x1, x2, x3 = self.x_loc
         y1, y2, y3 = self.y_loc
+        print('COORDENADAS:')
+        print(f'x1: {x1}')
+        print(f'x2: {x2}')
+        print(f'x3: {x3}')
+        print(f'y1: {y1}')
+        print(f'y2: {y2}')
+        print(f'y3: {y3}')
         
         b1, c1 = y2 - y3, x3 - x2
         b2, c2 = y3 - y1, x1 - x3
         b3, c3 = y1 - y2, x2 - x1
+
+        print(f'b1: {b1}')
+        print(f'b2: {b2}')
+        print(f'b3: {b3}')
+
+        print(f'c1: {c1}')
+        print(f'c2: {c2}')
+        print(f'c3: {c3}')
         
         # 1. Matriz de Curvaturas B_f (Evaluada para [w, th_x, th_y])
         B_f = (1.0 / (2.0 * self.area)) * np.array([
@@ -252,6 +269,7 @@ class CTRIA3:
             [0, -c1,   0,  0, -c2,   0,  0, -c3,   0],
             [0, -b1,  c1,  0, -b2,  c2,  0, -b3,  c3]
         ])
+        print('B_f, en "def _calcular_matrices_B_flexion_cortante(self):":',B_f)
         
         # 2. Matriz de Cortante Transversal B_c
         # Evaluada en el centroide (Integración reducida de 1 punto para evitar Shear Locking)
@@ -274,11 +292,99 @@ class CTRIA3:
         D_c = matriz_constitutiva_cortante(self.mat_c.G, self.t)
         
         # Integral analítica en el área: A * B^T * D * B
-        k_flex = self.area * np.dot(B_f.T, np.dot(D_f, B_f))
+        k_flex = self.area * np.dot(B_f.T, np.dot(D_f, B_f)) #(self.t**3/12)*
         k_cort = self.area * np.dot(B_c.T, np.dot(D_c, B_c))
+
+        print('B_f',B_f)
+        print('D_f',D_f)
+        print('-- K FLEX PURA (no isoparamétrica) (sin sumar rigidez cortadura)--')
+        print(k_flex)
+        print('-- K CORTADURA PURA (no isoparamétrica) --')
+        print(k_cort)
         
         return k_flex + k_cort
     
+    # ==========================================================
+    # 2B-BIS. FORMULACIÓN DE FLEXIÓN (ISOPARAMÉTRICA)
+    # ==========================================================
+    def _calcular_k_flexion_isoparametrica(self):
+        """
+        NUEVO MÉTODO:
+        Calcula la matriz de rigidez de flexión y cortante usando
+        coordenadas isoparamétricas (evaluado en el centroide con 1 punto de Gauss).
+        """
+        x = self.x_loc
+        y = self.y_loc
+        
+        # Punto de integración de Gauss (Centroide) y peso para el triángulo
+        xi, eta = 1.0/3.0, 1.0/3.0
+        peso_gauss = 0.5
+        
+        # Funciones de forma en el punto de integración: N = [L1, L2, L3]
+        N = np.array([1.0 - xi - eta, xi, eta])
+        
+        # Derivadas de las funciones de forma respecto a xi, eta
+        dN_dxi  = np.array([-1.0,  1.0,  0.0])
+        dN_deta = np.array([-1.0,  0.0,  1.0])
+        
+        # Jacobiano
+        dx_dxi  = np.dot(dN_dxi, x)
+        dy_dxi  = np.dot(dN_dxi, y)
+        dx_deta = np.dot(dN_deta, x)
+        dy_deta = np.dot(dN_deta, y)
+        
+        J = np.array([
+            [dx_dxi, dy_dxi],
+            [dx_deta, dy_deta]
+        ])
+        
+        #detJ = np.linalg.det(J) # ANTES:detJ = np.linalg.det(J)
+        detJ = np.abs(np.linalg.det(J)) # CORREGIDO 
+        J_inv = np.linalg.inv(J)
+        
+        # Derivadas en el plano físico local (x, y)
+        dN_dnat = np.vstack((dN_dxi, dN_deta))
+        dN_dfis = np.dot(J_inv, dN_dnat)
+        
+        dN_dx = dN_dfis[0, :]
+        dN_dy = dN_dfis[1, :]
+        
+        # Construcción de matrices B (3x9 para flexión, 2x9 para cortante)
+        B_f_iso = np.zeros((3, 9))
+        B_c_iso = np.zeros((2, 9))
+        
+        for i in range(3):
+            # Índices columna para el nodo i: w, th_x, th_y -> 3*i, 3*i+1, 3*i+2
+            col = 3 * i
+            
+            # Matriz B de flexión (Curvaturas)
+            B_f_iso[0, col+2] = dN_dx[i]       # d(th_y)/dx
+            B_f_iso[1, col+1] = -dN_dy[i]      # -d(th_x)/dy
+            B_f_iso[2, col+1] = -dN_dx[i]      # -d(th_x)/dx
+            B_f_iso[2, col+2] = dN_dy[i]       # d(th_y)/dy
+            
+            # Matriz B de cortante
+            B_c_iso[0, col]   = dN_dx[i]       # dw/dx
+            B_c_iso[0, col+2] = N[i]           # +th_y
+            B_c_iso[1, col]   = dN_dy[i]       # dw/dy
+            B_c_iso[1, col+1] = -N[i]          # -th_x
+
+        # Matrices constitutivas
+        D_f = matriz_constitutiva_flexion_tension_plana(self.mat_f.E, self.mat_f.nu, self.t)
+        D_c = matriz_constitutiva_cortante(self.mat_c.G, self.t)
+        
+        # Integración de Gauss
+        k_flex_iso = detJ * peso_gauss * np.dot(B_f_iso.T, np.dot(D_f, B_f_iso))
+        k_cort_iso = detJ * peso_gauss * np.dot(B_c_iso.T, np.dot(D_c, B_c_iso))
+        
+        
+        print('--- k_flex_iso PURA: ---')
+        print(k_flex_iso)
+        print('--- k_cort_iso PURA: ---')
+        print(k_cort_iso)
+        
+
+        return k_flex_iso + k_cort_iso
      
     # ==========================================================
     # 3. ENSAMBLAJE Y TRANSFORMACIÓN GLOBAL
@@ -322,12 +428,15 @@ class CTRIA3:
 
         # --- Cálculo Membrana Isoparamétrico (Nuevo) ---
         k_m_iso = self._calcular_k_membrana_isoparametrica()
+        k_f_iso = self._calcular_k_flexion_isoparametrica()
         
         # Puedes imprimir la diferencia para validar que es 0 (matemáticamente equivalente)
         print("Diferencia entre métodos de membrana:", np.max(np.abs(k_m - k_m_iso)))
+        print(f"Diferencia máxima en Flexión  (Clásico vs Iso): {np.max(np.abs(k_f - k_f_iso)):.2e}")
 
         # Paso 4: Ensamblar en matriz del elemento 18x18
-        self._ensamblar_K_local(k_m, k_f)
+        #self._ensamblar_K_local(k_m, k_f)
+        self._ensamblar_K_local(k_m_iso, k_f_iso)
         
         # Paso 5: Rotar al sistema global
         self._transformar_a_global()
@@ -378,19 +487,23 @@ print("\n>>> CASO DE VALIDACIÓN XY")
 
 print("\n>>> CASO: Elemento definido en coordenadas GLOBALES (3D)")
 # Cogemos el mismo triángulo, pero lo giramos 90 grados alrededor del eje X
-mat_m = Material(E=70e9, nu=0.3)
+mat_m = Material(E=0.0, nu=0.3)
 mat_f = Material(E=70e9, nu=0.3)
-mat_c = Material(E=70e9, nu=0.3)
+mat_c = Material(E=0.0, nu=0.3)
 
 
 nodos_globales_ej34 = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.866, 0.0]]
-thickness_ej34 = 0.001
+thickness_ej34 = 1.0
+
+elem_global_ej34 = CTRIA3(nodos_globales_ej34, material_membrana=mat_m, t=thickness_ej34, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
+elem_global_ej34.calcular_matrices()
+
 
 nodos_globales_ej36 = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
-thickness_ej36 = 50.0
+thickness_ej36 = 0.001
 
-elem_global = CTRIA3(nodos_globales_ej34, material_membrana=mat_m, t=thickness_ej34, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
-elem_global.calcular_matrices()
+elem_global_ej36 = CTRIA3(nodos_globales_ej36, material_membrana=mat_m, t=thickness_ej36, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
+elem_global_ej36.calcular_matrices()
 
 #print_matriz(elem_global.K_local, "Matriz K_local (Interna del elemento inclinado)")
 #print_matriz(elem_global.T, "Matriz de Transformación (T)")
@@ -437,5 +550,27 @@ def exportar_matriz_csv(K, nombre_archivo):
 
 # 4. Exportamos las matrices a CSV
 #exportar_matriz_csv(elem_local.K_local, r"draft_benging_calculadora_K_Local_bueno2.csv")
-exportar_matriz_csv(elem_global.K_global, r"draft_calc_K_Global_copn_isoparametricas_ej34_bueno3.csv")
+#exportar_matriz_csv(elem_global.K_global, r"draft_calc_K_Global_copn_isoparametricas_con_flexion_ej34_calc_iso_sol_abs(J)_CLAUDE.csv")
 #exportar_matriz_csv(elem_global.T, r"draft_benging_calculadora_Transformacion.csv")
+
+# ==========================================
+# CASO 3: MANUAL
+# ==========================================
+print("\n>>> CASO MANUAL")
+
+print("\n>>> CASO: CTRIA calculado a mano")
+mat_m_manual = Material(E=0., nu=0.3)
+mat_f_manual = Material(E=210000., nu=0.3)
+mat_c_manual = Material(E=0., nu=0.3)
+
+
+nodos_globales_ejmanual = [[10., 10., 10.], [20., 10., 10.], [10., 20., 10.]]
+thickness_ejmanual = 1.0
+
+
+elem_global_case_manual = CTRIA3(nodos_globales_ejmanual, material_membrana=mat_m_manual, t=thickness_ejmanual, material_flexion=mat_f_manual, material_cortante=mat_c_manual, sistema='global')
+elem_global_case_manual.calcular_matrices()
+
+#exportar_matriz_csv(elem_global_case_manual.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_Ej_manual_flex_pura_calculadoraTFM.csv")
+#exportar_matriz_csv(elem_global_ej34.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_34\draft_ej34_pure_flexion_calculadoraTFM.csv")
+exportar_matriz_csv(elem_global_ej36.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\draft_ej36_pure_flexion_calculadoraTFM.csv")
