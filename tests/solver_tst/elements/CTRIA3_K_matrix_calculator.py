@@ -573,4 +573,22 @@ elem_global_case_manual.calcular_matrices()
 
 #exportar_matriz_csv(elem_global_case_manual.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_Ej_manual_flex_pura_calculadoraTFM.csv")
 #exportar_matriz_csv(elem_global_ej34.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_34\draft_ej34_pure_flexion_calculadoraTFM.csv")
-exportar_matriz_csv(elem_global_ej36.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\draft_ej36_pure_flexion_calculadoraTFM.csv")
+#exportar_matriz_csv(elem_global_ej36.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\draft_ej36_pure_flexion_calculadoraTFM.csv")
+
+
+# ==========================================
+# CASO 33
+# ==========================================
+mat_m_case33 = Material(E=0., nu=0.33)
+mat_f_case33 = Material(E=500000000, nu=0.45)
+mat_c_case33 = Material(E=0., nu=0.3)
+
+
+nodos_globales_case33 = [[0., 0., 0.], [2., 5., 1.], [4., 1., 3.]]
+thickness_case33 = 0.005
+
+
+elem_global_case33 = CTRIA3(nodos_globales_case33, material_membrana=mat_m_case33, t=thickness_case33, material_flexion=mat_f_case33, material_cortante=mat_c_case33, sistema='global')
+elem_global_case33.calcular_matrices()
+exportar_matriz_csv(elem_global_case33.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_33\draft_ej33_Kglobal_pure_flexion_calculadoraTFM.csv")
+
