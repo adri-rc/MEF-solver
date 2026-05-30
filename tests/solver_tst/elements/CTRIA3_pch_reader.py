@@ -97,11 +97,18 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
 # ==========================================
 # EJECUCIÓN PRINCIPAL
 # ==========================================
+
+input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\ej_manual_kglobal_flexion_pura_ - copia.pch"
+output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_ej_manual_kglobal_flexion_pura_ - copia_Nastran.csv"
+
+# EL SCRIPT SOLO FUNCIONA PARA ELEMENTOS CTRIA (3 NUDOS)
+
 if __name__ == "__main__":
-    archivo_punch = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\ej36_kglobal_pure_membrane.pch"
+    
+    archivo_punch = input_pch_file_path
     
     # 1. Leemos la matriz Global de Rigidez (KAAX) asumiendo 3 nudos
     K_global_nastran = leer_dmig_pch(archivo_punch, nombre_matriz='KAAX', num_nudos=3)
     
     # 2. Exportamos a CSV
-    exportar_matriz_pch_csv(K_global_nastran, num_nudos=3, nombre_archivo=r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\draft_ej36_kglobal_pure_membrane_Nastran.csv")
+    exportar_matriz_pch_csv(K_global_nastran, num_nudos=3, nombre_archivo=output_K_csv_file_path)

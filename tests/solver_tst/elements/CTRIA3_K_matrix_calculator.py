@@ -441,9 +441,6 @@ class CTRIA3:
         # Paso 5: Rotar al sistema global
         self._transformar_a_global()
 
-
-
-
 # --- FUNCIONES DE UTILIDAD ---
 def print_matriz(K, titulo):
     """Imprime una matriz 18x18 filtrando los ceros para mejor lectura."""
@@ -462,54 +459,6 @@ def print_matriz(K, titulo):
             else:
                 fila += f"{val:9.1e}"
         print(fila)
-
-# ==========================================
-# CASO 1: TRABAJANDO EN COORDENADAS LOCALES
-# ==========================================
-'''
-print("\n>>> CASO 1: Elemento definido en coordenadas LOCALES (2D)")
-mat_m = Material(E=70e9, nu=0.3)
-mat_f = Material(E=70e9, nu=0.3)
-mat_c = Material(E=70e9, nu=0.3)
-
-# Nodos en 2D (x, y)
-nodos_locales = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
-elem_local = CTRIA3(nodos_locales, material_membrana=mat_m, t=50.0, material_flexion=mat_f, material_cortante=mat_c, sistema='local')
-elem_local.calcular_matrices()
-
-print_matriz(elem_local.K_local, "Matriz K_local (Coordenadas Locales)")
-'''
-
-# ==========================================
-# CASO 2: TRABAJANDO EN COORDENADAS GLOBALES
-# ==========================================
-print("\n>>> CASO DE VALIDACIÓN XY")
-
-print("\n>>> CASO: Elemento definido en coordenadas GLOBALES (3D)")
-# Cogemos el mismo triángulo, pero lo giramos 90 grados alrededor del eje X
-mat_m = Material(E=0.0, nu=0.3)
-mat_f = Material(E=70e9, nu=0.3)
-mat_c = Material(E=0.0, nu=0.3)
-
-
-nodos_globales_ej34 = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.866, 0.0]]
-thickness_ej34 = 1.0
-
-elem_global_ej34 = CTRIA3(nodos_globales_ej34, material_membrana=mat_m, t=thickness_ej34, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
-elem_global_ej34.calcular_matrices()
-
-
-nodos_globales_ej36 = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
-thickness_ej36 = 0.001
-
-elem_global_ej36 = CTRIA3(nodos_globales_ej36, material_membrana=mat_m, t=thickness_ej36, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
-elem_global_ej36.calcular_matrices()
-
-#print_matriz(elem_global.K_local, "Matriz K_local (Interna del elemento inclinado)")
-#print_matriz(elem_global.T, "Matriz de Transformación (T)")
-#print_matriz(elem_global.K_global, "Matriz K_global (Vista desde el sistema general)")
-
-
 
 # ==========================================
 #  --- FUNCIÓN DE EXPORTACIÓN A CSV ---
@@ -548,32 +497,81 @@ def exportar_matriz_csv(K, nombre_archivo):
             
     print(f"✅ Matriz exportada exitosamente a: \n   --> '{ruta_completa}'")
 
-# 4. Exportamos las matrices a CSV
-#exportar_matriz_csv(elem_local.K_local, r"draft_benging_calculadora_K_Local_bueno2.csv")
-#exportar_matriz_csv(elem_global.K_global, r"draft_calc_K_Global_copn_isoparametricas_con_flexion_ej34_calc_iso_sol_abs(J)_CLAUDE.csv")
-#exportar_matriz_csv(elem_global.T, r"draft_benging_calculadora_Transformacion.csv")
 
 # ==========================================
-# CASO 3: MANUAL
+# CASO 1: TRABAJANDO EN COORDENADAS LOCALES
 # ==========================================
-print("\n>>> CASO MANUAL")
+'''
+print("\n>>> CASO 1: Elemento definido en coordenadas LOCALES (2D)")
+mat_m = Material(E=70e9, nu=0.3)
+mat_f = Material(E=70e9, nu=0.3)
+mat_c = Material(E=70e9, nu=0.3)
 
+# Nodos en 2D (x, y)
+nodos_locales = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
+elem_local = CTRIA3(nodos_locales, material_membrana=mat_m, t=50.0, material_flexion=mat_f, material_cortante=mat_c, sistema='local')
+elem_local.calcular_matrices()
+print_matriz(elem_local.K_local, "Matriz K_local (Coordenadas Locales)")
+'''
+
+# ==========================================
+# CASO 2: TRABAJANDO EN COORDENADAS GLOBALES
+# ==========================================
+'''
+print("\n>>> CASO DE VALIDACIÓN XY")
+print("\n>>> CASO: Elemento definido en coordenadas GLOBALES (3D)")
+# Cogemos el mismo triángulo, pero lo giramos 90 grados alrededor del eje X
+mat_m = Material(E=0.0, nu=0.3)
+mat_f = Material(E=70e9, nu=0.3)
+mat_c = Material(E=0.0, nu=0.3)
+
+nodos_globales_ej34 = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.866, 0.0]]
+thickness_ej34 = 1.0
+
+elem_global_ej34 = CTRIA3(nodos_globales_ej34, material_membrana=mat_m, t=thickness_ej34, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
+elem_global_ej34.calcular_matrices()
+
+
+nodos_globales_ej36 = [[100.0, 100.0, 0.0], [150.0, 120.0, 0.0], [80.0, 200.0, 0.0]]
+thickness_ej36 = 0.001
+
+elem_global_ej36 = CTRIA3(nodos_globales_ej36, material_membrana=mat_m, t=thickness_ej36, material_flexion=mat_f, material_cortante=mat_c, sistema='global')
+elem_global_ej36.calcular_matrices()
+
+#print_matriz(elem_global.K_local, "Matriz K_local (Interna del elemento inclinado)")
+#print_matriz(elem_global.T, "Matriz de Transformación (T)")
+#print_matriz(elem_global.K_global, "Matriz K_global (Vista desde el sistema general)")
+'''
+
+# ==========================================
+# CASO MANUAL
+# ==========================================
 print("\n>>> CASO: CTRIA calculado a mano")
+
+output_csv_K_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_Ej_manual_flexYshear_pure_calculadoraTFM.csv"
+
+# Propiedades materiales (Membrana (MID1), flexión (MID2), cortadura (MID3))
+
 mat_m_manual = Material(E=0., nu=0.3)
 mat_f_manual = Material(E=210000., nu=0.3)
-mat_c_manual = Material(E=0., nu=0.3)
+mat_c_manual = Material(E=210000., nu=0.3)
 
-
+# COORDENADAS NODOS [Nix, Niy, Niz]
 nodos_globales_ejmanual = [[10., 10., 10.], [20., 10., 10.], [10., 20., 10.]]
+
+# ESPESOR ELEMENTO CTRIA3
 thickness_ejmanual = 1.0
 
-
+# Construción y cálculo
 elem_global_case_manual = CTRIA3(nodos_globales_ejmanual, material_membrana=mat_m_manual, t=thickness_ejmanual, material_flexion=mat_f_manual, material_cortante=mat_c_manual, sistema='global')
 elem_global_case_manual.calcular_matrices()
 
-#exportar_matriz_csv(elem_global_case_manual.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_Ej_manual_flex_pura_calculadoraTFM.csv")
-#exportar_matriz_csv(elem_global_ej34.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_34\draft_ej34_pure_flexion_calculadoraTFM.csv")
-#exportar_matriz_csv(elem_global_ej36.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_36\draft_ej36_pure_flexion_calculadoraTFM.csv")
+# Exportar la matriz de rigidez del elemento en corrdenadas globales a csv
+exportar_matriz_csv(elem_global_case_manual.K_global, output_csv_K_file_path)
+
+#print_matriz(elem_global_case_manual.K_global, "Matriz K_global:\n")
+#print_matriz(elem_global_case_manual.K_local, "Matriz K_local:\n")
+#print_matriz(elem_global_case_manual.T, "Matriz de Transformación (T):\n")
 
 
 # ==========================================
@@ -588,7 +586,7 @@ nodos_globales_case33 = [[0., 0., 0.], [2., 5., 1.], [4., 1., 3.]]
 thickness_case33 = 0.005
 
 
-elem_global_case33 = CTRIA3(nodos_globales_case33, material_membrana=mat_m_case33, t=thickness_case33, material_flexion=mat_f_case33, material_cortante=mat_c_case33, sistema='global')
-elem_global_case33.calcular_matrices()
-exportar_matriz_csv(elem_global_case33.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_33\draft_ej33_Kglobal_pure_flexion_calculadoraTFM.csv")
+#elem_global_case33 = CTRIA3(nodos_globales_case33, material_membrana=mat_m_case33, t=thickness_case33, material_flexion=mat_f_case33, material_cortante=mat_c_case33, sistema='global')
+#elem_global_case33.calcular_matrices()
+#exportar_matriz_csv(elem_global_case33.K_global, r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_33\draft_ej33_Kglobal_pure_flexion_calculadoraTFM.csv")
 
