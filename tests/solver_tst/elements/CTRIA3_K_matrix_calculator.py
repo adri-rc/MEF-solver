@@ -548,7 +548,7 @@ elem_global_ej36.calcular_matrices()
 # ==========================================
 print("\n>>> CASO: CTRIA calculado a mano")
 
-output_csv_K_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_Ej_manual_flexYshear_pure_calculadoraTFM.csv"
+output_csv_K_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\ej_manual_kglobal_flexion_pura_mid3_cero.csv"
 
 # Propiedades materiales (Membrana (MID1), flexión (MID2), cortadura (MID3))
 

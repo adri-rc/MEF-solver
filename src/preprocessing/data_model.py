@@ -256,18 +256,18 @@ class BarElement(Element):
 
 
 @dataclass
-class QUADElement(Element):
+class CQUAD4Element(Element):
     """
     @brief 4-node Quadrilateral Plate Element (CQUAD4).
-    @details ¿Supports flat tension and plate bending.?
+    @details Supports membrane and bending stiffness using Reissner-Mindlin and isoparametric formulation.
     """
-    pass
+    theta: float = 0.0 # Material coordinate system orientation
 
 @dataclass
 class CTRIA3Element(Element):
     """
     @brief 3-node Triangular Shell Element (CTRIA3).
-    @details Supports membrane and bending stiffness.
+    @details Supports membrane and bending stiffness (Reissner-Mindlin).
     """
     theta: float = 0.0 # Material coordinate system orientation
 # endregion Element Classes

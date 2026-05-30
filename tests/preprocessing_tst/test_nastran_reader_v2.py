@@ -208,7 +208,40 @@ CTRIA3, 100, 10, 1, 2, 3, 30.0
         assert elem.prop_id == 10
         assert elem.theta == 30.0
 
-      
+    def test_cquad4_parsing(self, tmp_path):
+        """
+        @test CQUAD4 and PSHELL parsing.
+        @brief Verifies that quadrilateral shell elements and properties are correctly mapped.
+        """
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01, 1, , 1 
+CQUAD4, 200, 10, 1, 2, 3, 4, 45.0
+        """
+        p = tmp_path / "cquad4_test.bdf"
+        p.write_text(bdf_content)
+
+        model = parse_nastran_input(str(p))
+
+        # Check Property
+        assert 10 in model.properties
+        prop = model.properties[10]
+        assert prop.t == 0.01
+        assert prop.mat_id == 1
+        assert prop.mat_id_bending == 1
+
+        # Check Element
+        assert 200 in model.elements
+        elem = model.elements[200]
+        assert elem.nodes == [1, 2, 3, 4]
+        assert elem.prop_id == 10
+        assert elem.theta == 45.0
+        assert elem.__class__.__name__ == "CQUAD4Element"
+
 # endregion --- Dummy Nastran texts Tests --
 
 
@@ -334,8 +367,8 @@ GRID, 2, , 1.,0.,0.
 GRID, 3, , 0.,1.,0.
 GRID, 4, , 1.,1.,0.
 MAT1, 1, 2.1E11, , 0.3
-PSHELL, 10, 1, 0.1
-CQUAD4, 99, 10, 1, 2, 3, 4
+PSOLID, 10, 1
+CTETRA, 99, 10, 1, 2, 3, 4
 
         """
         p = tmp_path / "unsupported_elem.bdf"
@@ -346,7 +379,7 @@ CQUAD4, 99, 10, 1, 2, 3, 4
         
         # Verify message is about the element type
         error_msg = str(excinfo.value)
-        assert "CQUAD4" in error_msg or "FATAL ERROR" in error_msg
+        assert "CTETRA" in error_msg or "FATAL ERROR" in error_msg
 
 
     def test_unsupported_load_error(self, tmp_path):
@@ -387,3 +420,7 @@ RBE2, 99, 1, 123456, 2, 3
         error_str = str(excinfo.value)
         # Verify message mentions MPC or Rigid
         assert "MPC" in error_str or "RBE" in error_str or "Rigid" in error_str
+
+
+
+        

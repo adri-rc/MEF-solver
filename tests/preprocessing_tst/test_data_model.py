@@ -11,7 +11,8 @@ from src.preprocessing.data_model import (
     SPCConstraint,     # Constraint
     SinglePointLoad,   # LoadCase
     ShellProperty,
-    CTRIA3Element
+    CTRIA3Element,
+    CQUAD4Element
     )
 
 
@@ -443,7 +444,17 @@ class TestCTRIA3Element:
         assert elem.prop_id == 1
         assert elem.theta == 30.0
 
-
-
+class TestCQUAD4Element:
+    """
+    @class TestCQUAD4Element
+    @brief Test suite for CQUAD4Element.
+    """
+    def test_initialization(self):
+        elem = CQUAD4Element(eid=200, prop_id=2, nodes=[1, 2, 3, 4], theta=45.0)
+        assert elem.eid == 200
+        assert len(elem.nodes) == 4
+        assert elem.nodes == [1, 2, 3, 4]
+        assert elem.prop_id == 2
+        assert elem.theta == 45.0
 
 

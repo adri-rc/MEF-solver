@@ -11,7 +11,7 @@ try:
     from pyNastran.bdf.cards.elements.rods import CROD
     from pyNastran.bdf.cards.elements.bars import CBAR
     from pyNastran.bdf.cards.properties.shell import PSHELL
-    from pyNastran.bdf.cards.elements.shell import CTRIA3
+    from pyNastran.bdf.cards.elements.shell import CTRIA3, CQUAD4
 except ImportError:
 
     print("[ERROR] 'pyNastran' library is not installed.")
@@ -30,7 +30,8 @@ from .data_model import (
     SinglePointMoment, 
     SPCConstraint,
     ShellProperty,
-    CTRIA3Element
+    CTRIA3Element,
+    CQUAD4Element
 )
 
 
@@ -185,7 +186,7 @@ def _map_nodes(bdf_model: BDF, model: FEMModel):
 
 def _map_elements(bdf_model: BDF, model: FEMModel):
     """
-    @brief Translates elements (CROD, CBAR) to data_model project classes.
+    @brief Translates elements (CROD, CBAR, CTRIA3, CQUAD4) to data_model project classes.
     @details Raises ValueError if unsupported elements are found.
     """
     # Set to avoid spamming the same warning 1000 times if there are 1000 identical elements
@@ -238,10 +239,19 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 nodes=elem.node_ids,
                 theta=elem.theta_mcid
             )
+        
+        # --- CQUAD4 ---
+        elif isinstance(elem, CQUAD4):
+            model.elements[eid] = CQUAD4Element(
+                eid=eid,
+                prop_id=elem.Pid(),
+                nodes=elem.node_ids,
+                theta=elem.theta_mcid if hasattr(elem, 'theta_mcid') else 0.0
+            )
 
         # --- CATCH-ALL FOR UNSUPPORTED ELEMENTS ---
         else:
-            # store the type of element (e.g., 'CTRIA3', 'CQUAD4', 'CTETRA')
+            # store the type of element
             unsupported_types.add(elem.type)
         
         # CRITICAL: Stop execution if the mesh contains elements we cannot solve.
@@ -249,7 +259,7 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
         error_msg = (
             f"\n[FATAL ERROR] The model contains element types not supported by this solver:\n"
             f"              Found: {', '.join(unsupported_types)}\n"
-            f"              Supported types are only: CROD, CBAR.\n"
+            f"              Supported types are only: CROD, CBAR, CTRIA3, CQUAD4.\n"
             f"              Execution stopped to prevent incorrect physics."
         )
         print(error_msg)
