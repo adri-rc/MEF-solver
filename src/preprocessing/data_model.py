@@ -203,10 +203,13 @@ class ShellProperty(Property):
     mat_id: int          #: Material ID for Membrane
     t: float             #: Thickness
     mat_id_bending: int = -1 #: Material ID for Bending (Default: same as membrane if -1)
-    
+    mat_id_shear: int = -1   #: Material ID for Transverse Shear (MID3) (Default: same as MID2)
+
     def __post_init__(self):
         if self.mat_id_bending == -1:
             self.mat_id_bending = self.mat_id
+        if self.mat_id_shear == -1:
+            self.mat_id_shear = self.mat_id_bending
 # endregion ShellProperty(Property)
 # endregion Property Classes
 

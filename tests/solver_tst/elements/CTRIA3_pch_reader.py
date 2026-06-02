@@ -65,9 +65,15 @@ def leer_dmig_pch(ruta_archivo, nombre_matriz='KAAX', num_nudos=3):
 def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
     """Exporta la matriz extraída al formato CSV con etiquetas completas."""
 
+    '''
     dof_names =  ['u1', 'v1', 'w1', 'theta_x1', 'theta_y1', 'theta_z1',
                 'u2', 'v2', 'w2', 'theta_x2', 'theta_y2', 'theta_z2',
                 'u3', 'v3', 'w3', 'theta_x3', 'theta_y3', 'theta_z3']
+    '''
+
+    dof_names = []
+    for i in range(1, num_nudos + 1):
+        dof_names.extend([f'u{i}', f'v{i}', f'w{i}', f'theta_x{i}', f'theta_y{i}', f'theta_z{i}'])
 
     # Lógica de rutas
     if os.path.isabs(nombre_archivo):
@@ -98,17 +104,25 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
 # EJECUCIÓN PRINCIPAL
 # ==========================================
 
-input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\ej_manual_kglobal_flexion_pura_ - copia.pch"
-output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual\draft_ej_manual_kglobal_flexion_pura_ - copia_Nastran.csv"
+input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\cquad_kglobal_flex_pure.pch"
+output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\draft_cquad_kglobal_flex_pure_Nastran.csv"
+CASE = 'CQUAD' # 'CTRIA' or 'CQUAD'
 
-# EL SCRIPT SOLO FUNCIONA PARA ELEMENTOS CTRIA (3 NUDOS)
 
+# ==========================================
 if __name__ == "__main__":
     
     archivo_punch = input_pch_file_path
+
+    if CASE == 'CTRIA':
+        nodes_num = 3
+    elif CASE == 'CQUAD':
+        nodes_num = 4
+    else:
+        raise ValueError('¿Es un "CTRIA" o un "CQUAD" ?')
     
     # 1. Leemos la matriz Global de Rigidez (KAAX) asumiendo 3 nudos
-    K_global_nastran = leer_dmig_pch(archivo_punch, nombre_matriz='KAAX', num_nudos=3)
+    K_global_nastran = leer_dmig_pch(archivo_punch, nombre_matriz='KAAX', num_nudos=nodes_num)
     
     # 2. Exportamos a CSV
-    exportar_matriz_pch_csv(K_global_nastran, num_nudos=3, nombre_archivo=output_K_csv_file_path)
+    exportar_matriz_pch_csv(K_global_nastran, num_nudos=nodes_num, nombre_archivo=output_K_csv_file_path)

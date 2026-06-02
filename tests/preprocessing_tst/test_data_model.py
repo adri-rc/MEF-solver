@@ -425,11 +425,19 @@ class TestShellProperty:
     @brief Test suite for ShellProperty (PSHELL).
     """
     def test_initialization(self):
-        prop = ShellProperty(pid=1, mat_id=10, t=0.005, mat_id_bending=10)
+        prop = ShellProperty(pid=1, mat_id=10, t=0.005, mat_id_bending=11, mat_id_shear=12)
         assert prop.pid == 1
         assert prop.t == 0.005
-        assert prop.mat_id == 10
-        assert prop.mat_id_bending == 10
+        assert prop.mat_id == 10           # MID1
+        assert prop.mat_id_bending == 11   # MID2
+        assert prop.mat_id_shear == 12     # MID3
+
+    def test_fallback_logic(self):
+        # Prueba que MID3 hereda de MID2, y MID2 de MID1 si se omiten (-1)
+        prop = ShellProperty(pid=2, mat_id=20, t=0.1)
+        assert prop.mat_id == 20
+        assert prop.mat_id_bending == 20
+        assert prop.mat_id_shear == 20
 
 
 class TestCTRIA3Element:

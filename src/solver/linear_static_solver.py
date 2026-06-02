@@ -27,7 +27,7 @@ from .utilities import DofMapper
 from .elements.rod_element_v2 import RodElementSolverV2
 from .elements.bar_element import BarElementSolver
 from .elements.ctria3_element import CTRIA3ElementSolver
-
+from .elements.cquad4_element import CQUAD4ElementSolver
 
 # --- DATA MODEL ---
 from src.preprocessing.data_model import (
@@ -35,6 +35,7 @@ from src.preprocessing.data_model import (
     RodElement,
     BarElement,
     CTRIA3Element,
+    CQUAD4Element,
     SinglePointLoad,  
     SinglePointMoment,
     SPCConstraint
@@ -118,8 +119,9 @@ class LinearStaticSolver:
 
             elif isinstance(element, CTRIA3Element):
                 k_elem_global, node_ids = self._solve_ctria3_element(element)
+            elif isinstance(element, CQUAD4Element):
+                k_elem_global, node_ids = self._solve_cquad4_element(element)
 
-            
             # Placeholder for future elements (Beam, Plate, Solid)
             # FUTURE: elif isinstance(element, BeamElement): ...
 
@@ -189,6 +191,35 @@ class LinearStaticSolver:
         solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending)
         
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
+
+    def _solve_cquad4_element(self, element: CQUAD4Element) -> tuple:
+        n1 = self.model.get_node(element.nodes[0])
+        n2 = self.model.get_node(element.nodes[1])
+        n3 = self.model.get_node(element.nodes[2])
+        n4 = self.model.get_node(element.nodes[3])
+        prop = self.model.properties[element.prop_id]
+        
+        # 1. Material de Membrana (MID1)
+        mat_membrane = self.model.materials[prop.mat_id]
+        
+        # 2. Material de Flexión (MID2)
+        mat_bending = None
+        if hasattr(prop, 'mat_id_bending') and prop.mat_id_bending in self.model.materials:
+            mat_bending = self.model.materials[prop.mat_id_bending]
+
+        # 3. Material de Cortante (MID3)
+        mat_shear = None
+        if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
+            mat_shear = self.model.materials[prop.mat_id_shear]
+
+        solver = CQUAD4ElementSolver(
+            n1, n2, n3, n4, 
+            prop, 
+            mat_membrane=mat_membrane, 
+            mat_bending=mat_bending,
+            mat_shear=mat_shear
+        )
+        return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid, n4.nid]
 
     
     # --- CORE ASSEMBLY & SOLVE LOGIC ---
