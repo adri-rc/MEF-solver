@@ -3,7 +3,7 @@
 @brief Finite Element Solver for the CQUAD4 (Quadrilateral Shell) element.
 @details
 Implements the stiffness matrix calculation for a 4-node Quadrilateral Shell.
-        - Membrane Stiffness: Bilinear Isoparametric Formulation (2x2 Gauss Quadrature).
+        - Membrane Stiffness: Bilinear Isoparametric Formulation (2x2 Gauss Quadrature, or SRI for shear components).
         - Bending Stiffness: Reissner-Mindlin Formulation (2x2 Gauss Quadrature).
         - Transverse Shear: Selective Reduced Integration (1x1 Gauss Quadrature) to avoid Shear Locking."""
 
@@ -44,13 +44,16 @@ class CQUAD4ElementSolver:
     
     def __init__(self, node1: Node, node2: Node, node3: Node, node4: Node, 
                  prop: ShellProperty, mat_membrane: IsotropicMaterial, 
-                 mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None):
+                 mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None,
+                 use_membrane_SRI: bool = False):
         """
         @brief Initialize the CQUAD4 Element Solver.
         @param mat_bending Optional material for bending stiffness (if different from membrane).
+        @param use_membrane_SRI Toggle Selective Reduced Integration for In-Plane Shear.
         """
         self.nodes = [node1, node2, node3, node4]
         self.prop = prop
+        self.use_membrane_SRI = use_membrane_SRI
         
         # Asignación explícita de materiales
         self.mat_membrane = mat_membrane
@@ -182,10 +185,10 @@ class CQUAD4ElementSolver:
             # kappa_x = d(th_y)/dx
             # kappa_y = -d(th_x)/dy
             # kappa_xy = d(th_y)/dy - d(th_x)/dx
-            B_b[0, 3*i + 2] = dN_dx[i]
-            B_b[1, 3*i + 1] = -dN_dy[i]
-            B_b[2, 3*i + 1] = -dN_dx[i]
-            B_b[2, 3*i + 2] = dN_dy[i]
+            B_b[0, 3*i + 2] = dN_dx[i]   # kappa_x depende de th_y
+            B_b[1, 3*i + 1] = -dN_dy[i]  # kappa_y depende de -th_x
+            B_b[2, 3*i + 1] = -dN_dx[i]  # kappa_xy depende de -th_x
+            B_b[2, 3*i + 2] = dN_dy[i]   # kappa_xy depende de th_y
             
         # 3. B_shear (2 x 12)
         B_s = np.zeros((2, 12))
@@ -231,7 +234,7 @@ class CQUAD4ElementSolver:
         G = E / (2.0 * (1.0 + nu))
         return G * np.eye(2)
 
-    def _build_local_stiffness(self) -> np.ndarray:
+    def _build_local_stiffness_old(self) -> np.ndarray:
         """
         @brief Computes Element Stiffness in Local Coordinates (24x24).
         """
@@ -308,6 +311,107 @@ class CQUAD4ElementSolver:
             K_plate_nastran = T_map.T @ K_plate_RM @ T_map
             
             # Indices for Bending DOFs in 24x24 matrix
+            bend_idx = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
+            for i, r in enumerate(bend_idx):
+                for j, c in enumerate(bend_idx):
+                    K_local[r, c] += K_plate_nastran[i, j]
+                    
+        # --- 4. STABILIZATION (Drilling DOFs) ---
+        k_diag_small = 0.3845 * self.mat_membrane.E * (t**3)
+        drill_idx = [5, 11, 17, 23]
+        for idx in drill_idx:
+            K_local[idx, idx] += k_diag_small
+            
+        return K_local
+    
+    def _build_local_stiffness(self) -> np.ndarray:
+        K_local = np.zeros((24, 24))
+        
+        pts_2, weights_2 = GaussQuadrature.get_rule(2)
+        pts_1, weights_1 = GaussQuadrature.get_rule(1)
+        
+        K_mem = np.zeros((8, 8))
+        K_bend = np.zeros((12, 12))
+        K_shear = np.zeros((12, 12))
+        
+        D_m = self._get_D_membrane()
+        D_b = self._get_D_bending()
+        D_s = self._get_D_shear()
+        
+        t = self.prop.t
+        has_bending = t > 0.0
+        
+        I_bend = (t**3) / 12.0
+        k_shear = 5.0 / 6.0 
+        A_shear = k_shear * t
+        
+        # Pre-allocate para Integración Reducida Selectiva de Membrana
+        K_mem_axial = np.zeros((8, 8))
+        if self.use_membrane_SRI:
+            # Separamos las matrices D en Axial (2x2) y Shear (1x1)
+            D_m_axial = D_m[0:2, 0:2]
+            D_m_shear = np.array([[D_m[2, 2]]]) # Aseguramos forma 2D
+        
+        # --- 1. FULL INTEGRATION LOOP (2x2) ---
+        for i in range(2):
+            for j in range(2):
+                xi, eta = pts_2[i], pts_2[j]
+                w = weights_2[i] * weights_2[j]
+                
+                B_m, B_b, _, detJ = self._get_B_matrices(xi, eta)
+                dA = detJ * w
+                
+                # Ensamblaje Membrana
+                if self.use_membrane_SRI:
+                    # SRI: Integramos con 2x2 SOLO la parte axial (u, v tracciones)
+                    B_m_axial = B_m[0:2, :]
+                    K_mem_axial += (B_m_axial.T @ D_m_axial @ B_m_axial) * (dA * t)
+                else:
+                    # Integración Completa clásica
+                    K_mem += (B_m.T @ D_m @ B_m) * (dA * t)
+                
+                # Ensamblaje Flexión (Reissner-Mindlin bending)
+                if has_bending:
+                    K_bend += (B_b.T @ D_b @ B_b) * (dA * I_bend)
+                    
+        # --- 2. SELECTIVE REDUCED INTEGRATION (1x1) ---
+        # A) Membrana: Evaluamos el cortante parasito en el centro
+        if self.use_membrane_SRI:
+            xi_c, eta_c = pts_1[0], pts_1[0]
+            w_c = weights_1[0] * weights_1[0] # 2.0 * 2.0 = 4.0
+            
+            B_m_c, _, _, detJ_c = self._get_B_matrices(xi_c, eta_c)
+            B_m_shear = B_m_c[2:3, :] # Extraemos la 3ª fila (cortante en el plano)
+            dA_c = detJ_c * w_c
+            
+            K_mem_shear = (B_m_shear.T @ D_m_shear @ B_m_shear) * (dA_c * t)
+            K_mem = K_mem_axial + K_mem_shear
+
+        # B) Flexión: Evaluamos el cortante transversal (Evita out-of-plane shear locking)
+        if has_bending:
+            xi_s, eta_s = pts_1[0], pts_1[0]
+            w_s = weights_1[0] * weights_1[0] 
+            
+            _, _, B_s, detJ_s = self._get_B_matrices(xi_s, eta_s)
+            dA_s = detJ_s * w_s
+            K_shear += (B_s.T @ D_s @ B_s) * (dA_s * A_shear)
+
+        # --- 3. SCATTER INTO LOCAL 24x24 MATRIX ---
+        mem_idx = [0, 1, 6, 7, 12, 13, 18, 19]
+        for i, r in enumerate(mem_idx):
+            for j, c in enumerate(mem_idx):
+                K_local[r, c] += K_mem[i, j]
+                
+        if has_bending:
+            K_plate_RM = K_bend + K_shear
+            T_node = np.array([
+                [1.0,  0.0,  0.0],
+                [0.0,  0.0,  1.0],
+                [0.0, -1.0,  0.0]
+            ])
+            T_map = np.kron(np.eye(4), T_node)
+            K_plate_nastran = T_map.T @ K_plate_RM @ T_map
+            
             bend_idx = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
             for i, r in enumerate(bend_idx):
                 for j, c in enumerate(bend_idx):

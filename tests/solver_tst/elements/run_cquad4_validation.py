@@ -85,15 +85,16 @@ def run_validation():
     # 2. Definir Propiedades y Materiales
     t = 1.0
     prop = MockProp(t=t)
-    mat_mem = MockMat(E=2.1E5, nu=0.3)  # E=210000, nu=0.3
-    mat_flex = MockMat(E=0.0, nu=0.3)  # E=210000, nu=0.3
+    mat_mem = MockMat(E=0.0, nu=0.3)  # E=210000, nu=0.3
+    mat_flex = MockMat(E=2.1E5, nu=0.3)  # E=210000, nu=0.3
     mat_shear = MockMat(E=0.0, nu=0.3)  # E=210000, nu=0.3
     
     # 3. Inicializar tu Solver
     # Pasamos solo mat_membrane para emular que MID2 y MID3 están en blanco
     solver = CQUAD4ElementSolver(
         node1=n1, node2=n2, node3=n3, node4=n4,
-        prop=prop, mat_membrane=mat_mem, mat_bending=mat_flex, mat_shear=mat_shear
+        prop=prop, mat_membrane=mat_mem, mat_bending=mat_flex, mat_shear=mat_shear,
+        use_membrane_SRI=False
     )
     
     # 4. Obtener la Matriz de Rigidez
@@ -108,7 +109,7 @@ def run_validation():
         K_global[idx, idx] = 0.0
         
     # 6. Exportar a CSV
-    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\K_cquad4_python.csv"
+    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\K_cquad4_pure_flex_integracion_completa_python_v3.csv"
     exportar_matriz_python_csv(K_global, num_nudos=4, nombre_archivo=output_path)
 
 if __name__ == "__main__":
