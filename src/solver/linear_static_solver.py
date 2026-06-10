@@ -26,7 +26,7 @@ from .utilities import DofMapper
 # --- ELEMENT SOLVERS ---
 from .elements.rod_element_v2 import RodElementSolverV2
 from .elements.bar_element import BarElementSolver
-from .elements.ctria3_element import CTRIA3ElementSolver
+from .elements.ctria3_element_FINALL import CTRIA3ElementSolver
 from .elements.cquad4_element import CQUAD4ElementSolver
 
 # --- DATA MODEL ---
@@ -187,8 +187,11 @@ class LinearStaticSolver:
         # Check if attribute exists (it is a ShellProperty) and points to a valid material
         if hasattr(prop, 'mat_id_bending') and prop.mat_id_bending in self.model.materials:
              mat_bending = self.model.materials[prop.mat_id_bending]
+        mat_shear = None
+        if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
+             mat_shear = self.model.materials[prop.mat_id_shear]
 
-        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending)
+        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear)
         
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
 
@@ -500,9 +503,13 @@ class LinearStaticSolver:
                 # Check if attribute exists (it is a ShellProperty) and points to a valid material
                 if hasattr(prop, 'mat_id_bending') and prop.mat_id_bending in self.model.materials:
                      mat_bending = self.model.materials[prop.mat_id_bending]
-
-                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending)
                 
+                mat_shear = None
+                if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
+                    mat_shear = self.model.materials[prop.mat_id_shear]
+                
+                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear)
+
                 stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
                 stress_data['type'] = 'CTRIA3' 
 

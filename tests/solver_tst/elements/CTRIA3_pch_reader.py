@@ -94,7 +94,7 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
         
         # 2. Filas de datos
         for i in range(len(K)):
-            fila_valores = [f"{val:.3e}" if abs(val) > 1e-10 else "0.0" for val in K[i]]
+            fila_valores = [f"{val:.9e}" if abs(val) > 1e-10 else "0.0" for val in K[i]]
             writer.writerow([i, dof_names[i]] + fila_valores)
             
     print(f"✅ Matriz global extraída del .pch y exportada a: \n   --> '{ruta_completa}'")
@@ -104,9 +104,9 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
 # EJECUCIÓN PRINCIPAL
 # ==========================================
 
-input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\cquad_kglobal_flex_pure.pch"
-output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\draft_cquad_kglobal_flex_pure_Nastran.csv"
-CASE = 'CQUAD' # 'CTRIA' or 'CQUAD'
+input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_32\ej32_ksolution_k6rot_100.pch"
+output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_32\ej32_ksolution_k6rot_100_Nastran.csv"
+CASE = 'CTRIA' # 'CTRIA' or 'CQUAD'
 
 
 # ==========================================

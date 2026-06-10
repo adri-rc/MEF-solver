@@ -109,7 +109,7 @@ def run_validation():
         K_global[idx, idx] = 0.0
         
     # 6. Exportar a CSV
-    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\K_cquad4_pure_flex_integracion_completa_python_v3.csv"
+    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\K_cquad4_pure_flex_integracion_completa_python_v4.csv"
     exportar_matriz_python_csv(K_global, num_nudos=4, nombre_archivo=output_path)
 
 if __name__ == "__main__":
