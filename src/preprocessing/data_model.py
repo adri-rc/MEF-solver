@@ -362,6 +362,9 @@ class FEMModel:
         self.constraints: List[Constraint] = []     
         self.loads: List[LoadCase] = []
 
+        # --- PARÁMETROS GLOBALES DE NASTRAN ---
+        self.k6rot: float = 0.0                     #: Factor de rigidez de drilling (PARAM, K6ROT)
+
     def get_node(self, node_id: int) -> Node:
         """
         @brief Retrieves a Node object by its ID.

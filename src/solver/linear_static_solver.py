@@ -55,6 +55,10 @@ class LinearStaticSolver:
         """
         self.model = model
 
+        # --- ASIGNACIÓN AUTOMÁTICA DESDE EL MODELO ---
+        # Leemos el parámetro k6rot del modelo usando getattr por seguridad
+        self.k6rot = getattr(model, 'k6rot', 0.0)
+
         # 1. Initialize DOF Mapping
         # We convert keys to a list to ensure deterministic ordering.
         node_ids = list(self.model.nodes.keys())
@@ -191,7 +195,7 @@ class LinearStaticSolver:
         if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
              mat_shear = self.model.materials[prop.mat_id_shear]
 
-        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear)
+        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot)
         
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
 
@@ -508,7 +512,7 @@ class LinearStaticSolver:
                 if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
                     mat_shear = self.model.materials[prop.mat_id_shear]
                 
-                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear)
+                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot)
 
                 stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
                 stress_data['type'] = 'CTRIA3' 

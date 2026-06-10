@@ -9,6 +9,34 @@ from src.solver.linear_static_solver import LinearStaticSolver
 # DATOS DE VALIDACIÓN DE MATRICES (K_global)
 # ==========================================
 STIFFNESS_VALIDATION_DATA = [
+    #region --- CASO manual: CON K6ROT = 0.0 (MEMBRANA + FLEXION PURA (MID3-> E=0)) ---
+    {
+        "case_name": "Ej_MANUAL_KGlobal_CTRIA3_K6ROT_0.0",
+        "folder": "case_k6rot_ctria", 
+        "filename": "Ej_manual_Kglobal_MID3_cero_K6rot_0.0.dat",
+        "k_csv_file": "ej_manual_kglobal_mid3_cero_k6rot_0.0_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, # 
+        "debug_export": True, # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej_manual_Kglobal_MID3_cero_K6rot_0.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+     #region --- CASO manual: CON K6ROT = 100.0 (MEMBRANA + FLEXION PURA (MID3-> E=0)) ---
+    {
+        "case_name": "Ej_MANUAL_KGlobal_CTRIA3_K6ROT_100.0",
+        "folder": "case_k6rot_ctria", 
+        "filename": "Ej_manual_Kglobal_MID3_cero_K6rot_100.0.dat",
+        "k_csv_file": "ej_manual_kglobal_mid3_cero_k6rot_100.0_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, # 
+        "debug_export": True, # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej_manual_Kglobal_MID3_cero_K6rot_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
     #region --- CASO 32: CON K6ROT = 0.0 ---
     {
         "case_name": "Ej32_KGlobal_CTRIA3_K6ROT_0.0",
@@ -19,7 +47,7 @@ STIFFNESS_VALIDATION_DATA = [
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, # <--- Cambiamos de 1e-6 a 1e-1 para filtrar el ruido del drilling
         "debug_export": True,                  # Activa/desactiva la exportación para este caso
-        "output_k_file": "draft_ej32_K_from_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+        "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_0.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
     #endregion
@@ -33,7 +61,7 @@ STIFFNESS_VALIDATION_DATA = [
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, # <--- Cambiamos de 1e-6 a 1e-1 para filtrar el ruido del drilling
         "debug_export": True,                  # Activa/desactiva la exportación para este caso
-        "output_k_file": "draft_ej32_K_K6ROT_100_from_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+        "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
     #endregion

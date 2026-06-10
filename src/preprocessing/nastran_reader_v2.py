@@ -34,7 +34,6 @@ from .data_model import (
     CQUAD4Element
 )
 
-
 """
 @file nastran_reader_v2.py
 @brief Nastran reader module using the pyNastran library.
@@ -421,6 +420,12 @@ def parse_nastran_input(entry_file_path: str) -> FEMModel:
     
     # 2. Initialize our container
     model = FEMModel()
+
+    # --- EXTRAER PARÁMETROS DEL DECK DE NASTRAN ---
+    if 'K6ROT' in bdf.params:
+        # pyNastran guarda el valor del parámetro en la lista '.values'
+        model.k6rot = float(bdf.params['K6ROT'].values[0])
+        print(f"[INFO] PARAM, K6ROT detectado en el archivo de entrada. Valor: {model.k6rot}")
     
     # 3. Entity Mapping (Logical Order: Mat -> Prop -> Node -> Elem -> Loads)
     try:

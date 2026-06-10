@@ -38,7 +38,7 @@ class CTRIA3ElementSolver:
     # Global Local Vector indices: 
     # Node 1: 0-5, Node 2: 6-11, Node 3: 12-17
     
-    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None): #, k6rot: float = 0.0
+    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None, k6rot: float = 0.0):
         """
         @brief Initialize the CTRIA3 Element Solver.
         @param mat_bending Optional material for bending stiffness (if different from membrane).
@@ -47,7 +47,7 @@ class CTRIA3ElementSolver:
         self.node2 = node2
         self.node3 = node3
         self.prop = prop
-        # self.k6rot = k6rot
+        self.k6rot = k6rot
         self.mat = mat # MID1
         
         # Use bending material if provided, otherwise use the same as membrane
@@ -220,10 +220,12 @@ class CTRIA3ElementSolver:
                     K_local[idx_f[i], idx_f[j]] += k_plate[i, j]
 
         
+        '''
+        INTENTO SIMPLE:
         # ---------------------------------------------------------------------
         # 3. Estabilización Drilling Dinámica (Sintonizada con MSC Nastran)
         # ---------------------------------------------------------------------
-        ''' NATES DE INTENTAR METER EL K6ROT COMO PARÁMETRO EXTERNO.
+        
         if self.k6rot > 0.0:
             # Escalamos tu fórmula original usando el factor exacto deducido de Nastran
             # El factor 0.34417 ajusta tu constante al valor real por unidad de K6ROT
@@ -231,14 +233,69 @@ class CTRIA3ElementSolver:
         else:
             # Si K6ROT es 0.0, dejamos la micro-estabilización residual para evitar singularidades
             k_drilling = 1e-6 * self.mat.E * (self.prop.t**3)
-        '''
-        k_drilling = 1e-6 * self.mat.E * (self.prop.t**3)    
+            
         K_local[5, 5] += k_drilling
         K_local[11, 11] += k_drilling
         K_local[17, 17] += k_drilling
+        '''
+        # ---------------------------------------------------------------------
+        # INTENTO COMPLICADO
+        # '''''''SOLUCIÓN ANALÍTICA EXACTA (FORMULACIÓN DE NASTRAN)''''''
+        # 3. MATRIZ DE PENALIZACIÓN DE DRILLING CONSISTENTE (PARAM, K6ROT)
+        # ---------------------------------------------------------------------
+        # Grados de libertad implicados localmente en el plano (9 DOFs):
+        # [u1, v1, tz1, u2, v2, tz2, u3, v3, tz3]
+        
+        K_drill_9x9 = np.zeros((9, 9))
+        A = self.A
+        
+        if self.k6rot > 0.0:
+            # Constante de penalización exacta calibrada de MSC Nastran
+            G = self.mat.G
+            t = self.prop.t
+            gamma = 1e-4 * self.k6rot * G * t
+            
+            # Constantes analíticas de la geometría del triángulo local
+            b1 = -self.y3
+            b2 = self.y3
+            b3 = 0.0
+            
+            c1 = self.x3 - self.x2
+            c2 = -self.x3
+            c3 = self.x2
+            
+            # Componentes del vector de vorticidad mecánica de membrana w_z
+            # w_z = (1/4A) * sum(-c_j * u_j + b_j * v_j)
+            w_u1 = -c1 / (4.0 * A)
+            w_v1 =  b1 / (4.0 * A)
+            w_u2 = -c2 / (4.0 * A)
+            w_v2 =  b2 / (4.0 * A)
+            w_u3 = -c3 / (4.0 * A)
+            w_v3 =  b3 / (4.0 * A)
+            
+            # Nastran define tres vectores de restricción independientes (uno por nodo)
+            # para evitar acoplamientos espurios entre theta_zi y theta_zj
+            h1 = np.array([-w_u1, -w_v1, 1.0, -w_u2, -w_v2, 0.0, -w_u3, -w_v3, 0.0])
+            h2 = np.array([-w_u1, -w_v1, 0.0, -w_u2, -w_v2, 1.0, -w_u3, -w_v3, 0.0])
+            h3 = np.array([-w_u1, -w_v1, 0.0, -w_u2, -w_v2, 0.0, -w_u3, -w_v3, 1.0])
+            
+            # La rigidez es la suma del producto exterior de las restricciones nodales
+            K_drill_9x9 = gamma * (np.outer(h1, h1) + np.outer(h2, h2) + np.outer(h3, h3))
+        else:
+            # Si K6ROT = 0.0, la rigidez de drilling es nula según el estándar analítico
+            k_residual = 0.0
+            for idx in [2, 5, 8]:
+                K_drill_9x9[idx, idx] = k_residual
+
+        # Ensamble de la matriz de drilling de 9x9 dentro de la K_local de 18x18
+        map_18 = [0, 1, 5, 6, 7, 11, 12, 13, 17]
+        for i in range(9):
+            for j in range(9):
+                K_local[map_18[i], map_18[j]] += K_drill_9x9[i, j]
         
 
         
+        '''MIRAR SI ESTO TIENE SENTIDO O ES METER MÁS RUIDO
         # ---------------------------------------------------------------------
         # 4. NUEVO: Estabilización Cortante Transversal (Pseudo-AUTOSPC)
         # Evita singularidades (mecanismos) si el usuario define MID3 nulo
@@ -253,6 +310,7 @@ class CTRIA3ElementSolver:
             K_local[2, 2] += k_shear_small
             K_local[8, 8] += k_shear_small
             K_local[14, 14] += k_shear_small
+        '''
         
         
         return K_local
