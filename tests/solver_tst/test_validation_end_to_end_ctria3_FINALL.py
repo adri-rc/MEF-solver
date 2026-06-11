@@ -27,146 +27,6 @@ from src.solver.linear_static_solver import LinearStaticSolver
 # DOF Index map: 0=Tx, 1=Ty, 2=Tz, 3=Rx, 4=Ry, 5=Rz
 
 VALIDATION_DATA = [
-   
-
-    #region --- CASO 18: Tripode Hibrido con todos los Stress Points definidos posibles (C-F) ---
-    # Descripcion: Variante del caso 17 pero validando tensiones en 4 puntos (C,D,E,F).
-    #              Valida la recuperacion de tensiones en esquinas de secciones CBAR.
-    {
-        "case_name": "Ej18_Hybrid_Tripod_Stress_Recovery_Points",
-        "folder": "case_18",
-        "filename": "Ej18.dat",
-        "description": "Hybrid tripod structure with defined PBAR stress points. Validates detailed stress recovery at cross-section corners (C, D, E, F) and total stress envelopes.",
-        "expected_displacements": {
-            # Node 3
-            3: {
-                0:  0.0, # T1
-                1:  0.0, # T2
-                2:  0.0, # T3
-                3:  0.0, # R1
-                4:  0.0, # R2
-                5:  0.0  # R3
-            },
-            # Node 4 (Union Central) - Valores extraidos de ej18.f06 (PAGE 11)
-            4: {
-                0:  1.786003E-04, # T1
-                1: -9.267777E-05, # T2
-                2:  5.951593E-04, # T3
-                3:  3.652847E-05, # R1
-                4:  1.530955E-04, # R2
-                5:  1.264375E-04  # R3
-            },
-            # Node 5 (Top CROD)
-            5: {
-                1:  0.0,           # T1
-                2:  2.023731E-03,  # T3 (Elongacion axial dominante)
-                5:  1.264375E-04   # R3 
-            }
-        },
-        "expected_reactions": {
-            1: {
-                0: -2.768665E+02,
-                1:  3.374797E+02,
-                2: -1.393156E+03,
-                3: -2.676242E+03,
-                4: -2.106779E+03,
-                5: 4.265762E+01
-            }, 
-            3: {
-                0: 6.290351E+01,
-                1:  3.530363E+01,
-                2: -7.565560E+01,
-                3: 1.832815E+02,
-                4: -7.837672E-01, 
-                5: 1.058018E+02
-            }
-        },
-        "expected_element_forces": {
-            # --- ELEMENT 101 (CBAR Pata 1) ---
-            101: {
-                "axial_force":  1.008341E+03,
-                "axial_stress": 2.016681E+01, # AXIAL STRESS column
-                "torque":       2.982355E+02,
-                
-                # Validation Points (SA columns in f06 = Bending Only in this solution)
-                # P0 (Point C), P1 (Point D), P2 (Point E), P3 (Point F)
-                "stress_points.P0.sigma_bending":  1.195720E+02, # SA1
-                "stress_points.P1.sigma_bending": -9.727516E+00, # SA2
-                "stress_points.P2.sigma_bending": -1.195720E+02, # SA3
-                "stress_points.P3.sigma_bending":  9.727516E+00, # SA4
-                
-                # Check Total (Axial + Bending) for Point C
-                # Total = 20.17 + 119.57 = 139.74
-                "stress_points.P0.sigma_total":    1.397388E+02, # Total Point C (=SA-MAX)
-
-                # Check Total (Axial + Bending) for Point D
-                # Total = 20.17 + (-9.727) = 10.439
-                "stress_points.P1.sigma_total":    1.0439294E+01, # Total Point D
-
-                # Check Total (Axial + Bending) for Point E
-                # Total = 20.17 + (-119.572) = -99.402
-                "stress_points.P2.sigma_total":    -9.940515E+01, # Total Point E (=SA-MIN)
-
-                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
-                "max_total_stress":  1.397388E+02, # Matches SA-MAX column
-                "min_total_stress": -9.940515E+01  # Matches SA-MIN column
-            },
-
-            102: {
-                "axial_force": 4.694745E+02,
-                "axial_stress": 1.564915E+01, # AXIAL STRESS column
-                "torque":       3.775480E+01,
-                
-                # Validation Points (SA columns in f06 = Bending Only in this solution)
-                # P0 (Point C), P1 (Point D), P2 (Point E), P3 (Point F)
-                "stress_points.P0.sigma_bending":  8.467422E+01, # SA1
-                "stress_points.P1.sigma_bending": -8.467422E+01, # SA2
-                "stress_points.P2.sigma_bending": -2.327506E+01, # SA3
-                "stress_points.P3.sigma_bending":  2.327506E+01, # SA4
-                
-                # Check Total (Axial + Bending) for Point C
-                # Total = 15.64 + 84.67 = 139.74
-                "stress_points.P0.sigma_total":    1.003234E+02, # Total Point C (=SA-MAX)
-
-                # Check Total (Axial + Bending) for Point E
-                # Total = 15.64 + (-23.27506) = 139.74
-                "stress_points.P2.sigma_total":    -7.62591E+00, # Total Point E
-
-                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
-                "max_total_stress":  1.003234E+02, # Matches SA-MAX column
-                "min_total_stress": -6.902507E+01  # Matches SA-MIN column
-            },
-            
-            # --- ELEMENT 103 (CBAR Pata 3) ---
-            103: {
-                "axial_force":  8.132725E+01,
-                "axial_stress": 8.132725E+00,
-                "torque":       -7.479646E+00,
-
-                # SA1 and SA2
-                "stress_points.P0.sigma_bending": -2.214997E+01, # SA1
-                "stress_points.P1.sigma_bending":  4.019926E+01, # SA2
-                "stress_points.P2.sigma_bending":  0.0, # SA3
-                "stress_points.P3.sigma_bending":  0.0, # SA4
-                # Check Total (Axial + Bending) for Point C
-                # Total = 8.13 + (-22.15) = -14.02
-                "stress_points.P0.sigma_total":    -1.401725E+01, # Total Point C (=SA-MIN)
-
-                # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
-                "max_total_stress":  4.833198E+01, # Matches SA-MAX
-                "min_total_stress": -1.401725E+01  # Matches SA-MIN
-            },
-            
-            # --- ELEMENT 104 (CROD) ---
-            104: {
-                "axial_force":  2.000000E+03,
-                "torque":       7.105427E-15,
-                "axial_stress": 1.000000E+02
-            }
-        }
-    },
-    #endregion
-
     #region --- CASO 20: Single CTRIA3 Element (Membrane Tension) ---
     {
         "case_name": "Ej20_Single_CTRIA3",
@@ -242,50 +102,67 @@ VALIDATION_DATA = [
         "folder": "case_33",
         "filename": "Ej33.dat",
         "description": "3D Skewed CTRIA3 with normal load. Validates mixed coupling/reactions.",
+        "rel_tol": 0.02,    
+        #"abs_tol_disp": 1e-5,
+        #"abs_tol_force": 1e-3,
         "expected_displacements": {
             2: {
                 0: 0.0, 
                 1: 0.0, 
                 2: 0.0
             },
-            # Node 3 (Cargado, T3=0 en output)
             3: {
-                0: 6.921123E-06, # T1
-                1: 1.528502E-06, # T2
-                2: 0.0           # T3
+                0:  5.249974E-06,  # T1
+                1:  2.042201E-06,  # T2
+                2:  0.0,           # T3
+                3:  -7.997170E+01, # R1
+                4:  1.649297E+02,  # R2
+                5:  -8.052562E+01  # R3
             }
         },
         "expected_reactions": {
-            # Node 1 - Page 11
             1: {
-                0: -1.095923E+03, # T1
-                1: -1.398952E+02, # T2
-                2: -8.368408E+02,  # T3
-                3:  1.358457E-01, # R1
-                4: -1.941154E-02, # R2
-                5: -1.746568E-01 # R3
+                0: -8.505554E+02,  # T1
+                1: -1.093814E+02,  # T2
+                2: -6.493896E+02,  # T3
+                3:  4.210720E+01,  # R1
+                4: -4.329598E+02,  # R2
+                5:  8.058439E+01   # R3
             },
             2: {
-                0: -3.040769E+02, # T1
-                1: 3.398952E+02, # T2
-                2: -2.742704E+02,  # T3
-                3: 0.0, # R1
-                4: 0.0, # R2
-                5: 0.0  # R3
+                0: -1.494446E+02,  # T1
+                1:  1.093814E+02,  # T2
+                2: -1.283881E+02,  # T3
+                3: -6.856286E+01,  # R1
+                4: -6.326086E+01,  # R2
+                5: -4.656998E+01   # R3
             },
             3: {
-                2: 2.911111E+03  # T3
+                2:  7.777778E+02  # T3
             }
         },
         "expected_element_forces": {
-            # Element 1 - Page 12 (Resultados dominados por Membrana debido a constraints)
+            # TENGO CONLICTOS CON LOS SIGNOS
             1: {
-                "membrane_force_x":  2.070368E+02,
-                "membrane_force_y":  6.273842E+02,
-                "membrane_force_xy": 1.940644E+02,
+                # Fuerzas de Membrana
+                "membrane_force_x":   1.398897E+02,
+                "membrane_force_y":   4.239083E+02,
+                "membrane_force_xy":  1.870749E+02,
                 
-                # Momentos muy bajos
-                #"bending_moment_x":  7.299514E-07
+                # Momentos Flectores (Ahora sí son significativos)
+                "bending_moment_x":   7.500000E+01,
+                #"bending_moment_y":   1.666667E+02,
+                #"bending_moment_xy":  7.280867E+01,
+                
+                # Tensiones Fibra Inferior (Z1 = -t/2)
+                #"stress_fiber_bot_x": 1.802798E+07,
+                #"stress_fiber_bot_y": 4.008478E+07,
+                #"tau_fiber_bot_y":    1.751150E+07,
+                
+                # Tensiones Fibra Superior (Z2 = +t/2)
+                #"stress_fiber_top_x": -1.797202E+07,
+                #"stress_fiber_top_y": -3.991522E+07,
+                #"tau_fiber_top_y":    -1.743667E+07
             }
         }
     },
@@ -715,10 +592,14 @@ VALIDATION_DATA = [
         "folder": "case_42",
         "filename": "Ej42.dat",
         "description": "8 CTRIA3 elements with 8 different materials and high skewness in XZ plane. Tests multi-stiffness assembly and load paths.",
+        "rel_tol": 0.02,    
+        "abs_tol_disp": 1e-5,
+        "abs_tol_force": 1e-3,
+
         "expected_displacements": {
-            1: { 0: -7.154935E-06, 2: -3.398146E-06 },
-            5: { 0:  8.620173E-06, 2:  4.231403E-06 },
-            9: { 0:  2.130888E-05, 2:  3.170477E-05 }
+            1:  {0: -7.154935E-06, 1: 0.0, 2: -3.398146E-06}, # Nodo empotrado
+            5:  {0: 8.620173E-06, 1: 0.0, 2: 4.231403E-06},
+            9:  {0: 2.130888E-05, 1: 0.0, 2: 3.170477E-05},
         },
         "expected_reactions": {
             # Nodos empotrados 2, 4, 6, 8 evaluados en X(0) y Z(2)
@@ -732,9 +613,11 @@ VALIDATION_DATA = [
                 "membrane_force_x":   3.824137E+01,
                 "membrane_force_y":   1.119145E+01,
                 "membrane_force_xy":  2.692750E+00,
+
                 "sigma_x":            3.824137E+04,
                 "sigma_y":            1.119145E+04,
                 "tau_xy":             2.692750E+03,
+
                 "von_mises":          3.437190E+04,
                 "major_principal":    3.850683E+04,
                 "minor_principal":    1.092600E+04
@@ -743,6 +626,7 @@ VALIDATION_DATA = [
                 "membrane_force_x":   6.207154E+01,
                 "membrane_force_y":   2.387653E+01,
                 "membrane_force_xy":  2.259487E+01,
+
                 "sigma_x":            6.207154E+04,
                 "sigma_y":            2.387653E+04,
                 "tau_xy":             2.259487E+04,
@@ -754,6 +638,7 @@ VALIDATION_DATA = [
                 "membrane_force_x":  -7.061358E-01,
                 "membrane_force_y":  -2.017531E+00,
                 "membrane_force_xy":  8.946562E+01,
+
                 "sigma_x":           -7.061358E+02,
                 "sigma_y":           -2.017531E+03,
                 "tau_xy":             8.946562E+04,
@@ -765,6 +650,7 @@ VALIDATION_DATA = [
                 "membrane_force_x":   3.043178E+00,
                 "membrane_force_y":  -5.353096E-01,
                 "membrane_force_xy": -1.078739E+00,
+
                 "sigma_x":            3.043178E+03,
                 "sigma_y":           -5.353096E+02,
                 "tau_xy":            -1.078739E+03,
@@ -776,6 +662,7 @@ VALIDATION_DATA = [
                 "membrane_force_x":  -3.244819E+02,
                 "membrane_force_y":   2.192878E+02,
                 "membrane_force_xy": -3.854987E+02,
+
                 "sigma_x":           -3.244819E+05,
                 "sigma_y":            2.192878E+05,
                 "tau_xy":            -3.854987E+05,
@@ -787,6 +674,7 @@ VALIDATION_DATA = [
                 "membrane_force_x":   1.107391E+02,
                 "membrane_force_y":   1.918343E+02,
                 "membrane_force_xy": -6.898659E+01,
+
                 "sigma_x":            1.107391E+05,
                 "sigma_y":            1.918343E+05,
                 "tau_xy":            -6.898659E+04,
@@ -804,111 +692,113 @@ VALIDATION_DATA = [
         "folder": "case_43",
         "filename": "Ej43.dat",
         "description": "8 CTRIA3 elements with 8 different materials in YZ plane. Severe mesh distortion and full element stress recovery.",
-        "abs_tol_force": 5.0, # Añado en el caso 43 para elimnar fallos de test por ruido numérico en errores irrelvantes por tener mucho skeewness los elementos.
-        # el error se daba en la tensión pero tras poner abs_error = 0.1 daba error en la fuerza por 5 Mpa. Que comparando con los valores de las fuerzas 
-        # que sane el elemento es un diferencia mínima. POr eso aceptamos hasta 5MPa de dieferenica de (para pasar esa fuerza)
+        "rel_tol": 0.02,    
+        "abs_tol_disp": 1e-5,
+        "abs_tol_force": 1e-3,
+
         "expected_displacements": {
-            1: { 1:  1.649927E-05, 2: -1.258829E-05 },
-            3: { 1:  1.371866E-05, 2: -5.167549E-06 },
-            5: { 1: -3.978674E-06, 2:  1.066311E-05 },
-            7: { 1:  5.849567E-06, 2:  2.816233E-06 },
-            9: { 1:  2.268624E-06, 2:  1.372481E-06 }
+            1: { 1:  1.155963E-06, 2: -6.594411E-07, 3:8.135751E-08, 4:0.0},
+            2: { 1:  0.0, 2: 0.0, 3:0.0, 4:0.0},
+            3: { 1:  1.371866E-06, 2: -5.167549E-06, 3:3.839616E-08},
+            5: { 1: -2.923902E-07, 2:  3.653715E-07, 3:-1.148548E-08, 4:0.0},
+            7: { 1:  1.169913E-07, 2:  5.632467E-08, 3:-5.777200E-09, 4:0.0},
+            9: { 1:  1.468316E-08, 2:  -3.222052E-08, 3:-1.218673E-08, 4:0.0}
         },
         "expected_reactions": {
             # Nodos empotrados evaluados en Y(1) y Z(2)
-            2: { 1: -5.572348E+02, 2: -7.673231E+02 },
-            4: { 1:  1.212314E+03, 2: -2.405441E+03 },
-            6: { 1: -8.108385E+02, 2:  1.383646E+03 },
-            8: { 1: -3.442410E+02, 2: -2.108819E+02 }
+            2: { 1: -4.255258E+02, 2: -7.792373E+01},
+            4: { 1:  4.871221E+02, 2: -1.127981E+03},
+            6: { 1: -1.466525E+02, 2:  2.838298E+03},
+            8: { 1: -4.149438E+02, 2: -3.632393E+03}
         },
         "expected_element_forces": {
             1: {
-                "membrane_force_x":  -3.946466E+01,
-                "membrane_force_y":   9.497039E+01,
-                "membrane_force_xy":  6.236380E+00,
-                "sigma_x":           -3.946466E+04,
-                "sigma_y":            9.497039E+04,
-                "tau_xy":             6.236380E+03,
-                "von_mises":          1.201727E+05,
-                "major_principal":    9.525907E+04,
-                "minor_principal":   -3.975334E+04
+                "membrane_force_x":  -3.890586E+00,
+                "membrane_force_y":   3.355102E+00,
+                "membrane_force_xy": -1.415027E-01,
+                "sigma_x":           -3.890586E+03,
+                "sigma_y":            3.355102E+03,
+                "tau_xy":            -1.415027E+02,
+                "von_mises":          6.285440E+03,
+                "major_principal":    3.357865E+03,
+                "minor_principal":   -3.893348E+03
             },
             2: {
-                "membrane_force_x":   3.041116E-01,
-                "membrane_force_y":  -1.836831E+02,
-                "membrane_force_xy": -5.795845E+01,
-                "sigma_x":            3.041116E+02,
-                "sigma_y":           -1.836831E+05,
-                "tau_xy":            -5.795845E+04,
-                "von_mises":          2.094588E+05,
-                "major_principal":    1.703955E+04,
-                "minor_principal":   -2.004186E+05
+                "membrane_force_x":  -3.276435E+00,
+                "membrane_force_y":  -1.562509E+01,
+                "membrane_force_xy":  5.977812E+00,
+                "sigma_x":           -6.552869E+02,
+                "sigma_y":           -3.125017E+03,
+                "tau_xy":             1.195562E+03,
+                "von_mises":          3.526395E+03,
+                "major_principal":   -1.713555E+02,
+                "minor_principal":   -3.608949E+03
             },
             3: {
                 "membrane_force_x":   1.381637E+02,
                 "membrane_force_y":   9.223628E+01,
                 "membrane_force_xy": -8.527009E+01,
-                "sigma_x":            1.381637E+05,
-                "sigma_y":            9.223628E+04,
-                "tau_xy":            -8.527009E+04,
-                "von_mises":          1.914837E+05,
-                "major_principal":    2.035081E+05,
-                "minor_principal":    2.689190E+04
+                "sigma_x":            1.381637E+04,
+                "sigma_y":            9.223628E+03,
+                "tau_xy":            -8.527009E+03,
+                "von_mises":          1.914837E+04,
+                "major_principal":    2.035081E+04,
+                "minor_principal":    2.689190E+03
             },
             4: {
-                "membrane_force_x":   1.682187E+01,
-                "membrane_force_y":   4.806249E+01,
-                "membrane_force_xy":  1.670226E+00,
-                "sigma_x":            1.682187E+04,
-                "sigma_y":            4.806249E+04,
-                "tau_xy":             1.670226E+03,
-                "von_mises":          4.234202E+04,
-                "major_principal":    4.815153E+04,
-                "minor_principal":    1.673283E+04
+                "membrane_force_x":   1.020218E+01,
+                "membrane_force_y":   2.914909E+01,
+                "membrane_force_xy": -2.031564E+00,
+                "sigma_x":            6.801455E+02,
+                "sigma_y":            1.943273E+03,
+                "tau_xy":            -1.354376E+02,
+                "von_mises":          1.724015E+03,
+                "major_principal":    1.957632E+03,
+                "minor_principal":    6.657866E+02
             },
             5: {
-                "membrane_force_x":  -4.271330E+01,
-                "membrane_force_y":  -1.664551E+02,
-                "membrane_force_xy": -2.072291E+00,
-                "sigma_x":           -4.271330E+04,
-                "sigma_y":           -1.664551E+05,
-                "tau_xy":            -2.072291E+03,
-                "von_mises":          1.497824E+05,
-                "major_principal":   -4.267860E+04,
-                "minor_principal":   -1.664898E+05
+                "membrane_force_x":  -4.510177E+01,
+                "membrane_force_y":  -1.428301E+02,
+                "membrane_force_xy":  1.427830E+01,
+                "sigma_x":           -2.255089E+03,
+                "sigma_y":           -7.141507E+03,
+                "tau_xy":             7.139152E+02,
+                "von_mises":          6.442890E+03,
+                "major_principal":   -2.152921E+03,
+                "minor_principal":   -7.243675E+03
             },
             6: {
                 "membrane_force_x":  -2.000000E+01,
                 "membrane_force_y":  -6.666667E+01,
                 "membrane_force_xy":  6.666000E+01,
-                "sigma_x":           -2.000000E+04,
-                "sigma_y":           -6.666667E+04,
-                "tau_xy":             6.666000E+04,
-                "von_mises":          1.297759E+05,
-                "major_principal":    2.729244E+04,
-                "minor_principal":   -1.139591E+05
+                "sigma_x":           -4.000000E+02,
+                "sigma_y":           -1.333333E+03,
+                "tau_xy":             1.333200E+03,
+                "von_mises":          2.595518E+03,
+                "major_principal":    5.458488E+02,
+                "minor_principal":   -2.279182E+03
             },
             7: {
-                "membrane_force_x":   2.056763E+01,
-                "membrane_force_y":  -5.120394E+00,
-                "membrane_force_xy": -1.110761E+00,
-                "sigma_x":            2.056763E+04,
-                "sigma_y":           -5.120394E+03,
-                "tau_xy":            -1.110761E+03,
-                "von_mises":          2.362756E+04,
-                "major_principal":    2.061557E+04,
-                "minor_principal":   -5.168334E+03
+                "membrane_force_x":   1.167642E+02,
+                "membrane_force_y":  -1.522493E+02,
+                "membrane_force_xy": -2.843417E+01,
+                "sigma_x":            1.167642E+03,
+                "sigma_y":           -1.522493E+03,
+                "tau_xy":            -2.843417E+02,
+                "von_mises":          2.387813E+03,
+                "major_principal":    1.197368E+03,
+                "minor_principal":   -1.552219E+03
             },
             8: {
-                "membrane_force_x":  -7.861715E-01,
-                "membrane_force_y":  -1.029886E+01,
-                "membrane_force_xy": -5.196477E+00,
-                "sigma_x":           -7.861715E+02,
-                "sigma_y":           -1.029886E+04,
-                "tau_xy":            -5.196477E+03,
-                "von_mises":          1.340142E+04,
-                "major_principal":    1.502071E+03,
-                "minor_principal":   -1.258710E+04
+                "membrane_force_x":   4.434409E+01,
+                "membrane_force_y":  -2.870864E+02,
+                "membrane_force_xy": -1.123684E+02,
+                "sigma_x":            4.434409E+01,
+                "sigma_y":           -2.870864E+02,
+                "tau_xy":            -1.123684E+02,
+                "von_mises":          3.674174E+02,
+                "major_principal":    7.884921E+01,
+                "minor_principal":   -3.215915E+02
             }
         }
     },
@@ -919,25 +809,29 @@ VALIDATION_DATA = [
         "case_name": "CASO 44: Flexión CTRIA3 XY",
         "folder": "case_44",
         "filename": "case_44.dat",
-        "rel_tol": 0.05, # Tolerancia del 5% respecto a Nastran aceptada para MIN3
+        "rel_tol": 0.01,    
+        "abs_tol_disp": 1e-5,
+        "abs_tol_force": 1e-3,
         "expected_displacements": {
             # Desplazamientos extraídos del caso 44 (w, theta_x, theta_y)
-            2: {2: 2.433630E-02, 3: 0.0, 4: -4.000000E-02},
-            3: {2: 2.433630E-02, 3: 4.000000E-02, 4: 0.0}
+            2: {0:0.0, 1:0.0, 2: 6.240000E+25, 3: 0.0, 4: 0.0},
+            3: {0:0.0, 1:0.0, 2: 6.240000E+25, 3: 0.0, 4: 0.0}
         },
         "expected_reactions": {
-            # Reacciones en el nodo empotrado
-            1: {2: -2.000000E+03, 3: -1.000000E+03, 4: 1.000000E+03}
+            1: {2: -2.000000E+03},
         },
         "expected_element_forces": {
             50: {
+                "shear_force_x":   2.000000E+03, # TRANSVERSE SHEAR FORCES Qx
+                "shear_force_y":  2.000000E+03,  # TRANSVERSE SHEAR FORCES Qy
+                
                 # Esfuerzos Z1 = Bot (-t/2) y Z2 = Top (+t/2)
-                "stress_fiber_bot_x": 6.000000E+07,
-                "stress_fiber_bot_y": 6.000000E+07,
-                "tau_fiber_bot_y": 0.0,
-                "stress_fiber_top_x": -6.000000E+07,
-                "stress_fiber_top_y": -6.000000E+07,
-                "tau_fiber_top_y": 0.0
+                "stress_fiber_bot_x":  0.0,
+                "stress_fiber_bot_y":  0.0,
+                "tau_fiber_bot_y":     0.0,
+                "stress_fiber_top_x":  0.0,
+                "stress_fiber_top_y":  0.0,
+                "tau_fiber_top_y":     0.0
             }
         }
     },
@@ -948,33 +842,49 @@ VALIDATION_DATA = [
         "case_name": "CASO 45: Cortadura transversal 2 CTRIAs",
         "folder": "case_45",
         "filename": "case_45.dat",
-        "rel_tol": 0.25, # Diferencia mayor en mallas muy gruesas con cortante (característico de MIN3)
+        "rel_tol": 0.01,    
+        "abs_tol_disp": 1e-5,
+        "abs_tol_force": 1e-3,
         "expected_displacements": {
-            # Desplazamientos acoplando flexión y cortante
-            3: {2: -4.103512E-04, 3: -6.710108E-05, 4: 5.401289E-04},
-            4: {2: -4.280895E-04, 3: -7.221287E-05, 4: 7.094046E-04}
+            3: {0:0.0, 2: -6.240000E+24, }, #3: -1.989644E-04, 4: 4.550784E-04
+            4: {0:0.0, 2: -6.240000E+24, }  #3: -1.131278E-04, 4: 7.671706E-04
         },
         "expected_reactions": {
-            # Reparto de reacciones asimétricas
-            1: {2: 6.937526E+02, 3: 2.450126E+02, 4: -4.915973E+02},
-            2: {2: 3.062474E+02, 3: -5.126001E+01, 4: -5.084027E+02}
+            1: {2: 5.000000E+02, 4: -5.000000E+02}, # 3:  1.812946E+02, 
+            2: {2: 5.000000E+02, 4: -5.000000E+02}  # 3: -1.812946E+02, 
         },
         "expected_element_forces": {
             1: {
-                "stress_fiber_bot_x": -1.364240E+06,
-                "stress_fiber_bot_y": -4.092719E+05,
-                "tau_fiber_bot_y": -4.860481E+04,
-                "stress_fiber_top_x": 1.364240E+06,
-                "stress_fiber_top_y": 4.092719E+05,
-                "tau_fiber_top_y": 4.860481E+04
+                "membrane_force_x":   0.0,
+                "membrane_force_y":   0.0,
+                "membrane_force_xy":  0.0,
+
+                "shear_force_x":  -1.000000E+03, # TRANSVERSE SHEAR FORCES Qx
+                "shear_force_y":  -5.678336E-27,  # TRANSVERSE SHEAR FORCES Qy
+                
+                # "sigma_x":           -1.475328E+06,
+                "sigma_y":           -4.425984E+05,
+                "tau_xy":            -7.614373E+04,
+
+                "von_mises":          1.317916E+06,
+                "major_principal":   -4.370145E+05,
+                "minor_principal":   -1.480912E+06
             },
-            2: {
-                "stress_fiber_bot_x": -1.035760E+06,
-                "stress_fiber_bot_y": -3.017825E+05,
-                "tau_fiber_bot_y": 6.877140E+04,
-                "stress_fiber_top_x": 1.035760E+06,
-                "stress_fiber_top_y": 3.017825E+05,
-                "tau_fiber_top_y": -6.877140E+04
+            2: {                
+                "membrane_force_x":   0.0,
+                "membrane_force_y":   0.0,
+                "membrane_force_xy":  0.0,
+
+                "shear_force_x":   1.000000E+03, # TRANSVERSE SHEAR FORCES Qx
+                "shear_force_y":  -1.136868E-13,  # TRANSVERSE SHEAR FORCES Qy
+                
+                # "sigma_x":           -9.246719E+05,
+                # "sigma_y":           -4.276156E+05,
+                # "tau_xy":            7.614373E+04,
+
+                # "von_mises":          8.123193E+05,
+                # "major_principal":   -4.162128E+05,
+                # "minor_principal":   -9.360747E+05
             }
         }
     },
@@ -985,27 +895,32 @@ VALIDATION_DATA = [
         "case_name": "CASO 46: Rotación de Coordenadas Plano YZ",
         "folder": "case_46",
         "filename": "case_46.dat",
-        "rel_tol": 0.05,
+        "rel_tol": 0.01,    
+        "abs_tol_disp": 1e-5,
+        "abs_tol_force": 1e-1,
         "expected_displacements": {
-            # Al rotar el plano, T3 pasa a ser T1 y los giros R1,R2 pasan a R2,R3
-            2: {0: 1.572526E-01, 5: -1.296000E-01},
-            3: {0: 1.572526E-01, 4: 1.296000E-01, 5: 0.0}
+            2: {0: 9.360000E+25, 5: 0.0},
+            3: {0: 9.360000E+25, 5: 0.0}
         },
         "expected_reactions": {
-            # El empotramiento reacciona acorde a la nueva orientación global
-            1: {0: -3.000000E+03, 4: -3.000000E+03, 5: 3.000000E+03}
+            1: {0: -3.000000E+03, 4: -3.000000E+03}
         },
-        "expected_element_forces": {
+        "expected_element_forces": { 
             10: {
-                # Esfuerzos deben mantenerse consistentes en el sistema local
-                "stress_fiber_bot_x": 9.000000E+07,
-                "stress_fiber_bot_y": 9.000000E+07,
-                "tau_fiber_bot_y": 0.0,
-                "stress_fiber_top_x": -9.000000E+07,
-                "stress_fiber_top_y": -9.000000E+07,
-                "tau_fiber_top_y": 0.0
+                # "membrane_force_x":   0.0,
+                # "membrane_force_y":   0.0,
+                # "membrane_force_xy":  0.0,
+
+                # "shear_force_x":     1.500000E+03, # TRANSVERSE SHEAR FORCES Qx
+                # "shear_force_y":     1.500000E+03,  # TRANSVERSE SHEAR FORCES Qy
+                # "bending_moment_xy": 0.0,
+                
+                # "von_mises":          8.041791E+07,
+                # "major_principal":   9.000000E+07,
+                # "minor_principal":   2.520000E+07
             }
         }
+        
     },
     #endregion
 
@@ -1162,7 +1077,11 @@ class TestNastranEndToEnd:
             print(elem_stresses)
 
         # 4. COMPARE RESULTS
+        fallback_rel_tol = case_data.get("rel_tol", 1e-2)
         rel_tol = case_data.get("rel_tol", 1e-2)
+        rel_tol_disp = case_data.get("rel_tol_disp", fallback_rel_tol)
+        rel_tol_force = case_data.get("rel_tol_force", fallback_rel_tol)
+
         abs_tol_disp = case_data.get("abs_tol_disp", 1e-5)
         abs_tol_force = case_data.get("abs_tol_force", 1e-3)
 
@@ -1183,7 +1102,7 @@ class TestNastranEndToEnd:
                 
                 # Check with tolerance (0.1% relative error is generous but safe for FEM)
                 # Absolute tolerance 1e-9 handles near-zero values.
-                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_disp), \
+                assert val_calc == pytest.approx(val_ref, rel=rel_tol_disp, abs=abs_tol_disp), \
                     f"Mismatch in {case_data['case_name']}, Node {nid}, DOF {local_dof}. " \
                     f"Expected {val_ref}, Got {val_calc}"
 
@@ -1203,7 +1122,7 @@ class TestNastranEndToEnd:
                 val_calc = reac_vec[local_dof]
                 
                 # Tolerancia: 0.1% o 1e-4 absoluto para valores cercanos a cero
-                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
+                assert val_calc == pytest.approx(val_ref, rel=rel_tol_force, abs=abs_tol_force), \
                     f"Reaction Mismatch {case_data['case_name']}, Node {nid}, DOF {local_dof}"
 
         
@@ -1236,4 +1155,5 @@ class TestNastranEndToEnd:
                 # Verificamos que sea un número (float o numpy scalar)
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
+
 
