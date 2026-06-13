@@ -156,47 +156,8 @@ STIFFNESS_VALIDATION_DATA = [
         "output_k_file": "draft_Ej46_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
-    #endregion
-    
+    #endregion    
 ]
-
-'''    
-    #region --- CASO 38: 2 CTRIAs Plano YZ ---
-    {
-        "case_name": "Ej38_KGlobal_CTRIA3_YZ",
-        "folder": "case_38", 
-        "filename": "Ej38.dat",
-        "k_csv_file": "Ej38_KAAX_Global.csv", # CSV generado con tu script desde el .pch
-        "description": "Validación de K_global para 2 elementos en plano YZ.",
-        "rel_tol": 1e-4,
-        "abs_tol": 1e-6
-    },
-    #endregion
-
-    #region --- CASO 39: Plano Arbitrario (Inclinado 13.5º), Alta Distorsión ---
-    {
-        "case_name": "Ej39_KGlobal_Arbitrary_Plane",
-        "folder": "case_39",
-        "filename": "Ej39.dat",
-        "k_csv_file": "Ej39_KAAX_Global.csv",
-        "description": "Validación de matriz de transformación T y K_global en 3D arbitrario.",
-        "rel_tol": 1e-4,
-        "abs_tol": 1e-6
-    },
-    #endregion
-
-    #region --- CASO MANUAL: Flexión Pura ---
-    {
-        "case_name": "Ej_Manual_KGlobal_Flexion_Pura",
-        "folder": "case_manual_con_cargas",
-        "filename": "Ej_manual_Kglobal_flexion_pura_MID3_cero_con carga.dat",
-        "k_csv_file": "Ej_manual_Kglobal_flexion_pura_Nastran.csv",
-        "description": "Validación estricta de los términos de bending (MIN3/DKT).",
-        "rel_tol": 1e-3, # Tolerancia algo mayor si hay diferencias de teoría de placas
-        "abs_tol": 1e-5
-    },
-    #endregion
-    '''
 
 class TestStiffnessMatrix:
     """
