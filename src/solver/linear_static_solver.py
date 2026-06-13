@@ -26,7 +26,7 @@ from .utilities import DofMapper
 # --- ELEMENT SOLVERS ---
 from .elements.rod_element_v2 import RodElementSolverV2
 from .elements.bar_element import BarElementSolver
-from .elements.ctria3_element_FINALL import CTRIA3ElementSolver
+from .elements.ctria3_element import CTRIA3ElementSolver
 from .elements.cquad4_element import CQUAD4ElementSolver
 
 # --- DATA MODEL ---

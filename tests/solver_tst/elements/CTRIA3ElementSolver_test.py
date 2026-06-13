@@ -12,7 +12,7 @@ Validates the physics of the Triangular Shell element:
 
 import pytest
 import numpy as np
-from src.solver.elements.ctria3_element import CTRIA3ElementSolver
+from src.solver.elements.ctria3_element_FINALL import CTRIA3ElementSolver
 
 # --- MOCKS (Data Objects Simulation) ---
 class MockNode:

@@ -4,7 +4,10 @@
 @details
 Implements the stiffness matrix calculation for a 3-node Triangular Shell.
         - Membrane Stiffness: Constant Strain Triangle (CST).
-        - Bending Stiffness: Reissner-Mindlin Formulation (MIN3).
+        - Bending Stiffness: Reissner-Mindlin Formulation.
+IMPORTANT: 
+Pure shear stiffnes does not mach with Nastrnas vales.
+Therefore to match Nastran results MID3 with E=0.0 value HAVE TO BE DEFINED in PSHELL card.
 """
 
 import numpy as np
@@ -29,7 +32,9 @@ class CTRIA3ElementSolver:
     Physics:
       - Membrane (In-plane): u (tx), v (ty). Formulation: CST (Linear shape functions).
       - Bending (Out-of-plane) & Shear: w, theta_x, theta_y. Formulation: Reissner-Mindlin.
-      - Drilling: theta_z. (Often needs artificial stiffness).
+        Pure shear stiffnes does not mach with Nastrnas vales.
+        Therefore to match Nastran results MID3 with E=0.0 value HAVE TO BE DEFINED in PSHELL card.
+      - Drilling: theta_z. (Defined with Nastran formula, K6ROT).
     """
 
     # --- CONSTANTS FOR DOF MAPPING ---
@@ -38,7 +43,7 @@ class CTRIA3ElementSolver:
     # Global Local Vector indices: 
     # Node 1: 0-5, Node 2: 6-11, Node 3: 12-17
     
-    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None):
+    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None, k6rot: float = 0.0):
         """
         @brief Initialize the CTRIA3 Element Solver.
         @param mat_bending Optional material for bending stiffness (if different from membrane).
@@ -47,10 +52,12 @@ class CTRIA3ElementSolver:
         self.node2 = node2
         self.node3 = node3
         self.prop = prop
-        self.mat = mat
+        self.k6rot = k6rot
+        self.mat = mat # MID1
         
         # Use bending material if provided, otherwise use the same as membrane
-        self.mat_bending = mat_bending if mat_bending is not None else mat
+        self.mat_bending = mat_bending if mat_bending is not None else mat # MID2
+        self.mat_shear = mat_shear if mat_shear is not None else self.mat_bending # MID3
         
         self.n1_coords = node1.get_coords()
         self.n2_coords = node2.get_coords()
@@ -73,7 +80,6 @@ class CTRIA3ElementSolver:
         self.x3 = np.dot(v13, self.local_x_axis)
         self.y3 = np.dot(v13, self.local_y_axis)
 
-        # FIX TRANFORMATIONS (Casos 45 y 46): Forzar y3 positivo para las matrices B
         if self.y3 < 0:
             self.y3 = -self.y3
             self.local_y_axis = -self.local_y_axis
@@ -81,7 +87,6 @@ class CTRIA3ElementSolver:
             # Recompute Transformation matrix with corrected axes
             R = CoordinateTransformation.get_rotation_matrix_3x3(self.local_x_axis, self.local_y_axis, self.local_z_axis)
             self.T = CoordinateTransformation.build_full_transformation_matrix(R, 3, 6)
-        
         
         # Area of triangle
         self.A = 0.5 * self.x2 * self.y3
@@ -102,445 +107,248 @@ class CTRIA3ElementSolver:
             R, nodes_count=3, dofs_per_node=6
         )
 
-    def _get_B_membrane(self) -> np.ndarray:
+    def _get_matrices_constitutivas(self):
         """
-        @brief Strain-Displacement matrix for Membrane (CST).
-        @details
-        Strains: [eps_x, eps_y, gam_xy]
-        Displacements: [u1, v1, u2, v2, u3, v3]
-        
-        B = (1/2A) * [ ... ]
+        @brief Calcula las matrices D utilizando materiales independientes para cada comportamiento.
         """
-        # Beta_i = y_j - y_k
-        # Gamma_i = x_k - x_j
-        # Cyclic permutation: 1-2-3
-        
-        # Local coords:
-        # 1: (0,0)
-        # 2: (x2, 0)
-        # 3: (x3, y3)
-        x1, y1 = 0.0, 0.0
-        x2, y2 = self.x2, 0.0
-        x3, y3 = self.x3, self.y3
-        
-        b1 = y2 - y3; g1 = x3 - x2
-        b2 = y3 - y1; g2 = x1 - x3
-        b3 = y1 - y2; g3 = x2 - x1
-        
-        # B matrix (3 rows x 6 cols)
-        # [ u1 v1 u2 v2 u3 v3 ]
-        # Row 1 (eps_x): b_i, 0
-        # Row 2 (eps_y): 0, g_i
-        # Row 3 (gam_xy): g_i, b_i
-        
-        B = np.zeros((3, 6))
-        
-        # Node 1
-        B[0, 0] = b1
-        B[1, 1] = g1
-        B[2, 0] = g1
-        B[2, 1] = b1
-        
-        # Node 2
-        B[0, 2] = b2
-        B[1, 3] = g2
-        B[2, 2] = g2
-        B[2, 3] = b2
-        
-        # Node 3
-        B[0, 4] = b3
-        B[1, 5] = g3
-        B[2, 4] = g3
-        B[2, 5] = b3
-        
-        return B * (1.0 / (2.0 * self.A))
-
-    def _get_D_membrane(self) -> np.ndarray:
-        """
-        @brief Constitutive Matrix for Plane Stress (Isotropic).
-        """
-        E = self.mat.E
-        nu = self.mat.nu
-        factor = E / (1 - nu**2)
-        
-        D = np.array([
-            [1,  nu, 0],
-            [nu, 1,  0],
-            [0,  0,  (1-nu)/2]
+        # --- COMPORTAMIENTO A MEMBRANA (MID1) ---
+        E_m, nu_m = self.mat.E, self.mat.nu
+        factor_m = E_m / (1.0 - nu_m**2)
+        D_m = factor_m * np.array([
+            [1.0,  nu_m, 0.0],
+            [nu_m, 1.0,  0.0],
+            [0.0,  0.0,  (1.0 - nu_m) / 2.0]
         ])
-        return D * factor
 
-    def _get_D_bending(self) -> np.ndarray:
-        """
-        @brief Constitutive Matrix for Plate Bending (Isotropic).
-        @details
-        D_b = (E * t^3) / (12 * (1 - nu^2)) * [ ... ]
-        """
-        # Use bending material properties
-        E = self.mat_bending.E
-        nu = self.mat_bending.nu
+        # --- COMPORTAMIENTO A FLEXIÓN (MID2) ---
         t = self.prop.t
-        
-        factor = (E * t**3) / (12.0 * (1 - nu**2))
-        
-        D = np.array([
-            [1,  nu, 0],
-            [nu, 1,  0],
-            [0,  0,  (1-nu)/2]
+        E_f, nu_f = self.mat_bending.E, self.mat_bending.nu
+        factor_f = (E_f * t**3) / (12.0 * (1.0 - nu_f**2))
+        D_f = factor_f * np.array([
+            [1.0,  nu_f, 0.0],
+            [nu_f, 1.0,  0.0],
+            [0.0,  0.0,  (1.0 - nu_f) / 2.0]
         ])
-        return D * factor
 
-    def _get_B_bending_RM(self) -> np.ndarray:
-        """
-        @brief Strain-Displacement matrix for Bending (Reissner-Mindlin).
-        @details
-        kappa = [kap_x, kap_y, kap_xy]
-        DOFs: [w1, thx1, thy1, w2, thx2, thy2, w3, thx3, thy3]
-        """
-        x1, y1 = 0.0, 0.0
-        x2, y2 = self.x2, 0.0
-        x3, y3 = self.x3, self.y3
+        # --- COMPORTAMIENTO A CORTANTE TRANSVERSAL (MID3) ---
+        E_s, nu_s = self.mat_shear.E, self.mat_shear.nu
+        G_c = E_s / (2.0 * (1.0 + nu_s)) # Deducción del módulo G para material isótropo
+        k_shear = 5.0 / 6.0              # Factor de corrección de Mindlin
+        factor_c = k_shear * G_c * t
         
-        b1 = y2 - y3; g1 = x3 - x2
-        b2 = y3 - y1; g2 = x1 - x3
-        b3 = y1 - y2; g3 = x2 - x1
-        inv2A = 1.0 / (2.0 * self.A)
-        
-        B_b = np.zeros((3, 9))
-        # Node 1
-        B_b[0, 1] = -b1 * inv2A; B_b[1, 2] = -g1 * inv2A
-        B_b[2, 1] = -g1 * inv2A; B_b[2, 2] = -b1 * inv2A
-        # Node 2
-        B_b[0, 4] = -b2 * inv2A; B_b[1, 5] = -g2 * inv2A
-        B_b[2, 4] = -g2 * inv2A; B_b[2, 5] = -b2 * inv2A
-        # Node 3
-        B_b[0, 7] = -b3 * inv2A; B_b[1, 8] = -g3 * inv2A
-        B_b[2, 7] = -g3 * inv2A; B_b[2, 8] = -b3 * inv2A
-        
-        return B_b
-
-    def _get_D_shear(self) -> np.ndarray:
-        """
-        @brief Constitutive Matrix for Transverse Shear.
-        """
-        E = self.mat_bending.E
-        nu = self.mat_bending.nu
-        G = E / (2.0 * (1.0 + nu))
-        t = self.prop.t
-        k = 5.0 / 6.0 # Shear correction factor
-        factor = k * G * t
-        
-        D_s = np.array([
+        D_c = factor_c * np.array([
             [1.0, 0.0],
             [0.0, 1.0]
         ])
-        return D_s * factor
 
-    def _get_B_shear_RM(self, N1: float, N2: float, N3: float) -> np.ndarray:
+        return D_m, D_f, D_c
+    
+    def _get_B_matrices_isoparametricas(self):
         """
-        @brief Strain-Displacement matrix for Transverse Shear (Reissner-Mindlin).
-        @details
-        gamma = [gamma_xz, gamma_yz]
-        DOFs: [w1, thx1, thy1, w2, thx2, thy2, w3, thx3, thy3]
+        @brief Construye las matrices B usando la formulación Isoparamétrica.
         """
-        x1, y1 = 0.0, 0.0
-        x2, y2 = self.x2, 0.0
-        x3, y3 = self.x3, self.y3
+        x = np.array([0.0, self.x2, self.x3])
+        y = np.array([0.0, 0.0, self.y3])
         
-        b1 = y2 - y3; g1 = x3 - x2
-        b2 = y3 - y1; g2 = x1 - x3
-        b3 = y1 - y2; g3 = x2 - x1
-        inv2A = 1.0 / (2.0 * self.A)
+        dN_dxi  = np.array([-1.0,  1.0,  0.0])
+        dN_deta = np.array([-1.0,  0.0,  1.0])
         
-        B_s = np.zeros((2, 9))
-        # Node 1
-        B_s[0, 0] = b1 * inv2A; B_s[0, 1] = -N1
-        B_s[1, 0] = g1 * inv2A; B_s[1, 2] = -N1
-        # Node 2
-        B_s[0, 3] = b2 * inv2A; B_s[0, 4] = -N2
-        B_s[1, 3] = g2 * inv2A; B_s[1, 5] = -N2
-        # Node 3
-        B_s[0, 6] = b3 * inv2A; B_s[0, 7] = -N3
-        B_s[1, 6] = g3 * inv2A; B_s[1, 8] = -N3
+        dx_dxi, dy_dxi   = np.dot(dN_dxi, x), np.dot(dN_dxi, y)
+        dx_deta, dy_deta = np.dot(dN_deta, x), np.dot(dN_deta, y)
         
-        return B_s
+        J = np.array([
+            [dx_dxi, dy_dxi],
+            [dx_deta, dy_deta]
+        ])
+        
+        detJ = np.abs(np.linalg.det(J))
+        J_inv = np.linalg.inv(J)
+        
+        dN_dnat = np.vstack((dN_dxi, dN_deta))
+        dN_dfis = np.dot(J_inv, dN_dnat)
+        dN_dx, dN_dy = dN_dfis[0, :], dN_dfis[1, :]
+        
+        B_m = np.zeros((3, 6))
+        for i in range(3):
+            B_m[0, 2*i]   = dN_dx[i]
+            B_m[1, 2*i+1] = dN_dy[i]
+            B_m[2, 2*i]   = dN_dy[i]
+            B_m[2, 2*i+1] = dN_dx[i]
+
+        xi, eta = 1.0/3.0, 1.0/3.0
+        N = np.array([1.0 - xi - eta, xi, eta])
+        
+        B_f = np.zeros((3, 9))
+        B_c = np.zeros((2, 9))
+        
+        for i in range(3):
+            col = 3 * i
+            B_f[0, col+2] = dN_dx[i]
+            B_f[1, col+1] = -dN_dy[i]
+            B_f[2, col+1] = -dN_dx[i]
+            B_f[2, col+2] = dN_dy[i]
+            
+            B_c[0, col]   = dN_dx[i]
+            B_c[0, col+2] = N[i]
+            B_c[1, col]   = dN_dy[i]
+            B_c[1, col+1] = -N[i]
+
+        return B_m, B_f, B_c, detJ
 
     def _build_local_stiffness(self) -> np.ndarray:
         """
         @brief Computes Element Stiffness in Local Coordinates (18x18).
         """
         K_local = np.zeros((18, 18))
+        peso_gauss = 0.5 
         
-        # --- 1. MEMBRANE STIFFNESS (CST) ---
-        # DOFs: u, v at each node (Tx, Ty)
-        # Indices in 18x18 matrix:
-        # N1: 0 (Tx), 1 (Ty)
-        # N2: 6 (Tx), 7 (Ty)
-        # N3: 12 (Tx), 13 (Ty)
-        # Map 0->0, 1->1, 2->6, 3->7, 4->12, 5->13
-        mem_indices_map = [0, 1, 6, 7, 12, 13]
-        
-        B_mem = self._get_B_membrane()
-        D_mem = self._get_D_membrane()
-        
-        # K_mem = t * A * B.T * D * B
-        k_mem = (self.prop.t * self.A) * (B_mem.T @ D_mem @ B_mem)
-        
-        # Scatter into K_local
-        for i, row_idx in enumerate(mem_indices_map):
-            for j, col_idx in enumerate(mem_indices_map):
-                K_local[row_idx, col_idx] += k_mem[i, j]
+        D_m, D_f, D_c = self._get_matrices_constitutivas()
+        B_m, B_f, B_c, detJ = self._get_B_matrices_isoparametricas()
+
+        # 1. Rigidez de Membrana
+        k_mem = (self.prop.t * detJ * peso_gauss) * (B_m.T @ D_m @ B_m)
+        idx_m = [0, 1, 6, 7, 12, 13]
+        for i in range(6):
+            for j in range(6):
+                K_local[idx_m[i], idx_m[j]] += k_mem[i, j]
                 
-        # --- 2. BENDING & SHEAR STIFFNESS (MIN3) ---
-        has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
+        # 2. Rigidez de Flexión y Cortante Transversal
+        has_bending = self.prop.t > 0.0
         if has_bending:
-            # Matriz de Flexión (Kf) - Integración Exacta Constante
-            B_b = self._get_B_bending_RM()
-            D_b = self._get_D_bending()
-            K_b = (B_b.T @ D_b @ B_b) * self.A
+            k_flex = (detJ * peso_gauss) * (B_f.T @ D_f @ B_f)
+            k_cort = (detJ * peso_gauss) * (B_c.T @ D_c @ B_c)
+            k_plate = k_flex + k_cort
             
-            # Matriz de Cortadura (Kc)
-            D_s = self._get_D_shear()
+            idx_f = [2, 3, 4, 8, 9, 10, 14, 15, 16]
+            for i in range(9):
+                for j in range(9):
+                    K_local[idx_f[i], idx_f[j]] += k_plate[i, j]
+
+        # ---------------------------------------------------------------------
+        # 3. Estabilización Drilling Dinámica (Sintonizada con MSC Nastran)
+        # ---------------------------------------------------------------------
+        
+        if self.k6rot > 0.0:
+            # 3.1 Calcular el módulo de cortante G
+            nu = self.mat.nu  # Asegúrate de tener acceso al coeficiente de Poisson
+            G = self.mat.E / (2.0 * (1.0 + nu))
             
-            # Kc_1pt: Integración a 1 punto (Baricentro) -> Evita el Shear Locking
-            N_cent = 1.0 / 3.0
-            B_s_cent = self._get_B_shear_RM(N_cent, N_cent, N_cent)
-            K_s_1pt = (B_s_cent.T @ D_s @ B_s_cent) * self.A
+            # 3.2 Constante de penalización exacta de Nastran
+            # Nastran usa: k_theta = K6ROT * 1e-6 * G * t * detJ
+            k_theta = self.k6rot * 1e-6 * G * self.prop.t * detJ
             
-            # Kc_3pt: Integración a 3 puntos (Lados) -> Aporta el rango matemático faltante
-            K_s_3pt = np.zeros((9, 9))
-            pts = [(0.5, 0.5, 0.0), (0.0, 0.5, 0.5), (0.5, 0.0, 0.5)]
-            for n1, n2, n3 in pts:
-                B_s_pt = self._get_B_shear_RM(n1, n2, n3)
-                K_s_3pt += (1.0/3.0) * (B_s_pt.T @ D_s @ B_s_pt)
-            K_s_3pt *= self.A
-            
-            # ESTABILIZACIÓN: Mezcla ambas matrices para sanear el mecanismo cinemático
-            eps = min(1.0, (self.prop.t**2) / self.A)
-            K_s = K_s_1pt + eps * (K_s_3pt - K_s_1pt)
-            
-            K_plate_RM = K_b + K_s
-            
-            # Mapeo Teórico RM a Nastran DOFs (w=Tz, th_x=Ry, th_y=-Rx)
-            T_node = np.array([
-                [1.0,  0.0,  0.0],
-                [0.0,  0.0,  1.0],
-                [0.0, -1.0,  0.0]
+            # 3.3 Extraer coeficientes de la macro-rotación omega
+            # omega = 0.5 * (dv/dx - du/dy)
+            # En la matriz B_m estándar: B_m[0, 2i] es dNi/dx, B_m[1, 2i+1] es dNi/dy
+            b_omega = np.array([
+                -0.5 * B_m[1, 1],  0.5 * B_m[0, 0],  # coeficientes para u1, v1
+                -0.5 * B_m[1, 3],  0.5 * B_m[0, 2],  # coeficientes para u2, v2
+                -0.5 * B_m[1, 5],  0.5 * B_m[0, 4]   # coeficientes para u3, v3
             ])
-            T_map = np.kron(np.eye(3), T_node)
             
-            K_plate_nastran = T_map.T @ K_plate_RM @ T_map
+            # 3.4 Construir matriz de acoplamiento B_drill (3 nodos x 9 GdL: u, v, theta_z)
+            B_drill = np.zeros((3, 9))
+            for i in range(3):
+                # Restamos la macro-rotación al nodo i
+                B_drill[i, 0] = -b_omega[0] # u1
+                B_drill[i, 1] = -b_omega[1] # v1
+                B_drill[i, 3] = -b_omega[2] # u2
+                B_drill[i, 4] = -b_omega[3] # v2
+                B_drill[i, 6] = -b_omega[4] # u3
+                B_drill[i, 7] = -b_omega[5] # v3
+                
+                # Y sumamos la rotación nodal theta_zi (1.0 en su respectiva columna)
+                B_drill[i, 2 + i*3] = 1.0   
+                
+            # 3.5 Matriz de rigidez de drilling local (9x9)
+            K_drill_local = k_theta * (B_drill.T @ B_drill)
             
-            # Ensamblar K_plate en la matriz local de 18x18
-            bend_indices_map = [2, 3, 4, 8, 9, 10, 14, 15, 16]
-            for i, row_idx in enumerate(bend_indices_map):
-                for j, col_idx in enumerate(bend_indices_map):
-                    K_local[row_idx, col_idx] += K_plate_nastran[i, j]
-        
-        '''has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
-        
-        B_b = self._get_B_bending()
-        D_bend = self._get_D_bending()
-        
-        if not has_bending:
-            D_bend = D_bend * 1e-8
-            
-        K_bend = (B_b.T @ D_bend @ B_b) * self.A
-        
-        # Transverse Shear Stiffness with Stabilized Hourglass Control
-        D_s = self._get_D_shear()
-        if not has_bending:
-            D_s = D_s * 1e-8
-            
-        # 1-point integration
-        B_s_cent = self._get_B_shear(1.0/3.0, 1.0/3.0)
-        K_shear_1pt = (B_s_cent.T @ D_s @ B_s_cent) * self.A
-        
-        # 3-point full integration
-        int_points = [
-            (0.5, 0.5, 1.0/3.0),
-            (0.0, 0.5, 1.0/3.0),
-            (0.5, 0.0, 1.0/3.0)
-        ]
-        K_shear_3pt = np.zeros((9, 9))
-        for xi, eta, w in int_points:
-            B_s_pt = self._get_B_shear(xi, eta)
-            K_shear_3pt += w * (B_s_pt.T @ D_s @ B_s_pt)
-        K_shear_3pt *= self.A
-        
-        eps = min(1.0, (self.prop.t**2) / self.A)
-        K_shear = K_shear_1pt + eps * (K_shear_3pt - K_shear_1pt)
-        
-        K_plate = K_bend + K_shear
-        
-        # Scatter K_plate (9x9) into K_local (18x18)
-        bend_indices_map = [2, 3, 4, 8, 9, 10, 14, 15, 16]
-        
-        for i, row_idx in enumerate(bend_indices_map):
-            for j, col_idx in enumerate(bend_indices_map):
-                K_local[row_idx, col_idx] += K_plate[i, j]
-        '''
-        # --- 3. STABILIZATION (Drilling ONLY) ---
-        G = self.mat.E / (2.0 * (1.0 + self.mat.nu))
-        k_diag_small = 1e-6 * G * self.prop.t * self.A
-        
-        # Drilling DOFs: 5, 11, 17 (Rz)
-        K_local[5, 5] += k_diag_small
-        K_local[11, 11] += k_diag_small
-        K_local[17, 17] += k_diag_small
+            # 3.6 Ensamblar en la matriz local de 18x18
+            # Índices correspondientes a [u1, v1, tz1, u2, v2, tz2, u3, v3, tz3]
+            idx_drill = [0, 1, 5, 6, 7, 11, 12, 13, 17]
+            for i in range(9):
+                for j in range(9):
+                    K_local[idx_drill[i], idx_drill[j]] += K_drill_local[i, j]
         
         return K_local
 
     def get_stiffness_matrix(self) -> np.ndarray:
         """
-        @brief Computes K_global = T.T * K_local * T, 
-        where K_global = T.T * K_local * T and enforces symmetry.
+        @brief Computes K_global = T.T * K_local * T
         """
         K_loc = self._build_local_stiffness()
-        K_global = self.T.T @ K_loc @ self.T
-        # Forzar simetría matemática para eliminar ruido de coma flotante
-        K_global = 0.5 * (K_global + K_global.T)
-        return K_global
+        return self.T.T @ K_loc @ self.T
 
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
-        @brief Calculates Membrane Stresses (Von Mises).
+        @brief Calculates Element Stresses and Internal Forces using exact constitutive matrices.
         """
-        # 1. Get Global Displacements
         idxs = []
         for n in [self.node1, self.node2, self.node3]:
             idxs.extend(dof_mapper.get_dof_indices(n.nid))
             
         u_elem_global = u_global_vector[idxs]
-        
-        # 2. Local Displacements
         u_loc = self.T @ u_elem_global
         
-        # 3. Membrane Strains
-        # Extract u,v for CST
-        # u_loc indices: 0,1, 6,7, 12,13
-        u_mem = np.array([
-            u_loc[0], u_loc[1],
-            u_loc[6], u_loc[7],
-            u_loc[12], u_loc[13]
-        ])
+        D_m, D_f, D_c = self._get_matrices_constitutivas()
+        B_m, B_f, B_c, detJ = self._get_B_matrices_isoparametricas()
         
-        B_mem = self._get_B_membrane()
-        strains = B_mem @ u_mem # [eps_x, eps_y, gam_xy]
-        
-        # 4. Membrane Stresses
-        D_mem = self._get_D_membrane()
-        stresses = D_mem @ strains # [sig_x, sig_y, tau_xy]
-        
+        # Esfuerzos Membrana
+        u_mem = np.array([u_loc[0], u_loc[1], u_loc[6], u_loc[7], u_loc[12], u_loc[13]])
+        strains = B_m @ u_mem 
+        stresses = D_m @ strains 
         sig_x, sig_y, tau_xy = stresses
         
-        # Von Mises (Plane Stress)
-        # sig_vm = sqrt(sig_x^2 - sig_x*sig_y + sig_y^2 + 3*tau^2)
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
-        
-        # 5. Principal Stresses (Major/Minor)
-        # avg = (sig_x + sig_y) / 2
-        # R = sqrt( ((sig_x - sig_y)/2)^2 + tau_xy^2 )
-        # s1 = avg + R
-        # s2 = avg - R
-        sig_avg = (sig_x + sig_y) / 2.0
-        sig_diff = (sig_x - sig_y) / 2.0
+        sig_avg, sig_diff = (sig_x + sig_y) / 2.0, (sig_x - sig_y) / 2.0
         R = np.sqrt(sig_diff**2 + tau_xy**2)
-        
-        s_major = sig_avg + R
-        s_minor = sig_avg - R
+        s_major, s_minor = sig_avg + R, sig_avg - R
 
-        # 6. Element Forces (Membrane + Bending)
-        # N = Membrane Force = Stress_mem * Thickness
         t = self.prop.t
-        f_x = sig_x * t
-        f_y = sig_y * t
-        f_xy = tau_xy * t
+        f_x, f_y, f_xy = sig_x * t, sig_y * t, tau_xy * t
         
-        # Bending Moments & Transverse Shear
-        # PARECE ES AQUI AL NO DEFINIR MAT 2 NO CALULA RIGIDEZ A FLEXIÓN Y POR ESO FALLA TOdO.
-        #has_bending = hasattr(self.prop, 'mid2') and self.prop.mid2 not in [-1, None, 0]
-        has_bending = self.prop.t > 0.0  # Si hay espesor, hay flexión
-        
+        # Esfuerzos Flexión y Cortante
+        has_bending = self.prop.t > 0.0
         if has_bending:
-            u_bend_nastran = np.array([
-                u_loc[2], u_loc[3], u_loc[4],
-                u_loc[8], u_loc[9], u_loc[10],
-                u_loc[14], u_loc[15], u_loc[16]
-            ])
-            
-            # Revertir mapeo de Nastran DOFs a Reissner-Mindlin DOFs [w, th_x, th_y]
-            T_node = np.array([
-                [1.0,  0.0,  0.0],
-                [0.0,  0.0,  1.0],
-                [0.0, -1.0,  0.0]
-            ])
-            T_map = np.kron(np.eye(3), T_node)
-            u_bend_RM = T_map @ u_bend_nastran
-            
-            # Curvaturas y Momentos
-            B_b = self._get_B_bending_RM()
-            kappa = B_b @ u_bend_RM
-            D_b = self._get_D_bending()
-            moments = D_b @ kappa
-            
+            u_bend_RM = np.array([u_loc[2], u_loc[3], u_loc[4], u_loc[8], u_loc[9], u_loc[10], u_loc[14], u_loc[15], u_loc[16]])
+            kappa = B_f @ u_bend_RM
+            moments = D_f @ kappa
             m_x, m_y, m_xy = moments[0], moments[1], moments[2]
             
-            # Esfuerzos de Cortadura Transversal
-            N_cent = 1.0 / 3.0
-            B_s_cent = self._get_B_shear_RM(N_cent, N_cent, N_cent)
-            gamma_s = B_s_cent @ u_bend_RM
-            D_s = self._get_D_shear()
-            shear_forces = D_s @ gamma_s
-            
+            gamma_s = B_c @ u_bend_RM
+            shear_forces = D_c @ gamma_s
             q_x, q_y = shear_forces[0], shear_forces[1]
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             
-        # Total Stresses at Top/Bottom Fibers
-        # sigma_total = sigma_mem +/- sigma_bend
-        # sigma_bend = 6*M / t^2
-        
-        sb_x = 6.0 * m_x / t**2
-        sb_y = 6.0 * m_y / t**2
-        sb_xy = 6.0 * m_xy / t**2
-        
-        # Top Fiber (+z)
-        sig_x_top = sig_x - sb_x # Note sign convention for M vs Stress
-        sig_y_top = sig_y - sb_y
-        tau_xy_top = tau_xy - sb_xy
-        
-        # Bottom Fiber (-z)
-        sig_x_bot = sig_x + sb_x
-        sig_y_bot = sig_y + sb_y
-        tau_xy_bot = tau_xy + sb_xy
-        
-        # For simple reporting, we return the Membrane stress as 'sigma_x' etc.
-        # But add specific Bending output.
+        sb_x, sb_y, sb_xy = 6.0 * m_x / t**2, 6.0 * m_y / t**2, 6.0 * m_xy / t**2
+        sig_x_top, sig_x_bot = sig_x - sb_x, sig_x + sb_x
+        sig_y_top, sig_y_bot = sig_y - sb_y, sig_y + sb_y
+        tau_xy_top, tau_xy_bot = tau_xy - sb_xy, tau_xy + sb_xy
         
         return {
-            'sigma_x': sig_x, # Membrane
-            'sigma_y': sig_y,
+            'sigma_x': sig_x, 
+            'sigma_y': sig_y, 
             'tau_xy': tau_xy,
-            'von_mises': vm_stress,
-            'major_principal': s_major,
+            'von_mises': vm_stress, 
+            'major_principal': s_major, 
             'minor_principal': s_minor,
-            
+
             # Additional Bending Info
-            'bending_moment_x': m_x,
-            'bending_moment_y': m_y,
+            'bending_moment_x': m_x, 
+            'bending_moment_y': m_y, 
             'bending_moment_xy': m_xy,
-            'stress_fiber_top_x': sig_x_top,
+            'stress_fiber_top_x': sig_x_top, 
             'stress_fiber_bot_x': sig_x_bot,
-            'stress_fiber_top_y': sig_y_top,
+            'stress_fiber_top_y': sig_y_top, 
             'stress_fiber_bot_y': sig_y_bot,
-            'tau_fiber_top_y': tau_xy_top,
-            'tau_fiber_bot_y': tau_xy_bot,
-            
+            'tau_fiber_top_xy': tau_xy_top, 
+            'tau_fiber_bot_xy': tau_xy_bot,
+
             # Forces
-            'membrane_force_x': f_x,
-            'membrane_force_y': f_y,
+            'membrane_force_x': f_x, 
+            'membrane_force_y': f_y, 
             'membrane_force_xy': f_xy,
-            'shear_force_x': q_x,
+            'shear_force_x': q_x, 
             'shear_force_y': q_y
         }

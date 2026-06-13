@@ -41,11 +41,11 @@ STIFFNESS_VALIDATION_DATA = [
     {
         "case_name": "Ej32_KGlobal_CTRIA3_K6ROT_0.0",
         "folder": "case_32", 
-        "filename": "Ej32_Ksolution.dat",
-        "k_csv_file": "ej32_ksolution_Nastran.csv", # CSV generado con tu script desde el .pch
+        "filename": "Ej32_Ksolution_K6ROT_0.0.dat",
+        "k_csv_file": "ej32_ksolution_k6rot_0.0_Nastran.csv", # CSV generado con tu script desde el .pch
         "description": "Validación de K_global para 2 elementos en plano YZ.",
         "rel_tol": 1e-4,
-        "abs_tol": 1e-1, # <--- Cambiamos de 1e-6 a 1e-1 para filtrar el ruido del drilling
+        "abs_tol": 1e-1, 
         "debug_export": True,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_0.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
@@ -59,9 +59,101 @@ STIFFNESS_VALIDATION_DATA = [
         "k_csv_file": "ej32_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
         "description": "Validación de K_global para 2 elementos en plano YZ.",
         "rel_tol": 1e-4,
-        "abs_tol": 1e-1, # <--- Cambiamos de 1e-6 a 1e-1 para filtrar el ruido del drilling
+        "abs_tol": 1e-1, 
         "debug_export": True,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+    #region --- CASO 33: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej33_KGlobal_CTRIA3_K6ROT_100.0",
+        "folder": "case_33", 
+        "filename": "Ej33_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej33_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej33_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+    #region --- CASO 34: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej34_KGlobal_CTRIA3_K6ROT_100.0",
+        "folder": "case_34", 
+        "filename": "Ej34_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej34_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej34_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+    #region --- CASO 35: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej35_KGlobal_CTRIA3_K6ROT_100.0",
+        "folder": "case_35", 
+        "filename": "Ej35_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej35_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "Test del K6ROT",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej35_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+    #region --- CASO 36: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej36_KGlobal_CTRIA3_OFFSET_K6ROT_100.0",
+        "folder": "case_36", 
+        "filename": "Ej36_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej36_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "Ejemplo con Offset de cordenadas, y enormes dimensiones frente al espesor.",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej36_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    },
+    #endregion
+    
+    # --- CASO 37 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 38 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 39 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 40 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 41 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 42 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    # --- CASO 43 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    #region --- CASO 44: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej44_KGlobal_CTRIA3_K6ROT_100.0",
+        "folder": "case_44", 
+        "filename": "Ej44_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej44_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej44_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
+    
+    },
+    #endregion
+    # --- CASO 45 (tiene más de un ctria): CON K6ROT = 100.0 ---
+    #region --- CASO 46: CON K6ROT = 100.0 ---
+    {
+        "case_name": "Ej46_KGlobal_CTRIA3_K6ROT_100",
+        "folder": "case_46", 
+        "filename": "Ej46_Ksolution_K6ROT_100.dat",
+        "k_csv_file": "ej46_ksolution_k6rot_100_Nastran.csv", # CSV generado con tu script desde el .pch
+        "description": "",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1, 
+        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "output_k_file": "draft_Ej46_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
     #endregion
@@ -185,7 +277,8 @@ class TestStiffnessMatrix:
             ruta_salida = validation_data_dir / folder / case_data["output_k_file"]
             nodes_num = K_python.shape[0] // 6
             # Llamamos al nuevo método de volcado CSV
-            self._exportar_matriz_a_csv(K_python, ruta_salida, num_nudos=nodes_num)# ---------------------------------------------------------------------
+            self._exportar_matriz_a_csv(K_python, ruta_salida, num_nudos=nodes_num)
+        # ---------------------------------------------------------------------
         
         # 4. Verificaciones de dimensiones
         assert K_python.shape == K_nastran.shape, \

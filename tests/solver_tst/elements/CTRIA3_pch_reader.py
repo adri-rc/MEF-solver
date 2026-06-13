@@ -104,8 +104,8 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
 # EJECUCIÓN PRINCIPAL
 # ==========================================
 
-input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_k6rot_ctria\ej_manual_kglobal_mid3_cero_k6rot_100.0.pch"
-output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_k6rot_ctria\ej_manual_kglobal_mid3_cero_k6rot_100.0_Nastran.csv"
+input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_46\ej46_ksolution_k6rot_100.pch"
+output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_46\ej46_ksolution_k6rot_100_Nastran.csv"
 CASE = 'CTRIA' # 'CTRIA' or 'CQUAD'
 
 
