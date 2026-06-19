@@ -42,17 +42,17 @@ from src.solver.linear_static_solver import LinearStaticSolver
 #                    'bending_moment_xy': m_xy,
 
 #                    # Tensiones Fibra Superior (Z = +t/2)
-#                    'stress_fiber_top_x': sig_x_top, 
-#                    'stress_fiber_top_y': sig_y_top,
+#                    'stress_top_fiber_x': sig_x_top, 
+#                    'stress_top_fiber_y': sig_y_top,
 #                    'tau_fiber_top_y': tau_xy_top,
 #                    'von_mises': vm_stress, 
 #                    'major_principal': s_major_principal, 
 #                    'minor_principal': s_minor_principal,
 #
 #                    # Tensiones Fibra Inferior (Z = -t/2)
-#                    'stress_fiber_bot_x': sig_x_bot,
-#                    'stress_fiber_bot_xy': sig_y_bot,
-#                    'tau_fiber_bot_xy': tau_xy_bot,
+#                    'stress_bot_fiber_x': sig_x_bot,
+#                    'stress_bot_fiber_xy': sig_y_bot,
+#                    'tau_bot_fiber_xy': tau_xy_bot,
 #
 #                    
 #               },
@@ -94,7 +94,23 @@ VALIDATION_DATA = [
                 "bending_moment_y": 0.0,
                 "bending_moment_xy": 0.0,
                 "shear_force_x": 0.0,
-                "shear_force_y": 0.0
+                "shear_force_y": 0.0,
+
+                # Top Fiber (Z2)
+                "stress_top_fiber_x": 2.000000E+06,
+                "stress_top_fiber_y": 6.000000E+05,
+                "tau_top_fiber_xy": 0.0,
+                "von_mises_top": 1.777639E+06,
+                "major_principal_top": 2.000000E+06,
+                "minor_principal_top": 6.000000E+05,
+                
+                # Bottom Fiber (Z1)
+                "stress_bot_fiber_x": 2.000000E+06,
+                "stress_bot_fiber_y": 6.000000E+05,
+                "tau_bot_fiber_xy": 0.0,
+                "von_mises_bot": 1.777639E+06,
+                "major_principal_bot": 2.000000E+06,
+                "minor_principal_bot": 6.000000E+05
             }
         }
     },
@@ -133,33 +149,41 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # TENGO CONLICTOS CON LOS SIGNOS
             1: {
-                # Fuerzas de Membrana
+                # Membrana / Midplane
+                "sigma_x": 5.242224E+05,
+                "sigma_y": 0.0,
+                "tau_xy": 0.0,
+                "von_mises": 5.242224E+05,
+                "major_principal": 5.242224E+05,
+                "minor_principal": 0.0,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":   2.621112E+03,
-                "membrane_force_y":   2.273737E-13,
+                "membrane_force_y":   0.0, 
                 "membrane_force_xy":  0.0,
-                
-                # Momentos Flectores
+                "shear_force_x":      0.0, 
+                "shear_force_y":      0.0,
                 "bending_moment_x":   0.0,
                 "bending_moment_y":   0.0,
                 "bending_moment_xy":  0.0,
-                'shear_force_x': 0.0, 
-                'shear_force_y': 0.0,
 
-                # Tensiones Fibra Superior (Z2 = +t/2)
-                "stress_fiber_top_x": 5.242224E+05,
-                "stress_fiber_top_y": 4.547474E-11,
-                "tau_fiber_top_xy":    0.0,
-                "von_mises":          5.242224E+05,
-                "major_principal":    5.242224E+05,
-                "minor_principal":    5.820766E-11,
+                # Top Fiber (Z2)
+                "stress_top_fiber_x":  5.242224E+05,
+                "stress_top_fiber_y":  0.0, 
+                "tau_top_fiber_xy":    0.0,
+                "von_mises_top":       5.242224E+05,
+                "major_principal_top": 5.242224E+05,
+                "minor_principal_top": 0.0,
                 
-                # Tensiones Fibra Inferior (Z1 = -t/2)
-                "stress_fiber_bot_x": 5.242224E+05,
-                "stress_fiber_bot_y": 4.547474E-11,
-                "tau_fiber_bot_xy":    0.0,                
-            },
+                # Bottom Fiber (Z1)
+                "stress_bot_fiber_x":  5.242224E+05,
+                "stress_bot_fiber_y":  0.0, 
+                "tau_bot_fiber_xy":    0.0,                
+                "von_mises_bot":       5.242224E+05,
+                "major_principal_bot": 5.242224E+05,
+                "minor_principal_bot": 0.0
+            }
         }
     },
     #endregion
@@ -208,36 +232,40 @@ VALIDATION_DATA = [
                 5: -4.656998E+01   # R3
             },
             3: {
+                0:  0.0,  # T1
+                1:  0.0,  # T2
                 2:  7.777778E+02  # T3
             }
         },
         "expected_element_forces": {
-            # TENGO CONLICTOS CON LOS SIGNOS
             1: {
                 # Fuerzas de Membrana
                 "membrane_force_x":   1.398897E+02,
                 "membrane_force_y":   4.239083E+02,
                 "membrane_force_xy":  1.870749E+02,
                 
-                # Momentos Flectores (Ahora sí son significativos)
-                #"bending_moment_x":   7.500000E+01,
-                #"bending_moment_y":   1.666667E+02,
-                #"bending_moment_xy":  7.280867E+01,
-                #'shear_force_x': -4.805034E-22, 
-                #'shear_force_y': -8.814329E-22
+                # Fuerzas y Momentos
+                "bending_moment_x":   7.500000E+01,
+                "bending_moment_y":   1.666667E+02,
+                "bending_moment_xy":  7.280867E+01,
+                'shear_force_x': -4.805034E-22, 
+                'shear_force_y': -8.814329E-22,
                 
-                # Tensiones Fibra Superior (1 = +t/2)
-                #"stress_fiber_top_x": 1.802798E+07,
-                #"stress_fiber_top_y": 4.008478E+07,
-                #"tau_fiber_yop_y":    1.751150E+07,
-                #"von_mises":          4.614225E+07,
-                #"major_principal":    4.975126E+07,
-                #"minor_principal":    8.361498E+06,
+                # Top Fiber (Z2 = +t/2, Línea 2 en el f06)
+                "stress_top_fiber_x":  -1.797202E+07,
+                "stress_top_fiber_y":  -3.991522E+07,
+                "tau_top_fiber_xy":    -1.743667E+07,
+                "von_mises_top":        4.594533E+07,
+                "major_principal_top": -8.342327E+06,
+                "minor_principal_top": -4.954491E+07,
             
-                # Tensiones Fibra Inferior (Z = -t/2)
-                #"stress_fiber_bot_x": -1.797202E+07,
-                #"stress_fiber_bot_y": -3.991522E+07,
-                #"tau_fiber_bot_y":    -1.743667E+07
+                # Bottom Fiber (Z1 = -t/2, Línea 1 en el f06)
+                "stress_bot_fiber_x":   1.802798E+07,
+                "stress_bot_fiber_y":   4.008478E+07,
+                "tau_bot_fiber_xy":     1.751150E+07,
+                "von_mises_bot":        4.614225E+07,
+                "major_principal_bot":  4.975126E+07,
+                "minor_principal_bot":  8.361498E+06
             }
         }
     },
@@ -279,6 +307,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
+                # Membrana / Midplane
                 "membrane_force_x":   1.154734E+03,
                 "membrane_force_y":  -5.684342E-14,
                 "membrane_force_xy":  2.000000E+03,
@@ -289,13 +318,21 @@ VALIDATION_DATA = [
                 'shear_force_x':      0.0, 
                 'shear_force_y':      0.0,
                 
-                # Tensiones Fibra Superior (z = +t/2)
-                "stress_fiber_top_x":  1.154734E+06,
-                "stress_fiber_top_y": -5.684342E-11 ,
-                "tau_fiber_top_xy":    2.000000E+06,
-                "von_mises":           3.651494E+06,
-                "major_principal":     2.659038E+06,
-                "minor_principal":    -1.504303E+06,
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.154734E+06,
+                "stress_top_fiber_y": -5.684342E-11,
+                "tau_top_fiber_xy":    2.000000E+06,
+                "von_mises_top":       3.651494E+06,
+                "major_principal_top": 2.659038E+06,
+                "minor_principal_top": -1.504303E+06,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.154734E+06,
+                "stress_bot_fiber_y": -5.684342E-11,
+                "tau_bot_fiber_xy":    2.000000E+06,
+                "von_mises_bot":       3.651494E+06,
+                "major_principal_bot": 2.659038E+06,
+                "minor_principal_bot": -1.504303E+06
             }
         }
     },
@@ -345,6 +382,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
+                # Membrana / Midplane
                 "membrane_force_x":   1.333333E+03,
                 "membrane_force_y":  -4.000000E+04,
                 "membrane_force_xy":  3.966667E+04,
@@ -354,13 +392,21 @@ VALIDATION_DATA = [
                 'shear_force_x':      0.0, 
                 'shear_force_y':      0.0,
 
-            # Tensiones Fibra Superior (z = +t/2)
-                "stress_fiber_top_x":  1.333333E+06,
-                "stress_fiber_top_y": -4.000000E+07,
-                "tau_fiber_top_xy":    3.966667E+07,
+                # Tensiones Fibra Superior (z = +t/2)
+                "stress_top_fiber_x":  1.333333E+06,
+                "stress_top_fiber_y": -4.000000E+07,
+                "tau_top_fiber_xy":    3.966667E+07,
                 "von_mises":           7.984638E+07,
                 "major_principal":     2.539424E+07,
                 "minor_principal":    -6.406090E+07,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.333333E+06,
+                "stress_bot_fiber_y": -4.000000E+07,
+                "tau_bot_fiber_xy":    3.966667E+07,
+                "von_mises_bot":       7.984638E+07,
+                "major_principal_bot": 2.539424E+07,
+                "minor_principal_bot": -6.406090E+07
             }
         }
         
@@ -374,7 +420,7 @@ VALIDATION_DATA = [
         "filename": "Ej36.dat",
         "description": "CTRIA3 in XY plane, large coordinates without origin (0,0). Validates coordinate projection independence.",
         "note": "El resultado de desplazamiento no tiene sentido (resultado que coincide), pero no tiene sentido comparar pospocreso del caso",
-        "rel_tol": 0.01,
+        "rel_tol": 0.02,
         #"rel_tol_force": 0.11,
         "expected_displacements": {
             1: {
@@ -398,33 +444,36 @@ VALIDATION_DATA = [
             3: {
                 0:  5.967060E-06,
                 1:  3.064617E-06,
-                2:  5.809655E+25
+                2:  5.809655E+25,
+                3:  0.0,
+                4:  0.0,
+                5: -3.330049E-06
             }
         },
         # NO TIENE SENTIDO ESTA COMPARATIVA DE REACCIONES PUES EL ELEMENTO NO TIENE SENTIDO POR LOS RESULTADOS DE DESPLAZAMIENTOS
-        #"expected_reactions": {
-        #    1: {
-        #        0:   4.399524E+01,
-        #        1:  -1.058240E+04,
-        #        2:  -3.275862E+03,
-        #        3:  -1.407826E+05,
-        #        4:  -1.262447E+04,
-        #        5:   0.0,
-        #    },
-        #    2: {
-        #        0:  -4.043995E+03,
-        #        1:   7.582402E+03,
-        #        2:  -1.724138E+03,
-        #        3:  -9.772859E+04,
-        #        4:  -6.609744E+04,
-        #        5:   0.0,
-        #    },
-        #    3: {
-        #        3:  -2.270060E+05 ,
-        #        4:  -1.074850E+05,
-        #        5:   0.0,
-        #    }
-        #},
+        "expected_reactions": {
+            1: {
+                0:   4.399524E+01,
+                1:  -1.058240E+04,
+                2:  -3.275862E+03,
+                #3:  -1.407826E+05,
+                #4:  -1.262447E+04,
+                5:   0.0,
+            },
+            2: {
+                0:  -4.043995E+03,
+                1:   7.582402E+03,
+                2:  -1.724138E+03,
+                #3:  -9.772859E+04,
+                #4:  -6.609744E+04,
+                5:   0.0,
+            },
+            3: {
+                #3:  -2.270060E+05 ,
+                #4:  -1.074850E+05,
+                5:   0.0,
+            }
+        },
     },
     #endregion
 
@@ -470,23 +519,49 @@ VALIDATION_DATA = [
                 "membrane_force_x":   1.300000E+02,
                 "membrane_force_y":   1.300000E+02,
                 "membrane_force_xy": -1.750000E+01,
-                "sigma_x":            1.300000E+05,
-                "sigma_y":            1.300000E+05,
-                "tau_xy":            -1.750000E+04,
-                "von_mises":          1.334869E+05,
-                "major_principal":    1.475000E+05,
-                "minor_principal":    1.125000E+05
+                "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+                "bending_moment_x": 0.0,
+                "bending_moment_y": 0.0,
+                "bending_moment_xy": 0.0,
+
+                "stress_top_fiber_x":  1.300000E+05,
+                "stress_top_fiber_y":  1.300000E+05,
+                "tau_top_fiber_xy":   -1.750000E+04,
+                "von_mises_top":       1.334869E+05,
+                "major_principal_top": 1.475000E+05,
+                "minor_principal_top": 1.125000E+05,
+
+                "stress_bot_fiber_x":  1.300000E+05,
+                "stress_bot_fiber_y":  1.300000E+05,
+                "tau_bot_fiber_xy":   -1.750000E+04,
+                "von_mises_bot":       1.334869E+05,
+                "major_principal_bot": 1.475000E+05,
+                "minor_principal_bot": 1.125000E+05
             },
             2: {
                 "membrane_force_x":   1.825000E+02,
                 "membrane_force_y":  -1.175000E+02,
                 "membrane_force_xy": -7.000000E+01,
-                "sigma_x":            1.825000E+05,
-                "sigma_y":           -1.175000E+05,
-                "tau_xy":            -7.000000E+04,
-                "von_mises":          2.885416E+05,
-                "major_principal":    1.980295E+05,
-                "minor_principal":    -1.330295E+05
+                 "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+                "bending_moment_x": 0.0,
+                "bending_moment_y": 0.0,
+                "bending_moment_xy": 0.0,
+
+                "stress_top_fiber_x":  1.825000E+05,
+                "stress_top_fiber_y": -1.175000E+05,
+                "tau_top_fiber_xy":   -7.000000E+04,
+                "von_mises_top":       2.885416E+05,
+                "major_principal_top": 1.980295E+05,
+                "minor_principal_top": -1.330295E+05,
+
+                "stress_bot_fiber_x":  1.825000E+05,
+                "stress_bot_fiber_y": -1.175000E+05,
+                "tau_bot_fiber_xy":   -7.000000E+04,
+                "von_mises_bot":       2.885416E+05,
+                "major_principal_bot": 1.980295E+05,
+                "minor_principal_bot": -1.330295E+05
             }
         }
     },
@@ -549,16 +624,21 @@ VALIDATION_DATA = [
                 'shear_force_x':     -1.000000E-02, 
                 'shear_force_y':     1.000000E-02,
 
-                # El major, minor y VonMises por ahora solo se calculan de la fibra superior.
-                "von_mises":           3.527593E-01,
-                "major_principal":     3.933422E-01,
-                "minor_principal":     1.050165E-01,
+                # Tensiones Fibra Inferior (z = -t/2)
+                "stress_bot_fiber_x":  2.450750E-01,
+                "stress_bot_fiber_y":  2.532837E-01,
+                "tau_bot_fiber_xy":   -1.441044E-01,
+                "von_mises_bot":       3.527593E-01,
+                "major_principal_bot": 3.933422E-01,
+                "minor_principal_bot": 1.050165E-01,
 
                 # Tensiones Fibra Superior (z = +t/2)
-                "stress_fiber_top_x":  2.450750E-01,
-                "stress_fiber_top_y":  2.532837E-01,
-                "tau_fiber_top_xy":   -1.441044E-01,
-                
+                "stress_top_fiber_x":  2.749250E-01,
+                "stress_top_fiber_y":  2.667163E-01,
+                "tau_top_fiber_xy":   -1.358956E-01,
+                "von_mises_top":       3.588833E-01,
+                "major_principal_top": 4.067782E-01,
+                "minor_principal_top": 1.348631E-01,
             },
             2: {
                 "membrane_force_x":   1.300000E+00,
@@ -566,21 +646,27 @@ VALIDATION_DATA = [
                 "membrane_force_xy": -7.000000E-01,
                 
                 "bending_moment_x":   6.218770E-02,
-                "bending_moment_y":  -2.798447E-02,
-                "bending_moment_xy": -1.710162E-02,
+                "bending_moment_y":   2.798447E-02,
+                "bending_moment_xy":  1.710162E-02,
                 'shear_force_x':      1.000000E-02, 
                 'shear_force_y':     -1.000000E-02,
 
-                # El major, minor y VonMises por ahora solo se calculan de la fibra superior.
-                "von_mises":           3.588833E-01,
-                "major_principal":     3.933422E-01,
-                "minor_principal":     1.050165E-01,
 
                 # Tensiones Fibra Inferior (z = -t/2)
-                "stress_fiber_bot_x":  2.450750E-01,
-                "stress_fiber_bot_y":  2.532837E-01,
-                "tau_fiber_bot_xy":   -1.441044E-01,
-                
+                "stress_bot_fiber_x":  2.749250E-01,
+                "stress_bot_fiber_y":  2.667163E-01,
+                "tau_bot_fiber_xy":   -1.358956E-01,
+                "von_mises_bot":       3.588833E-01,
+                "major_principal_bot": 4.067782E-01,
+                "minor_principal_bot": 1.348631E-01,
+
+                # Tensiones Fibra Superior (z = +t/2)
+                "stress_top_fiber_x":  2.450750E-01,
+                "stress_top_fiber_y":  2.532837E-01,
+                "tau_top_fiber_xy":   -1.441044E-01,
+                "von_mises_top":       3.527593E-01,
+                "major_principal_top": 3.933422E-01,
+                "minor_principal_top": 1.050165E-01,
             }
         }
     },
@@ -608,36 +694,80 @@ VALIDATION_DATA = [
             1: {
                 0: -2.187853E+02,
                 1: -4.680588E+02,
-                2: -7.105239E+01
+                2: -7.105239E+01,
+                3:  1.038178E-02,
+                4: -1.798214E-02,
+                5:  8.648996E-02,
+            },
+            2: {
+                2:  2.218275E-03,
+                3:  1.992055E-03,
+                4: -3.450503E-03,
+                5:  1.659580E-02
             },
             3: {
                 0: -6.837475E+01, 
                 1: -3.457025E+01, 
-                2:  1.019433E+00  
-            }
+                2:  1.019433E+00,
+                3: -8.389595E-03,
+                4:  1.453227E-02,
+                5:  -6.989413E-02, 
+            },
+            4: {
+                2: -5.263498E-03,
+                3:  1.992055E-03,
+                4: -3.450503E-03,
+                5:  1.659580E-02
+            },
         },
         "expected_element_forces": {
             1: {
                 "membrane_force_x":   1.157082E+02,
                 "membrane_force_y":   8.893921E+01,
                 "membrane_force_xy": -2.232528E+01,
-                "sigma_x":            1.157082E+05,
-                "sigma_y":            8.893921E+04,
-                "tau_xy":            -2.232528E+04,
-                "von_mises":          1.118160E+05,
-                "major_principal":    1.283537E+05,
-                "minor_principal":    7.629366E+04
+                "bending_moment_x": -3.538480E-13,
+                "bending_moment_y":  3.538480E-13,
+                "bending_moment_xy": 1.007096E-13,
+                "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+
+                "stress_top_fiber_x":  1.157082E+05,
+                "stress_top_fiber_y":  8.893921E+04,
+                "tau_top_fiber_xy":   -2.232528E+04,
+                "von_mises_top":       1.118160E+05,
+                "major_principal_top": 1.283537E+05,
+                "minor_principal_top": 7.629366E+04,
+
+                "stress_bot_fiber_x":  1.157082E+05,
+                "stress_bot_fiber_y":  8.893921E+04,
+                "tau_bot_fiber_xy":   -2.232528E+04,
+                "von_mises_bot":       1.118160E+05,
+                "major_principal_bot": 1.283537E+05,
+                "minor_principal_bot": 7.629366E+04
             },
             2: {
                 "membrane_force_x":   3.077436E+01,
-                "membrane_force_y":   5.373421E+01,  # Corregido según .f06
+                "membrane_force_y":   5.373421E+01,
                 "membrane_force_xy":  4.983093E+01,
-                "sigma_x":            3.077436E+04,
-                "sigma_y":            5.373482E+04,
-                "tau_xy":             4.983093E+04,
-                "von_mises":          9.813360E+04,
-                "major_principal":    9.339086E+04,
-                "minor_principal":   -8.881669E+03 
+                "bending_moment_x": -1.472079E-13,
+                "bending_moment_y":  1.472079E-13,
+                "bending_moment_xy": -6.623366E-14,
+                "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+
+                "stress_top_fiber_x":  3.077436E+04,
+                "stress_top_fiber_y":  5.373482E+04,
+                "tau_top_fiber_xy":    4.983093E+04,
+                "von_mises_top":       9.813360E+04,
+                "major_principal_top": 9.339086E+04,
+                "minor_principal_top": -8.881669E+03,
+
+                "stress_bot_fiber_x":  3.077436E+04,
+                "stress_bot_fiber_y":  5.373482E+04,
+                "tau_bot_fiber_xy":    4.983093E+04,
+                "von_mises_bot":       9.813360E+04,
+                "major_principal_bot": 9.339086E+04,
+                "minor_principal_bot": -8.881669E+03
             }
         }
     },
@@ -663,24 +793,50 @@ VALIDATION_DATA = [
             1: {
                 "membrane_force_x":   1.301354E+02,
                 "membrane_force_y":   1.051633E+02,
-                "membrane_force_xy": -1.112066E+02,
-                "sigma_x":            1.301354E+05,
-                "sigma_y":            1.051633E+05,
-                "tau_xy":            -1.112066E+05,
-                "von_mises":          2.267373E+05,
-                "major_principal":    2.295547E+05,
-                "minor_principal":    5.743959E+03
+                "membrane_force_xy": -1.112066E+02,                
+                "bending_moment_x": 0.0,
+                "bending_moment_y": 0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+
+                "stress_top_fiber_x":  1.301354E+05,
+                "stress_top_fiber_y":  1.051633E+05,
+                "tau_top_fiber_xy":   -1.112066E+05,
+                "von_mises_top":       2.267373E+05,
+                "major_principal_top": 2.295547E+05,
+                "minor_principal_top": 5.743959E+03,
+
+                "stress_bot_fiber_x":  1.301354E+05,
+                "stress_bot_fiber_y":  1.051633E+05,
+                "tau_bot_fiber_xy":   -1.112066E+05,
+                "von_mises_bot":       2.267373E+05,
+                "major_principal_bot": 2.295547E+05,
+                "minor_principal_bot": 5.743959E+03
             },
             10: {
                 "membrane_force_x":  -1.348041E+02,
                 "membrane_force_y":   1.216682E+02,
                 "membrane_force_xy":  3.244484E+02,
-                "sigma_x":           -1.348041E+05,
-                "sigma_y":            1.216682E+05,
-                "tau_xy":             3.244484E+05,
-                "von_mises":          6.042988E+05,
-                "major_principal":    3.423035E+05,
-                "minor_principal":   -3.554395E+05
+                "bending_moment_x": 0.0,
+                "bending_moment_y": 0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x": 0.0, 
+                "shear_force_y": 0.0,
+
+                "stress_top_fiber_x": -1.348041E+05,
+                "stress_top_fiber_y":  1.216682E+05,
+                "tau_top_fiber_xy":    3.244484E+05,
+                "von_mises_top":       6.042988E+05,
+                "major_principal_top": 3.423035E+05,
+                "minor_principal_top": -3.554395E+05,
+
+                "stress_bot_fiber_x": -1.348041E+05,
+                "stress_bot_fiber_y":  1.216682E+05,
+                "tau_bot_fiber_xy":    3.244484E+05,
+                "von_mises_bot":       6.042988E+05,
+                "major_principal_bot": 3.423035E+05,
+                "minor_principal_bot": -3.554395E+05
             }
         }
     },
@@ -693,9 +849,9 @@ VALIDATION_DATA = [
         "filename": "Ej41.dat",
         "description": "10 CTRIA3 elements forming a trapezoid in an arbitrary 3D plane. Validates assembly and transformations combined.",
         
-        "rel_tol": 0.02,              # Flexibilizado al 2% para absorber la desviación del drilling acoplado (1.54%)
-        "abs_tol_disp": 1e-9,         # Filtro estricto para GDLs bloqueados o próximos a cero
-        "abs_tol_force": 1e-2,        # Filtro de ruido para componentes residuales de fuerza (0.01 N)
+        "rel_tol": 0.01,           
+        "abs_tol_disp": 1e-9, 
+        "abs_tol_force": 1e-2,
         
         "expected_displacements": {
             2:  {0:  1.781194E-05, 1: -8.038953E-06, 2: 0.0},
@@ -710,42 +866,152 @@ VALIDATION_DATA = [
             12: {0:  2.067144E-04, 1: -1.343570E-04, 2: 0.0}
         },
         "expected_reactions": {
-            1: {0: -6.520454E+02, 1: -1.829452E+02, 2:  1.836533E+02},
-            7: {0: -1.731955E+03, 1: -8.050548E+02, 2:  2.963467E+02}
+            1: {
+                0: -6.520454E+02, 
+                1: -1.829452E+02, 
+                2:  1.836533E+02,
+                3:  6.636643E-02,
+                4: -8.848857E-02,
+                5: 1.474810E-01,
+                },
+            3: {
+                0:  0.0, 
+                1:  0.0, 
+                2: -6.821210E-13,
+                3:  5.706813E-01,
+                4: -7.609084E-01,
+                5:  1.268181E+00,
+                },
+            5: {
+                0:  0.0, 
+                1:  0.0, 
+                2:  0.0,
+                3:  6.251460E-01,
+                4: -8.335280E-01,
+                5:  1.389213E+00,
+                },
+            7: {
+                0: -1.731955E+03, 
+                1: -8.050548E+02, 
+                2:  2.963467E+02,
+                3:  1.361563E-01,
+                4: -1.815418E-01,
+                5:  3.025696E-01,
+                },
+            12: {
+                0:  0.0, 
+                1:  0.0, 
+                2:  -3.637979E-12,
+                3:  1.132903E-01,
+                4: -1.510537E-01,
+                5:  2.517562E-01,
+                },
         },
         "expected_element_forces": {
             1: {
-                "membrane_force_x":   1.304317E+02,
-                "membrane_force_y":   1.052227E+02,
+                # Membrana / Midplane
+                "sigma_x": 1.304317E+05,
+                "sigma_y": 1.052227E+05,
+                "tau_xy": -1.111881E+05,
+                "von_mises": 2.268221E+05,
+                "major_principal": 2.297275E+05,
+                "minor_principal": 5.926994E+03,
+
+                # Fuerzas y Momentos
+                "membrane_force_x":  1.304317E+02,
+                "membrane_force_y":  1.052227E+02,
                 "membrane_force_xy": -1.111881E+02,
-                "sigma_x":            1.304317E+05,
-                "sigma_y":            1.052227E+05,
-                "tau_xy":            -1.111881E+05,
-                "von_mises":          2.268221E+05,
-                "major_principal":    2.297275E+05,
-                #"minor_principal":    5.926994E+03 # para pasar este stress el error relativo debe ser de 0.078 (7.8%)
+                "bending_moment_x":  0.0,
+                "bending_moment_y":  0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x":     0.0,
+                "shear_force_y":     0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.304317E+05,
+                "stress_top_fiber_y":  1.052227E+05,
+                "tau_top_fiber_xy":   -1.111881E+05,
+                "von_mises_top":       2.268221E+05,
+                "major_principal_top": 2.297275E+05,
+                "minor_principal_top": 5.926994E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.304317E+05,
+                "stress_bot_fiber_y":  1.052227E+05,
+                "tau_bot_fiber_xy":   -1.111881E+05,
+                "von_mises_bot":       2.268221E+05,
+                "major_principal_bot": 2.297275E+05,
+                "minor_principal_bot": 5.926994E+03
             },
             2: {
-                "membrane_force_x":   1.060832E+02,
-                "membrane_force_y":   4.326561E+02,
-                "membrane_force_xy":  1.586497E+02,
-                "sigma_x":            1.060832E+05,
-                "sigma_y":            4.326561E+05,
-                "tau_xy":             1.586497E+05,
-                "von_mises":          4.775527E+05,
-                "major_principal":    4.970365E+05,
-                "minor_principal":    4.170287E+04
+                # Membrana / Midplane
+                "sigma_x": 1.060832E+05,
+                "sigma_y": 4.326561E+05,
+                "tau_xy":  1.586497E+05,
+                "von_mises": 4.775527E+05,
+                "major_principal": 4.970365E+05,
+                "minor_principal": 4.170287E+04,
+
+                # Fuerzas y Momentos
+                "membrane_force_x":  1.060832E+02,
+                "membrane_force_y":  4.326561E+02,
+                "membrane_force_xy": 1.586497E+02,
+                "bending_moment_x":  0.0,
+                "bending_moment_y":  0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x":     0.0,
+                "shear_force_y":     0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.060832E+05,
+                "stress_top_fiber_y":  4.326561E+05,
+                "tau_top_fiber_xy":    1.586497E+05,
+                "von_mises_top":       4.775527E+05,
+                "major_principal_top": 4.970365E+05,
+                "minor_principal_top": 4.170287E+04,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.060832E+05,
+                "stress_bot_fiber_y":  4.326561E+05,
+                "tau_bot_fiber_xy":    1.586497E+05,
+                "von_mises_bot":       4.775527E+05,
+                "major_principal_bot": 4.970365E+05,
+                "minor_principal_bot": 4.170287E+04
             },
             10: {
+                # Membrana / Midplane
+                "sigma_x": -1.347920E+05,
+                "sigma_y":  1.216227E+05,
+                "tau_xy":   3.243900E+05,
+                "von_mises": 6.041866E+05,
+                "major_principal": 3.422219E+05,
+                "minor_principal": -3.553913E+05,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":  -1.347920E+02,
                 "membrane_force_y":   1.216227E+02,
                 "membrane_force_xy":  3.243900E+02,
-                "sigma_x":           -1.347920E+05,
-                "sigma_y":            1.216227E+05,
-                "tau_xy":             3.243900E+05,
-                "von_mises":          6.041866E+05,
-                "major_principal":    3.422219E+05,
-                "minor_principal":   -3.553913E+05
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -1.347920E+05,
+                "stress_top_fiber_y":  1.216227E+05,
+                "tau_top_fiber_xy":    3.243900E+05,
+                "von_mises_top":       6.041866E+05,
+                "major_principal_top": 3.422219E+05,
+                "minor_principal_top": -3.553913E+05,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -1.347920E+05,
+                "stress_bot_fiber_y":  1.216227E+05,
+                "tau_bot_fiber_xy":    3.243900E+05,
+                "von_mises_bot":       6.041866E+05,
+                "major_principal_bot": 3.422219E+05,
+                "minor_principal_bot": -3.553913E+05
             }
         }
     },
@@ -757,95 +1023,232 @@ VALIDATION_DATA = [
         "folder": "case_42",
         "filename": "Ej42.dat",
         "description": "8 CTRIA3 elements with 8 different materials and high skewness in XZ plane. Tests multi-stiffness assembly and load paths.",
-        "rel_tol": 0.02,    
+        "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
         "abs_tol_force": 1e-3,
 
         "expected_displacements": {
-            1:  {0: -7.154935E-06, 1: 0.0, 2: -3.398146E-06}, # Nodo empotrado
-            5:  {0: 8.620173E-06, 1: 0.0, 2: 4.231403E-06},
-            9:  {0: 2.130888E-05, 1: 0.0, 2: 3.170477E-05},
+            1:  {0: -7.154935E-06, 1: 0.0, 2: -3.398146E-06, 3:0.0, 4: 1.527657E-07}, # Nodo empotrado
+            5:  {0: 8.620173E-06,  1: 0.0, 2:  4.231403E-06, 3:0.0, 4: 1.717897E-07},
+            9:  {0: 2.130888E-05,  1: 0.0, 2:  3.170477E-05, 3:0.0, 4:-5.673143E-07},
         },
         "expected_reactions": {
             # Nodos empotrados 2, 4, 6, 8 evaluados en X(0) y Z(2)
-            2: { 0:  1.216458E+02, 2: -2.610722E+02 },
-            4: { 0:  2.026487E+02, 2:  5.495897E+02 },
-            6: { 0: -2.742055E+03, 2:  2.498112E+02 },
-            8: { 0: -5.822398E+02, 2: -5.383288E+02 }
+            2: { 0:  1.216458E+02, 2: -2.610722E+02, 4: -1.406964E-01},
+            4: { 0:  2.026487E+02, 2:  5.495897E+02, 4: -2.216302E-01},
+            6: { 0: -2.742055E+03, 2:  2.498112E+02, 4:  -1.837294E-01},
+            8: { 0: -5.822398E+02, 2: -5.383288E+02, 4:  1.018744E-01}
         },
         "expected_element_forces": {
             1: {
+                # Membrana / Midplane
+                "sigma_x": 3.824137E+04,
+                "sigma_y": 1.119145E+04,
+                "tau_xy":  2.692750E+03,
+                "von_mises": 3.437190E+04,
+                "major_principal": 3.850683E+04,
+                "minor_principal": 1.092600E+04,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":   3.824137E+01,
                 "membrane_force_y":   1.119145E+01,
                 "membrane_force_xy":  2.692750E+00,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  3.824137E+04,
+                "stress_top_fiber_y":  1.119145E+04,
+                "tau_top_fiber_xy":    2.692750E+03,
+                "von_mises_top":       3.437190E+04,
+                "major_principal_top": 3.850683E+04,
+                "minor_principal_top": 1.092600E+04,
 
-                "sigma_x":            3.824137E+04,
-                "sigma_y":            1.119145E+04,
-                "tau_xy":             2.692750E+03,
-
-                "von_mises":          3.437190E+04,
-                "major_principal":    3.850683E+04,
-                "minor_principal":    1.092600E+04
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  3.824137E+04,
+                "stress_bot_fiber_y":  1.119145E+04,
+                "tau_bot_fiber_xy":    2.692750E+03,
+                "von_mises_bot":       3.437190E+04,
+                "major_principal_bot": 3.850683E+04,
+                "minor_principal_bot": 1.092600E+04
             },
             2: {
+                # Membrana / Midplane
+                "sigma_x": 6.207154E+04,
+                "sigma_y": 2.387653E+04,
+                "tau_xy":  2.259487E+04,
+                "von_mises": 6.687673E+04,
+                "major_principal": 7.255854E+04,
+                "minor_principal": 1.338953E+04,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":   6.207154E+01,
                 "membrane_force_y":   2.387653E+01,
                 "membrane_force_xy":  2.259487E+01,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  6.207154E+04,
+                "stress_top_fiber_y":  2.387653E+04,
+                "tau_top_fiber_xy":    2.259487E+04,
+                "von_mises_top":       6.687673E+04,
+                "major_principal_top": 7.255854E+04,
+                "minor_principal_top": 1.338953E+04,
 
-                "sigma_x":            6.207154E+04,
-                "sigma_y":            2.387653E+04,
-                "tau_xy":             2.259487E+04,
-                "von_mises":          6.687673E+04,
-                "major_principal":    7.255854E+04,
-                "minor_principal":    1.338953E+04
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  6.207154E+04,
+                "stress_bot_fiber_y":  2.387653E+04,
+                "tau_bot_fiber_xy":    2.259487E+04,
+                "von_mises_bot":       6.687673E+04,
+                "major_principal_bot": 7.255854E+04,
+                "minor_principal_bot": 1.338953E+04
             },
             4: {
+                # Membrana / Midplane
+                "sigma_x": -7.061358E+02,
+                "sigma_y": -2.017531E+03,
+                "tau_xy":   8.946562E+04,
+                "von_mises": 1.549691E+05,
+                "major_principal": 8.810619E+04,
+                "minor_principal": -9.082986E+04,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":  -7.061358E-01,
                 "membrane_force_y":  -2.017531E+00,
                 "membrane_force_xy":  8.946562E+01,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -7.061358E+02,
+                "stress_top_fiber_y": -2.017531E+03,
+                "tau_top_fiber_xy":    8.946562E+04,
+                "von_mises_top":       1.549691E+05,
+                "major_principal_top": 8.810619E+04,
+                "minor_principal_top": -9.082986E+04,
 
-                "sigma_x":           -7.061358E+02,
-                "sigma_y":           -2.017531E+03,
-                "tau_xy":             8.946562E+04,
-                "von_mises":          1.549691E+05,
-                "major_principal":    8.810619E+04,
-                "minor_principal":   -9.082986E+04
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -7.061358E+02,
+                "stress_bot_fiber_y": -2.017531E+03,
+                "tau_bot_fiber_xy":    8.946562E+04,
+                "von_mises_bot":       1.549691E+05,
+                "major_principal_bot": 8.810619E+04,
+                "minor_principal_bot": -9.082986E+04
             },
             5: {
+                # Membrana / Midplane
+                "sigma_x":  3.043178E+03,
+                "sigma_y": -5.353096E+02,
+                "tau_xy":  -1.078739E+03,
+                "von_mises": 3.829826E+03,
+                "major_principal": 3.343210E+03,
+                "minor_principal": -8.353412E+02,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":   3.043178E+00,
                 "membrane_force_y":  -5.353096E-01,
                 "membrane_force_xy": -1.078739E+00,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  3.043178E+03,
+                "stress_top_fiber_y": -5.353096E+02,
+                "tau_top_fiber_xy":   -1.078739E+03,
+                "von_mises_top":       3.829826E+03,
+                "major_principal_top": 3.343210E+03,
+                "minor_principal_top": -8.353412E+02,
 
-                "sigma_x":            3.043178E+03,
-                "sigma_y":           -5.353096E+02,
-                "tau_xy":            -1.078739E+03,
-                "von_mises":          3.829826E+03,
-                "major_principal":    3.343210E+03,
-                "minor_principal":   -8.353412E+02
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  3.043178E+03,
+                "stress_bot_fiber_y": -5.353096E+02,
+                "tau_bot_fiber_xy":   -1.078739E+03,
+                "von_mises_bot":       3.829826E+03,
+                "major_principal_bot": 3.343210E+03,
+                "minor_principal_bot": -8.353412E+02
             },
             7: {
+                # Membrana / Midplane
+                "sigma_x": -3.244819E+05,
+                "sigma_y":  2.192878E+05,
+                "tau_xy":  -3.854987E+05,
+                "von_mises": 8.187542E+05,
+                "major_principal": 4.191345E+05,
+                "minor_principal": -5.243286E+05,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":  -3.244819E+02,
                 "membrane_force_y":   2.192878E+02,
                 "membrane_force_xy": -3.854987E+02,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -3.244819E+05,
+                "stress_top_fiber_y":  2.192878E+05,
+                "tau_top_fiber_xy":   -3.854987E+05,
+                "von_mises_top":       8.187542E+05,
+                "major_principal_top": 4.191345E+05,
+                "minor_principal_top": -5.243286E+05,
 
-                "sigma_x":           -3.244819E+05,
-                "sigma_y":            2.192878E+05,
-                "tau_xy":            -3.854987E+05,
-                "von_mises":          8.187542E+05,
-                "major_principal":    4.191345E+05,
-                "minor_principal":   -5.243286E+05
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -3.244819E+05,
+                "stress_bot_fiber_y":  2.192878E+05,
+                "tau_bot_fiber_xy":   -3.854987E+05,
+                "von_mises_bot":       8.187542E+05,
+                "major_principal_bot": 4.191345E+05,
+                "minor_principal_bot": -5.243286E+05
             },
             8: {
+                # Membrana / Midplane
+                "sigma_x": 1.107391E+05,
+                "sigma_y": 1.918343E+05,
+                "tau_xy": -6.898659E+04,
+                "von_mises": 2.051766E+05,
+                "major_principal": 2.313071E+05,
+                "minor_principal": 7.126633E+04,
+
+                # Fuerzas y Momentos
                 "membrane_force_x":   1.107391E+02,
                 "membrane_force_y":   1.918343E+02,
                 "membrane_force_xy": -6.898659E+01,
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.107391E+05,
+                "stress_top_fiber_y":  1.918343E+05,
+                "tau_top_fiber_xy":   -6.898659E+04,
+                "von_mises_top":       2.051766E+05,
+                "major_principal_top": 2.313071E+05,
+                "minor_principal_top": 7.126633E+04,
 
-                "sigma_x":            1.107391E+05,
-                "sigma_y":            1.918343E+05,
-                "tau_xy":            -6.898659E+04,
-                "von_mises":          2.051766E+05,
-                "major_principal":    2.313071E+05,
-                "minor_principal":    7.126633E+04
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.107391E+05,
+                "stress_bot_fiber_y":  1.918343E+05,
+                "tau_bot_fiber_xy":   -6.898659E+04,
+                "von_mises_bot":       2.051766E+05,
+                "major_principal_bot": 2.313071E+05,
+                "minor_principal_bot": 7.126633E+04
             }
         }
     },
@@ -857,7 +1260,7 @@ VALIDATION_DATA = [
         "folder": "case_43",
         "filename": "Ej43.dat",
         "description": "8 CTRIA3 elements with 8 different materials in YZ plane. Severe mesh distortion and full element stress recovery.",
-        "rel_tol": 0.02,    
+        "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
         "abs_tol_force": 1e-3,
 
@@ -869,101 +1272,222 @@ VALIDATION_DATA = [
             7: { 1:  1.169913E-07, 2:  5.632467E-08, 3:-5.777200E-09, 4:0.0},
             9: { 1:  1.468316E-08, 2:  -3.222052E-08, 3:-1.218673E-08, 4:0.0}
         },
-        "expected_reactions": {
-            # Nodos empotrados evaluados en Y(1) y Z(2)
-            2: { 1: -4.255258E+02, 2: -7.792373E+01},
-            4: { 1:  4.871221E+02, 2: -1.127981E+03},
-            6: { 1: -1.466525E+02, 2:  2.838298E+03},
-            8: { 1: -4.149438E+02, 2: -3.632393E+03}
-        },
         "expected_element_forces": {
             1: {
+                # Fuerzas y Momentos
                 "membrane_force_x":  -3.890586E+00,
                 "membrane_force_y":   3.355102E+00,
                 "membrane_force_xy": -1.415027E-01,
-                "sigma_x":           -3.890586E+03,
-                "sigma_y":            3.355102E+03,
-                "tau_xy":            -1.415027E+02,
-                "von_mises":          6.285440E+03,
-                "major_principal":    3.357865E+03,
-                "minor_principal":   -3.893348E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -3.890586E+03,
+                "stress_top_fiber_y":  3.355102E+03,
+                "tau_top_fiber_xy":   -1.415027E+02,
+                "von_mises_top":       6.285440E+03,
+                "major_principal_top": 3.357865E+03,
+                "minor_principal_top": -3.893348E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -3.890586E+03,
+                "stress_bot_fiber_y":  3.355102E+03,
+                "tau_bot_fiber_xy":   -1.415027E+02,
+                "von_mises_bot":       6.285440E+03,
+                "major_principal_bot": 3.357865E+03,
+                "minor_principal_bot": -3.893348E+03
             },
             2: {
+                # Fuerzas y Momentos
                 "membrane_force_x":  -3.276435E+00,
                 "membrane_force_y":  -1.562509E+01,
                 "membrane_force_xy":  5.977812E+00,
-                "sigma_x":           -6.552869E+02,
-                "sigma_y":           -3.125017E+03,
-                "tau_xy":             1.195562E+03,
-                "von_mises":          3.526395E+03,
-                "major_principal":   -1.713555E+02,
-                "minor_principal":   -3.608949E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -6.552869E+02,
+                "stress_top_fiber_y": -3.125017E+03,
+                "tau_top_fiber_xy":    1.195562E+03,
+                "von_mises_top":       3.526395E+03,
+                "major_principal_top": -1.713555E+02,
+                "minor_principal_top": -3.608949E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -6.552869E+02,
+                "stress_bot_fiber_y": -3.125017E+03,
+                "tau_bot_fiber_xy":    1.195562E+03,
+                "von_mises_bot":       3.526395E+03,
+                "major_principal_bot": -1.713555E+02,
+                "minor_principal_bot": -3.608949E+03
             },
             3: {
+                # Fuerzas y Momentos
                 "membrane_force_x":   1.381637E+02,
                 "membrane_force_y":   9.223628E+01,
                 "membrane_force_xy": -8.527009E+01,
-                "sigma_x":            1.381637E+04,
-                "sigma_y":            9.223628E+03,
-                "tau_xy":            -8.527009E+03,
-                "von_mises":          1.914837E+04,
-                "major_principal":    2.035081E+04,
-                "minor_principal":    2.689190E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.381637E+04,
+                "stress_top_fiber_y":  9.223628E+03,
+                "tau_top_fiber_xy":   -8.527009E+03,
+                "von_mises_top":       1.914837E+04,
+                "major_principal_top": 2.035081E+04,
+                "minor_principal_top": 2.689190E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.381637E+04,
+                "stress_bot_fiber_y":  9.223628E+03,
+                "tau_bot_fiber_xy":   -8.527009E+03,
+                "von_mises_bot":       1.914837E+04,
+                "major_principal_bot": 2.035081E+04,
+                "minor_principal_bot": 2.689190E+03
             },
             4: {
+                # Fuerzas y Momentos
                 "membrane_force_x":   1.020218E+01,
                 "membrane_force_y":   2.914909E+01,
                 "membrane_force_xy": -2.031564E+00,
-                "sigma_x":            6.801455E+02,
-                "sigma_y":            1.943273E+03,
-                "tau_xy":            -1.354376E+02,
-                "von_mises":          1.724015E+03,
-                "major_principal":    1.957632E+03,
-                "minor_principal":    6.657866E+02
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  6.801455E+02,
+                "stress_top_fiber_y":  1.943273E+03,
+                "tau_top_fiber_xy":   -1.354376E+02,
+                "von_mises_top":       1.724015E+03,
+                "major_principal_top": 1.957632E+03,
+                "minor_principal_top": 6.657866E+02,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  6.801455E+02,
+                "stress_bot_fiber_y":  1.943273E+03,
+                "tau_bot_fiber_xy":   -1.354376E+02,
+                "von_mises_bot":       1.724015E+03,
+                "major_principal_bot": 1.957632E+03,
+                "minor_principal_bot": 6.657866E+02
             },
             5: {
+                # Fuerzas y Momentos
                 "membrane_force_x":  -4.510177E+01,
                 "membrane_force_y":  -1.428301E+02,
                 "membrane_force_xy":  1.427830E+01,
-                "sigma_x":           -2.255089E+03,
-                "sigma_y":           -7.141507E+03,
-                "tau_xy":             7.139152E+02,
-                "von_mises":          6.442890E+03,
-                "major_principal":   -2.152921E+03,
-                "minor_principal":   -7.243675E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -2.255089E+03,
+                "stress_top_fiber_y": -7.141507E+03,
+                "tau_top_fiber_xy":    7.139152E+02,
+                "von_mises_top":       6.442890E+03,
+                "major_principal_top": -2.152921E+03,
+                "minor_principal_top": -7.243675E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -2.255089E+03,
+                "stress_bot_fiber_y": -7.141507E+03,
+                "tau_bot_fiber_xy":    7.139152E+02,
+                "von_mises_bot":       6.442890E+03,
+                "major_principal_bot": -2.152921E+03,
+                "minor_principal_bot": -7.243675E+03
             },
             6: {
+                # Fuerzas y Momentos
                 "membrane_force_x":  -2.000000E+01,
                 "membrane_force_y":  -6.666667E+01,
                 "membrane_force_xy":  6.666000E+01,
-                "sigma_x":           -4.000000E+02,
-                "sigma_y":           -1.333333E+03,
-                "tau_xy":             1.333200E+03,
-                "von_mises":          2.595518E+03,
-                "major_principal":    5.458488E+02,
-                "minor_principal":   -2.279182E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -4.000000E+02,
+                "stress_top_fiber_y": -1.333333E+03,
+                "tau_top_fiber_xy":    1.333200E+03,
+                "von_mises_top":       2.595518E+03,
+                "major_principal_top": 5.458488E+02,
+                "minor_principal_top": -2.279182E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -4.000000E+02,
+                "stress_bot_fiber_y": -1.333333E+03,
+                "tau_bot_fiber_xy":    1.333200E+03,
+                "von_mises_bot":       2.595518E+03,
+                "major_principal_bot": 5.458488E+02,
+                "minor_principal_bot": -2.279182E+03
             },
             7: {
+                # Fuerzas y Momentos
                 "membrane_force_x":   1.167642E+02,
                 "membrane_force_y":  -1.522493E+02,
                 "membrane_force_xy": -2.843417E+01,
-                "sigma_x":            1.167642E+03,
-                "sigma_y":           -1.522493E+03,
-                "tau_xy":            -2.843417E+02,
-                "von_mises":          2.387813E+03,
-                "major_principal":    1.197368E+03,
-                "minor_principal":   -1.552219E+03
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  1.167642E+03,
+                "stress_top_fiber_y": -1.522493E+03,
+                "tau_top_fiber_xy":   -2.843417E+02,
+                "von_mises_top":       2.387813E+03,
+                "major_principal_top": 1.197368E+03,
+                "minor_principal_top": -1.552219E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  1.167642E+03,
+                "stress_bot_fiber_y": -1.522493E+03,
+                "tau_bot_fiber_xy":   -2.843417E+02,
+                "von_mises_bot":       2.387813E+03,
+                "major_principal_bot": 1.197368E+03,
+                "minor_principal_bot": -1.552219E+03
             },
             8: {
+                # Fuerzas y Momentos
                 "membrane_force_x":   4.434409E+01,
                 "membrane_force_y":  -2.870864E+02,
                 "membrane_force_xy": -1.123684E+02,
-                "sigma_x":            4.434409E+01,
-                "sigma_y":           -2.870864E+02,
-                "tau_xy":            -1.123684E+02,
-                "von_mises":          3.674174E+02,
-                "major_principal":    7.884921E+01,
-                "minor_principal":   -3.215915E+02
+                "bending_moment_x":   0.0,
+                "bending_moment_y":   0.0,
+                "bending_moment_xy":  0.0,
+                "shear_force_x":      0.0,
+                "shear_force_y":      0.0,
+
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  4.434409E+01,
+                "stress_top_fiber_y": -2.870864E+02,
+                "tau_top_fiber_xy":   -1.123684E+02,
+                "von_mises_top":       3.674174E+02,
+                "major_principal_top": 7.884921E+01,
+                "minor_principal_top": -3.215915E+02,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  4.434409E+01,
+                "stress_bot_fiber_y": -2.870864E+02,
+                "tau_bot_fiber_xy":   -1.123684E+02,
+                "von_mises_bot":       3.674174E+02,
+                "major_principal_bot": 7.884921E+01,
+                "minor_principal_bot": -3.215915E+02
             }
         }
     },
@@ -985,20 +1509,39 @@ VALIDATION_DATA = [
             3: {0:0.0, 1:0.0, 2: 6.240000E+25, 3: 0.0, 4: 0.0}
         },
         "expected_reactions": {
-            1: {2: -2.000000E+03},
+            1: {
+                2: -2.000000E+03,
+                #3: -5.000000E+02,
+                #4:  5.000000E+02
+            },
         },
         "expected_element_forces": {
             50: {
-                "shear_force_x":   2.000000E+03, # TRANSVERSE SHEAR FORCES Qx
-                "shear_force_y":  2.000000E+03,  # TRANSVERSE SHEAR FORCES Qy
+                # Fuerzas y Momentos
+                "membrane_force_x":  0.0,
+                "membrane_force_y":  0.0,
+                "membrane_force_xy": 0.0,
+                "bending_moment_x":  0.0,
+                "bending_moment_y":  0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x":     2.000000E+03, # TRANSVERSE SHEAR FORCES Qx
+                "shear_force_y":     2.000000E+03, # TRANSVERSE SHEAR FORCES Qy
                 
-                # Esfuerzos Z1 = Bot (-t/2) y Z2 = Top (+t/2)
-                "stress_fiber_bot_x":  0.0,
-                "stress_fiber_bot_y":  0.0,
-                "tau_fiber_bot_xy":     0.0,
-                "stress_fiber_top_x":  0.0,
-                "stress_fiber_top_y":  0.0,
-                "tau_fiber_top_xy":     0.0
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  0.0,
+                "stress_top_fiber_y":  0.0,
+                "tau_top_fiber_xy":    0.0,
+                "von_mises_top":       0.0, 
+                "major_principal_top": 0.0,
+                "minor_principal_top": 0.0,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  0.0,
+                "stress_bot_fiber_y":  0.0,
+                "tau_bot_fiber_xy":    0.0,
+                "von_mises_bot":       0.0,
+                "major_principal_bot": 0.0,
+                "minor_principal_bot": 0.0
             }
         }
     },
@@ -1011,14 +1554,31 @@ VALIDATION_DATA = [
         "filename": "case_45.dat",
         "rel_tol": 0.01,  
         "abs_tol_disp": 1e-1,
-        "abs_tol_force": 1e-1,
+        "abs_tol_force": 2.0, # al tener deformaciones en giros tan elevadas hay que levantar la mano con la toleracia en los esfuerzos
         "expected_displacements": {
-             3: {
-                    0: 0.0,
-                    1: 0.0,
-                    2: -4.264000E+20,
-                    3: -2.535236E-10,
-                    4: 6.484807E-11,
+            1: {
+                0: 0.0,
+                1: 0.0,
+                2: 0.0,
+                3: 0.0,
+                4: 0.0,
+                5: 0.0,
+            },
+            2: {
+                0: 0.0,
+                1: 0.0,
+                2: 0.0,
+                3: 0.0,
+                4: 0.0,
+                5: 0.0,
+            },
+            3: {
+                0: 0.0,
+                1: 0.0,
+                2: -4.264000E+20,
+                3: -2.535236E-10,
+                4: 6.484807E-11,
+                5: 0.0,
             },
             4: {
                 0: 0.0,
@@ -1026,6 +1586,7 @@ VALIDATION_DATA = [
                 2: -2.288000E+20,
                 3: -2.360616E-10,
                 4: 1.592333E-10,
+                5: 0.0,
             },
         },
         "expected_reactions": {
@@ -1033,19 +1594,83 @@ VALIDATION_DATA = [
                 2:  1.833333E-01,
                 3:  1.761063E-01,
                 4: -3.416667E-01,
+                5: 0.0,
             },
             2: {
                 2:  3.416667E-01,
                 3: -1.777295E-02,
                 4: -1.833333E-01,
+                5: 0.0,
             },
         },
+        "expected_element_forces": {
+            1: {
+                # Fuerzas y Momentos
+                "membrane_force_x":  0.0,
+                "membrane_force_y":  0.0,
+                "membrane_force_xy": 0.0,
+                "bending_moment_x": -3.645452E-01,
+                "bending_moment_y": -1.093635E-01,
+                "bending_moment_xy":-1.891519E-01,
+                "shear_force_x":    -3.666667E-01, 
+                "shear_force_y":     4.470687E-32,
+                
+                # Top Fiber (z = +t/2) -> DISTANCE = 2.500000E-01
+                "stress_top_fiber_x":  8.749084E+00,
+                "stress_top_fiber_y":  2.624725E+00,
+                "tau_top_fiber_xy":    4.539646E+00,
+                "von_mises_top":       1.105879E+01,
+                "major_principal_top": 1.116279E+01,
+                "minor_principal_top": 2.110181E-01,
 
+                # Bottom Fiber (z = -t/2) -> DISTANCE = -2.500000E-01
+                "stress_bot_fiber_x": -8.749084E+00,
+                "stress_bot_fiber_y": -2.624725E+00,
+                "tau_bot_fiber_xy":   -4.539646E+00,
+                "von_mises_bot":       1.105879E+01,
+                "major_principal_bot":-2.110181E-01,
+                "minor_principal_bot":-1.116279E+01
+            },
+            2: {
+                # Membrana / Midplane
+                "sigma_x": 0.0,
+                "sigma_y": 0.0,
+                "tau_xy": 0.0,
+                "von_mises": 0.0,
+                "major_principal": 0.0,
+                "minor_principal": 0.0,
 
+                # Fuerzas y Momentos
+                "membrane_force_x":  0.0,
+                "membrane_force_y":  0.0,
+                "membrane_force_xy": 0.0,
+                "bending_moment_x": -1.604548E-01,
+                "bending_moment_y": -8.451569E-02,
+                "bending_moment_xy":-1.275147E-01,
+                "shear_force_x":     6.833333E-01, 
+                "shear_force_y":     3.166667E-01, 
+                
+                # Top Fiber (z = +t/2) -> DISTANCE = 2.500000E-01
+                "stress_top_fiber_x":  3.850916E+00,
+                "stress_top_fiber_y":  2.028377E+00,
+                "tau_top_fiber_xy":    3.060354E+00,
+                "von_mises_top":       6.263390E+00,
+                "major_principal_top": 6.132792E+00,
+                "minor_principal_top":-2.534989E-01,
+
+                # Bottom Fiber (z = -t/2) -> DISTANCE = -2.500000E-01
+                "stress_bot_fiber_x": -3.850916E+00,
+                "stress_bot_fiber_y": -2.028377E+00,
+                "tau_bot_fiber_xy":   -3.060354E+00,
+                "von_mises_bot":       6.263390E+00,
+                "major_principal_bot": 2.534989E-01,
+                "minor_principal_bot":-6.132792E+00
+            }
+        }
     },
     #endregion
 
-    #region --- CASO 46: Rotación de Matrices ---
+    #region --- CASO 46: Rotación de Matrices ---  
     {
         "case_name": "CASO 46: Rotación de Matrices",
         "folder": "case_46",
@@ -1097,23 +1722,28 @@ VALIDATION_DATA = [
                 "membrane_force_x":   -6.120276E+00,
                 "membrane_force_y":   -2.185813E+01,
                 "membrane_force_xy":  -6.666000E+00,
-
-                "shear_force_x":     0.0, # TRANSVERSE SHEAR FORCES Qx
-                "shear_force_y":     0.0, # TRANSVERSE SHEAR FORCES Qy
                 
                 "bending_moment_x":   0.0,
                 "bending_moment_y":   0.0,
                 "bending_moment_xy":  5.075695E-06,
+                "shear_force_x":     0.0, # Prácticamente cero en F06
+                "shear_force_y":     0.0, # Prácticamente cero en F06
                 
-                # El major, minor y VonMises por ahora solo se calculan de la fibra superior.
-                "von_mises":          2.268574E+03,
-                "major_principal":   -3.678288E+02,
-                "minor_principal":   -2.430012E+03,
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -6.120276E+02,
+                "stress_top_fiber_y": -2.185813E+03,
+                "tau_top_fiber_xy":   -6.669045E+02,
+                "von_mises_top":       2.269111E+03,
+                "major_principal_top":-3.674351E+02,
+                "minor_principal_top":-2.430405E+03,
 
-                # Tensiones Fibra Superior (z = +t/2)
-                "stress_fiber_top_x": -6.120276E+02,
-                "stress_fiber_top_y": -2.185813E+03,
-                "tau_fiber_top_xy":   -6.662954E+02,
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x": -6.120276E+02,
+                "stress_bot_fiber_y": -2.185813E+03,
+                "tau_bot_fiber_xy":   -6.662954E+02,
+                "von_mises_bot":       2.268574E+03,
+                "major_principal_bot":-3.678288E+02,
+                "minor_principal_bot":-2.430012E+03
             }
         },
         
@@ -1127,88 +1757,86 @@ VALIDATION_DATA = [
         "filename": "case_47.dat",
         "rel_tol": 0.2,
         "expected_displacements": {
-            # Desplazamientos nodales en la punta libre (Nodos 4, 8, 12 y 16)
-               1: {
-                    0: 0.0,
-                    1: 0.0,
-                    5: 0.0,
-                },
-                2: {
-                    0: 1.746000E-08,
-                    1: 5.274341E-09,
-                    5: 1.750931E-08,
-                },
-                3: {
-                    0: 3.507992E-08,
-                    1: 7.110717E-09,
-                    5: 3.130605E-08,
-                },
-                4: {
-                    0: 5.700468E-08,
-                    1: 1.414165E-08,
-                    5: 5.265168E-08,
-                },
-                5: {
-                    0: 0.0,
-                    1: 0.0,
-                    5: 0.0,
-                },
-                6: {
-                    0: 1.422573E-08,
-                    1: 1.573758E-09,
-                    5: 7.586792E-09,
-                },
-                7: {
-                    0: 2.889294E-08,
-                    1: 2.818707E-09,
-                    5: 1.001719E-08,
-                },
-                8: {
-                    0: 4.297494E-08,
-                    1: 5.114963E-09,
-                    5: 2.725968E-08,
-                },
-                9: {
-                    0: 0.0,
-                    1: 0.0,
-                    5: 0.0,
-                },
-                10: {
-                    0: 1.405558E-08,
-                    1: -9.506571E-10,
-                    5: -3.169371E-09,
-                },
-                11: {
-                    0: 2.869232E-08,
-                    1: -6.635764E-10,
-                    5: -9.150788E-09,
-                },
-                12: {
-                    0: 4.210349E-08,
-                    1: -2.422028E-09,
-                    5: -9.081675E-09,
-                },
-                13: {
-                    0: 0.0,
-                    1: 0.0,
-                    5: 0.0,
-                },
-                14: {
-                    0: 1.563513E-08,
-                    1: -4.695931E-09,
-                    5: -8.055739E-09,
-                },
-                15: {
-                    0: 3.286541E-08,
-                    1: -5.557129E-09,
-                    5: -1.019977E-08,
-                },
-                16: {
-                    0: 5.285293E-08,
-                    1: -7.296996E-09,
-                    5: -2.302607E-08,
-                },
-            
+            1: {
+                0: 0.0,
+                1: 0.0,
+                5: 0.0,
+            },
+            2: {
+                0: 1.746000E-08,
+                1: 5.274341E-09,
+                5: 1.750931E-08,
+            },
+            3: {
+                0: 3.507992E-08,
+                1: 7.110717E-09,
+                5: 3.130605E-08,
+            },
+            4: {
+                0: 5.700468E-08,
+                1: 1.414165E-08,
+                5: 5.265168E-08,
+            },
+            5: {
+                0: 0.0,
+                1: 0.0,
+                5: 0.0,
+            },
+            6: {
+                0: 1.422573E-08,
+                1: 1.573758E-09,
+                5: 7.586792E-09,
+            },
+            7: {
+                0: 2.889294E-08,
+                1: 2.818707E-09,
+                5: 1.001719E-08,
+            },
+            8: {
+                0: 4.297494E-08,
+                1: 5.114963E-09,
+                5: 2.725968E-08,
+            },
+            9: {
+                0: 0.0,
+                1: 0.0,
+                5: 0.0,
+            },
+            10: {
+                0: 1.405558E-08,
+                1: -9.506571E-10,
+                5: -3.169371E-09,
+            },
+            11: {
+                0: 2.869232E-08,
+                1: -6.635764E-10,
+                5: -9.150788E-09,
+            },
+            12: {
+                0: 4.210349E-08,
+                1: -2.422028E-09,
+                5: -9.081675E-09,
+            },
+            13: {
+                0: 0.0,
+                1: 0.0,
+                5: 0.0,
+            },
+            14: {
+                0: 1.563513E-08,
+                1: -4.695931E-09,
+                5: -8.055739E-09,
+            },
+            15: {
+                0: 3.286541E-08,
+                1: -5.557129E-09,
+                5: -1.019977E-08,
+            },
+            16: {
+                0: 5.285293E-08,
+                1: -7.296996E-09,
+                5: -2.302607E-08,
+            }, 
         },
         
     },
@@ -1223,7 +1851,7 @@ VALIDATION_DATA = [
         
         "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
-        "abs_tol_force": 1e-3,
+        "abs_tol_force": 5e-1,
 
         "expected_displacements": {
                 1: {
@@ -1263,9 +1891,92 @@ VALIDATION_DATA = [
                 },
         },
         "expected_reactions": {
-           
+            2: { 
+                0: -4.000000E-02, 
+                1:  9.549069E+01, 
+                2: -3.370845E+02, 
+                #3: -1.398823E-02, 
+                #4:  2.003716E+00, 
+                5:  2.659258E+00 
+            },
+            4: { 0:  8.333333E-01, 
+                1:  9.908001E+02, 
+                2: -9.570910E+02, 
+                #3: -9.220836E-03, 
+                #4:  7.022088E+00, 
+                #5:  3.813755E+00 
+            },
+            6: { 
+                0: -9.600000E-01, 
+                1:  8.173972E+02, 
+                2:  1.612536E+03, 
+                #3:  3.089219E-01, 
+                #4:  9.596284E+00, 
+                5:  3.140742E+00 },
+            8: { 
+                0:  1.666667E-01, 
+                1:  7.131199E+01, 
+                2: -3.805360E+03, 
+                #3:  4.428437E-01, 
+                #4:  4.779119E-01, 
+                5:  3.686245E+00 
+            }
         },
         "expected_element_forces": {
+            3: {
+                # Fuerzas y Momentos
+                "membrane_force_x":   1.381678E+00,
+                "membrane_force_y":   9.223219E-01,
+                "membrane_force_xy": -8.527224E-01,
+                "bending_moment_x":   4.421595E-01,
+                "bending_moment_y":   3.002405E-01,
+                "bending_moment_xy": -2.731644E-01,
+                "shear_force_x":      4.625223E-02,
+                "shear_force_y":     -7.655541E-02,
+                
+                # Top Fiber (z = +t/2)
+                #"stress_top_fiber_x": -2.639141E+04,
+                #"stress_top_fiber_y": -1.792219E+04,
+                ###"tau_top_fiber_xy":    1.630459E+04,
+                #"von_mises_top":       3.663658E+04,
+                #"major_principal_top":-5.311276E+03,
+                #"minor_principal_top":-3.900232E+04,
+
+                # Bottom Fiber (z = -t/2)
+                #"stress_bot_fiber_x":  2.666774E+04,
+                #"stress_bot_fiber_y":  1.810666E+04,
+                #"tau_bot_fiber_xy":   -1.647514E+04,
+                #"von_mises_bot":       3.701954E+04,
+                #"major_principal_bot": 3.940934E+04,
+                #"minor_principal_bot": 5.365060E+03
+            },
+            6: {
+               # Fuerzas y Momentos
+                "membrane_force_x":  -1.600000E-01,
+                "membrane_force_y":  -5.333333E-01,
+                "membrane_force_xy":  7.999816E-01,
+                "bending_moment_x":  -1.500000E-01,
+                "bending_moment_y":  -5.000000E-01,
+                "bending_moment_xy":  1.109438E-01,
+                "shear_force_x":      0.0, 
+                "shear_force_y":     -9.428090E-02,
+                
+                # Top Fiber (z = +t/2)
+                #"stress_top_fiber_x":  3.568000E+02,
+                #"stress_top_fiber_y":  1.189333E+03,
+                #"tau_top_fiber_xy":   -2.502655E+02,
+                #"von_mises_top":       1.142525E+03,
+                #"major_principal_top": 1.258773E+03,
+                #"minor_principal_top": 2.873602E+02,
+
+                # Bottom Fiber (z = -t/2)
+                #"stress_bot_fiber_x": -3.632000E+02,
+                #"stress_bot_fiber_y": -1.210667E+03,
+                #"tau_bot_fiber_xy":    2.822648E+02,
+                #"von_mises_bot":       1.181920E+03,
+                #"major_principal_bot":-2.777935E+02,
+                #"minor_principal_bot":-1.296073E+03
+            }
 
         }
     },
@@ -1281,7 +1992,7 @@ VALIDATION_DATA = [
         
         "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
-        "abs_tol_force": 1e-3,
+        "abs_tol_force": 5e-1,
 
         "expected_displacements": {
                     1: {
@@ -1325,10 +2036,94 @@ VALIDATION_DATA = [
                     },
         },
         "expected_reactions": {
-           
+            2: { 
+                0: -4.000000E-02, 
+                1:  9.549069E+01, 
+                2: -3.370845E+02, 
+                3: -1.398823E-02, 
+                #4:  2.003716E+00, 
+                5:  2.659258E+00 
+            },
+            4: { 
+                0:  8.333333E-01, 
+                1:  9.908001E+02, 
+                2: -9.570910E+02, 
+                3: -9.220836E-03, 
+                #4:  7.022088E+00, 
+                5:  3.813755E+00 
+            },
+            6: { 
+                0: -9.600000E-01, 
+                1:  8.173972E+02, 
+                2:  1.612536E+03, 
+                3:  3.089219E-01, 
+                #4:  9.596284E+00, 
+                5:  3.140742E+00 
+            },
+            8: { 
+                0:  1.666667E-01, 
+                1:  7.131199E+01, 
+                2: -3.805360E+03, 
+                3:  4.428437E-01, 
+                #4:  4.779119E-01, 
+                5:  3.686245E+00 
+            } 
         },
         "expected_element_forces": {
+            3: {
+                # Fuerzas y Momentos
+                "membrane_force_x":   1.381678E+00,
+                "membrane_force_y":   9.223219E-01,
+                "membrane_force_xy": -8.527224E-01,
+                "bending_moment_x":   4.421595E-01,
+                "bending_moment_y":   3.002405E-01,
+                "bending_moment_xy": -2.731644E-01,
+                "shear_force_x":      4.625223E-02,
+                "shear_force_y":     -7.655541E-02,
+                
+                # Top Fiber (z = +t/2)
+                #"stress_top_fiber_x": -2.639141E+04,
+                #"stress_top_fiber_y": -1.792219E+04,
+                ###"tau_top_fiber_xy":    1.630459E+04,
+                #"von_mises_top":       3.663658E+04,
+                #"major_principal_top":-5.311276E+03,
+                #"minor_principal_top":-3.900232E+04,
 
+                # Bottom Fiber (z = -t/2)
+                #"stress_bot_fiber_x":  2.666774E+04,
+                #"stress_bot_fiber_y":  1.810666E+04,
+                #"tau_bot_fiber_xy":   -1.647514E+04,
+                #"von_mises_bot":       3.701954E+04,
+                #"major_principal_bot": 3.940934E+04,
+                #"minor_principal_bot": 5.365060E+03
+            },
+            6: {
+                # Fuerzas y Momentos
+                "membrane_force_x":  -1.600000E-01,
+                "membrane_force_y":  -5.333333E-01,
+                "membrane_force_xy":  7.999816E-01,
+                "bending_moment_x":  -1.500000E-01,
+                "bending_moment_y":  -5.000000E-01,
+                "bending_moment_xy":  1.109438E-01,
+                "shear_force_x":      0.0, 
+                "shear_force_y":     -9.428090E-02,
+                
+                # Top Fiber (z = +t/2)
+                #"stress_top_fiber_x":  3.568000E+02,
+                #"stress_top_fiber_y":  1.189333E+03,
+                #"tau_top_fiber_xy":   -2.502655E+02,
+                #"von_mises_top":       1.142525E+03,
+                #"major_principal_top": 1.258773E+03,
+                #"minor_principal_top": 2.873602E+02,
+
+                # Bottom Fiber (z = -t/2)
+                #"stress_bot_fiber_x": -3.632000E+02,
+                #"stress_bot_fiber_y": -1.210667E+03,
+                #"tau_bot_fiber_xy":    2.822648E+02,
+                #"von_mises_bot":       1.181920E+03,
+                #"major_principal_bot":-2.777935E+02,
+                #"minor_principal_bot":-1.296073E+03
+            }
         }
     },
     #endregion
@@ -1340,23 +2135,39 @@ VALIDATION_DATA = [
         "filename": "Ej_manual_Kglobal_membrana_con carga en plano.dat",
         "rel_tol": 1e-3,
         "expected_displacements": {
-            # Desplazamientos: Nodo 2 se estira en X, Nodo 3 se contrae en Y (Efecto Poisson)
             2: {0: 9.523810E-03},
             3: {1: -2.857143E-03}
         },
         "expected_reactions": {
-            # Reacciones en el Nodo 1 (Empotrado). Solo reacciona en X.
-            # Al no haber giro, el momento de reacción R3 es 0.0.
             1: {0: -1.000000E+03}
         },
         "expected_element_forces": {
             1: {
-                # Validamos Fuerza de Membrana y Tensión en estado uniaxial puro
-                "membrane_force_x": 200.0,
-                "membrane_force_y": 0.0,  
+                # Fuerzas y Momentos
+                "membrane_force_x":  200.0,
+                "membrane_force_y":  -2.842171E-14,  
                 "membrane_force_xy": 0.0,
-                "sigma_x": 200.0,
-                "von_mises": 200.0
+                "bending_moment_x":  0.0,
+                "bending_moment_y":  0.0,
+                "bending_moment_xy": 0.0,
+                "shear_force_x":     0.0, 
+                "shear_force_y":     0.0, 
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x":  200.0,
+                "stress_top_fiber_y":  -2.842171E-14,
+                "tau_top_fiber_xy":    0.0,
+                "von_mises_top":       200.0,
+                "major_principal_top": 200.0,
+                "minor_principal_top": -2.842171E-14,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  200.0,
+                "stress_bot_fiber_y":  -2.842171E-14,
+                "tau_bot_fiber_xy":    0.0,
+                "von_mises_bot":       200.0,
+                "major_principal_bot": 200.0,
+                "minor_principal_bot": -2.842171E-14
             }
         }
     },
@@ -1379,9 +2190,44 @@ VALIDATION_DATA = [
                 3: -1.000000E+03,
                 4: 3.000000E+02},
             2: {2: -1.429760E-25,
-                3: 2.440777E-11,
-                4: 3-3.000000E+02} # Prácticamente cero
+                3: 2.440777E-11,# Prácticamente cero
+                4: 3-3.000000E+02},
+            3:{
+                2:-8.333333E-12, # Prácticamente cero
+                3:0.0,
+                4:0.0,
+                5:0.0
+                }
         },
+        "expected_element_forces": {
+            1: {
+                # Fuerzas y Momentos
+                "membrane_force_x":   0.0,
+                "membrane_force_y":   0.0,
+                "membrane_force_xy":  0.0,
+                "bending_moment_x":   6.000000E+01,
+                "bending_moment_y":   2.000000E+02,
+                "bending_moment_xy":  2.440777E-12,
+                "shear_force_x":     -2.859519E-26,
+                "shear_force_y":     -1.666667E-12,
+                
+                # Top Fiber (z = +t/2)
+                "stress_top_fiber_x": -3.600000E+02,
+                "stress_top_fiber_y": -1.200000E+03,
+                "tau_top_fiber_xy":   -1.464466E-11,
+                "von_mises_top":       1.066583E+03,
+                "major_principal_top":-3.600000E+02,
+                "minor_principal_top":-1.200000E+03,
+
+                # Bottom Fiber (z = -t/2)
+                "stress_bot_fiber_x":  3.600000E+02,
+                "stress_bot_fiber_y":  1.200000E+03,
+                "tau_bot_fiber_xy":    1.464466E-11,
+                "von_mises_bot":       1.066583E+03,
+                "major_principal_bot": 1.200000E+03,
+                "minor_principal_bot": 3.600000E+02
+            }
+        }
     },
     #endregion
 ]

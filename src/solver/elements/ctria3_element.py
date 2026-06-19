@@ -80,6 +80,8 @@ class CTRIA3ElementSolver:
         self.x3 = np.dot(v13, self.local_x_axis)
         self.y3 = np.dot(v13, self.local_y_axis)
 
+        '''
+        ESTE IF PUEDE HACER QUE SE INVIERTA LA CARA TOP DEL ELEMENTO POR LO QEU LOS RESULTADOS DE STRESS NO CUADREN CON NASTRAN:
         if self.y3 < 0:
             self.y3 = -self.y3
             self.local_y_axis = -self.local_y_axis
@@ -87,14 +89,46 @@ class CTRIA3ElementSolver:
             # Recompute Transformation matrix with corrected axes
             R = CoordinateTransformation.get_rotation_matrix_3x3(self.local_x_axis, self.local_y_axis, self.local_z_axis)
             self.T = CoordinateTransformation.build_full_transformation_matrix(R, 3, 6)
-        
+        '''
         # Area of triangle
         self.A = 0.5 * self.x2 * self.y3
         if self.A < 1e-12:
             raise ValueError(f"Zero area triangle: Nodes {node1.nid}, {node2.nid}, {node3.nid}")
 
     def _compute_transformation(self):
-        """@brief Computes T matrix (18x18) based on element geometry."""
+        """
+        @brief Computes T matrix (18x18) based on element geometry.
+        @details 
+            Ensures strict compliance with MSC Nastran Right-Hand Rule to 
+            define Top/Bottom faces correctly.
+        """
+        v12 = self.n2_coords - self.n1_coords
+        v13 = self.n3_coords - self.n1_coords
+
+        # 1. Eje X Local: Directamente del Nodo 1 al Nodo 2
+        vx = v12 / np.linalg.norm(v12)
+
+        # 2. Eje Z Local (Normal): Regla de la mano derecha (X cruz v13)
+        # Esto define físicamente hacia dónde mira la cara superior (Top Face / Z1)
+        vz_cross = np.cross(vx, v13)
+        vz = vz_cross / np.linalg.norm(vz_cross)
+
+        # 3. Eje Y Local: Producto cruzado para cerrar el triedro (Z cruz X)
+        vy = np.cross(vz, vx)
+
+        # Guardamos los ejes en la instancia
+        self.local_x_axis = vx
+        self.local_y_axis = vy
+        self.local_z_axis = vz
+        
+        # Construimos la matriz de transformación
+        R = CoordinateTransformation.get_rotation_matrix_3x3(vx, vy, vz)
+        self.T = CoordinateTransformation.build_full_transformation_matrix(
+            R, nodes_count=3, dofs_per_node=6
+        )
+
+        '''
+        VERSIÓN ANTIGUA:
         vx, vy, vz = CoordinateTransformation.compute_local_axes_triangle(
             self.n1_coords, self.n2_coords, self.n3_coords
         )
@@ -106,6 +140,7 @@ class CTRIA3ElementSolver:
         self.T = CoordinateTransformation.build_full_transformation_matrix(
             R, nodes_count=3, dofs_per_node=6
         )
+        '''
 
     def _get_matrices_constitutivas(self):
         """
@@ -293,27 +328,30 @@ class CTRIA3ElementSolver:
         D_m, D_f, D_c = self._get_matrices_constitutivas()
         B_m, B_f, B_c, detJ = self._get_B_matrices_isoparametricas()
         
-        # Esfuerzos Membrana
+        # --- Esfuerzos Membrana ---
         u_mem = np.array([u_loc[0], u_loc[1], u_loc[6], u_loc[7], u_loc[12], u_loc[13]])
         strains = B_m @ u_mem 
         stresses = D_m @ strains 
         sig_x, sig_y, tau_xy = stresses
         
+        '''        
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
         sig_avg, sig_diff = (sig_x + sig_y) / 2.0, (sig_x - sig_y) / 2.0
         R = np.sqrt(sig_diff**2 + tau_xy**2)
         s_major, s_minor = sig_avg + R, sig_avg - R
+        '''
 
         t = self.prop.t
         f_x, f_y, f_xy = sig_x * t, sig_y * t, tau_xy * t
         
-        # Esfuerzos Flexión y Cortante
+        # --- Esfuerzos Flexión y Cortante ---
         has_bending = self.prop.t > 0.0
         if has_bending:
             u_bend_RM = np.array([u_loc[2], u_loc[3], u_loc[4], u_loc[8], u_loc[9], u_loc[10], u_loc[14], u_loc[15], u_loc[16]])
             kappa = B_f @ u_bend_RM
             moments = D_f @ kappa
-            m_x, m_y, m_xy = moments[0], moments[1], moments[2]
+            # INVERSIÓN DE SIGNOS PARA COINCIDIR CON NASTRAN
+            m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
             
             gamma_s = B_c @ u_bend_RM
             shear_forces = D_c @ gamma_s
@@ -321,11 +359,46 @@ class CTRIA3ElementSolver:
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             
+        # --- Cálculo de tensiones en las fibras Top (Z1) y Bottom (Z2) ---
         sb_x, sb_y, sb_xy = 6.0 * m_x / t**2, 6.0 * m_y / t**2, 6.0 * m_xy / t**2
         sig_x_top, sig_x_bot = sig_x - sb_x, sig_x + sb_x
         sig_y_top, sig_y_bot = sig_y - sb_y, sig_y + sb_y
         tau_xy_top, tau_xy_bot = tau_xy - sb_xy, tau_xy + sb_xy
+
+        # Función auxiliar para cálculo de Von Mises y Principales
+        def calc_principal_vm(sx, sy, txy):
+            vm = np.sqrt(sx**2 - sx*sy + sy**2 + 3*txy**2)
+            s_avg, s_diff = (sx + sy) / 2.0, (sx - sy) / 2.0
+            R = np.sqrt(s_diff**2 + txy**2)
+            return vm, s_avg + R, s_avg - R
+
+        # Evaluar fibras
+        vm_mem, s_maj_mem, s_min_mem = calc_principal_vm(sig_x, sig_y, tau_xy)
+        vm_top, s_maj_top, s_min_top = calc_principal_vm(sig_x_top, sig_y_top, tau_xy_top)
+        vm_bot, s_maj_bot, s_min_bot = calc_principal_vm(sig_x_bot, sig_y_bot, tau_xy_bot)
         
+        return {
+            # Membrana / Midplane
+            'sigma_x': sig_x, 'sigma_y': sig_y, 'tau_xy': tau_xy,
+            'von_mises': vm_mem, 'major_principal': s_maj_mem, 'minor_principal': s_min_mem,
+
+            # Fuerzas y Momentos
+            'membrane_force_x': f_x, 'membrane_force_y': f_y, 'membrane_force_xy': f_xy,
+            'shear_force_x': q_x, 'shear_force_y': q_y,
+            'bending_moment_x': m_x, 'bending_moment_y': m_y, 'bending_moment_xy': m_xy,
+
+            # Top Fiber (Z1)
+            'stress_top_fiber_x': sig_x_top, 'stress_top_fiber_y': sig_y_top, 'tau_top_fiber_xy': tau_xy_top,
+            'von_mises_top': vm_top, 'major_principal_top': s_maj_top, 'minor_principal_top': s_min_top,
+
+            # Bottom Fiber (Z2)
+            'stress_bot_fiber_x': sig_x_bot, 'stress_bot_fiber_y': sig_y_bot, 'tau_bot_fiber_xy': tau_xy_bot,
+            'von_mises_bot': vm_bot, 'major_principal_bot': s_maj_bot, 'minor_principal_bot': s_min_bot
+        }
+        
+
+        '''
+        OLD RESULT REPORT:
         return {
             'sigma_x': sig_x, 
             'sigma_y': sig_y, 
@@ -352,3 +425,5 @@ class CTRIA3ElementSolver:
             'shear_force_x': q_x, 
             'shear_force_y': q_y
         }
+        '''
+    
