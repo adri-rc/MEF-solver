@@ -2230,6 +2230,165 @@ VALIDATION_DATA = [
         }
     },
     #endregion
+    #region --- CASO MANUAL: Fitting L con Carga de Traccion ---
+    {
+        "case_name": "Ej50_Fitting_L",
+        "folder": "case_50",
+        "filename": "Ej50.dat",
+        "description": "Dummy L fitting + 2 CBAR as base.",
+        "note": "K6ROT=100.0 & MID3/E=0.0.",
+        
+        "rel_tol": 0.01,    
+        #"abs_tol_disp": 1e-5,
+
+        "expected_displacements": {
+            1:  {0: -1.371559E-07, 1: 4.816932E-07, 2: 2.202258E-06,  3: -1.330108E-06, 4: 5.328575E-06, 5: -9.837401E-08},
+            2:  {0: 7.981849E-09,  1: 4.335555E-07, 2: 1.263795E-06,  3: -1.296167E-06, 4: 3.537645E-06, 5: -1.420997E-07},
+            3:  {0: 1.303164E-07,  1: 4.132674E-07, 2: -1.784488E-07, 3: -1.386450E-06, 4: 6.132084E-06, 5: -8.329172E-08},
+            4:  {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0},
+            5:  {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0},
+            6:  {0: 0.0,           1: 3.659459E-06, 2: -6.543600E-08, 3: -1.662775E-06, 4: 5.304242E-06, 5: 6.152201E-07},
+            7:  {0: 0.0,           1: 3.998660E-06, 2: 2.869857E-06,  3: -1.385384E-06, 4: 4.466842E-06, 5: 7.344812E-07},
+            8:  {0: 0.0,           1: 3.662532E-06, 2: 1.637019E-06,  3: -1.461351E-06, 4: 4.373258E-06, 5: 6.375942E-07},
+            10: {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0},
+            30: {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0}
+        },
+        # --- REACCIONES (SPCFORCES) ---
+        "expected_reactions": {
+            4:  {0: 4.658708E+02,  1: -2.469092E+02, 2: 6.681161E-29,  3: 1.933096E-03,  4: -3.068949E-01, 5: 1.323872E-01},
+            5:  {0: -5.237704E+02, 1: -2.487398E+02, 2: 1.302834E-28,  3: 4.789982E-02,  4: -4.047260E-01, 5: 1.231769E-01},
+            6:  {0: -7.652261E-29, 1: 0.0,           2: 0.0,           3: 0.0,           4: 0.0,           5: 0.0},
+            7:  {0: -9.585472E-29, 1: 0.0,           2: 0.0,           3: 0.0,           4: 0.0,           5: 0.0},
+            8:  {0: -1.500000E+02, 1: 0.0,           2: 0.0,           3: 0.0,           4: 0.0,           5: 0.0},
+            10: {0: 2.962108E+01,  1: -3.007192E+00, 2: -9.249485E+02, 3: 1.310443E+00,  4: 5.167269E+00,  5: 3.178237E-02},
+            30: {0: 2.827853E+01,  1: -1.343762E+00, 2: 7.494848E+01,  3: 9.182495E-01,  4: 4.494156E+00,  5: 2.690963E-02}
+        },
+        # --- FUERZAS Y TENSIONES EN ELEMENTOS ---
+        "expected_element_forces": {
+            # Elementos CBAR 
+            # ----------------------------------------------------
+            201: {
+                "axial_force":   9.249485E+02,
+                "axial_stress":  9.249485E+05,
+                "torque":       -3.178237E-02,
+                
+                # Mapeo a las variables de tu funcion: forces_n1 (End A) y forces_n2 (End B)
+                "forces_n1.Mz":  9.643272E+00,   # Bending Moment End-A Plane 1
+                "forces_n1.My":  1.931528E-01,   # Bending Moment End-A Plane 2
+                "forces_n2.Mz": -5.167269E+00,   # Bending Moment End-B Plane 1
+                "forces_n2.My": -1.310443E+00,   # Bending Moment End-B Plane 2
+                "forces_n1.Fy":  2.962108E+01,   # Shear Plane 1
+                "forces_n1.Fz":  3.007192E+00,   # Shear Plane 2
+                
+                # Puntos de Tensión (CBAR 201) - End A
+                "stress_points.P0.sigma_bending": 0.0, # SA1
+                "stress_points.P1.sigma_bending": 0.0, # SA2
+                "stress_points.P2.sigma_bending": 0.0, # SA3
+                "stress_points.P3.sigma_bending": 0.0, # SA4
+                
+                # Tensiones Max y Min (End A y End B coinciden en tu f06)
+                "max_total_stress": 9.249485E+05, # SA-MAX / SB-MAX
+                "min_total_stress": 9.249485E+05  # SA-MIN / SB-MIN
+            },
+            # Elemento CBAR
+            202: {
+                "axial_force":  -7.494848E+01,
+                "axial_stress": -7.494848E+04,
+                "torque":       -2.690963E-02,
+                
+                # Mapeo a las variables de tu funcion
+                "forces_n1.Mz":  9.645107E+00,
+                "forces_n1.My": -2.463686E-01,
+                "forces_n2.Mz": -4.494156E+00,
+                "forces_n2.My": -9.182495E-01,
+                "forces_n1.Fy":  2.827853E+01,
+                "forces_n1.Fz":  1.343762E+00,
+                
+                # Puntos de Tensión (CBAR 202)
+                "stress_points.P0.sigma_bending": 0.0,
+                "stress_points.P1.sigma_bending": 0.0,
+                "stress_points.P2.sigma_bending": 0.0,
+                "stress_points.P3.sigma_bending": 0.0,
+                
+                "max_total_stress": -7.494848E+04,
+                "min_total_stress": -7.494848E+04
+            },
+            # Elementos CTRIA 
+            # ----------------------------------------------------
+            # Elemento 1
+            1: {
+                "membrane_force_x":   2.498615E+02, "membrane_force_y":  -1.272198E+02, "membrane_force_xy": -1.546065E+02,
+                "bending_moment_x":   4.114569E-01, "bending_moment_y":   1.281887E-01, "bending_moment_xy":  1.322453E-01,
+                "shear_force_x":      8.641892E-29, "shear_force_y":      3.780114E-29, 
+                "stress_bot_fiber_x": 1.866493E+04, "stress_bot_fiber_y":-4.438158E+03, "tau_bot_fiber_xy":  -5.746647E+03,
+                "von_mises_bot":      2.345179E+04, "major_principal_bot": 2.001541E+04, "minor_principal_bot":-5.788634E+03,
+                "stress_top_fiber_x": 6.321224E+03, "stress_top_fiber_y":-8.283820E+03, "tau_top_fiber_xy":  -9.714006E+03,
+                "von_mises_top":      2.107200E+04, "major_principal_top": 1.117143E+04, "minor_principal_top":-1.313402E+04
+            },
+            # Elemento 2
+            2: {
+                "membrane_force_x":   2.643027E+02, "membrane_force_y":  -2.882482E+02, "membrane_force_xy": -2.152652E+02,
+                "bending_moment_x":   2.061114E-01, "bending_moment_y":   1.476531E-01, "bending_moment_xy":  9.713352E-02,
+                "shear_force_x":      5.944445E-29, "shear_force_y":      4.407526E-29, 
+                "stress_bot_fiber_x": 1.630680E+04, "stress_bot_fiber_y":-1.219761E+04, "tau_bot_fiber_xy":  -9.306256E+03,
+                "von_mises_bot":      2.955363E+04, "major_principal_bot": 1.907611E+04, "minor_principal_bot":-1.496692E+04,
+                "stress_top_fiber_x": 1.012346E+04, "stress_top_fiber_y":-1.662721E+04, "tau_top_fiber_xy":  -1.222026E+04,
+                "von_mises_top":      3.154802E+04, "major_principal_top": 1.486537E+04, "minor_principal_top":-2.136911E+04
+            },
+            # Elemento 3
+            3: {
+                "membrane_force_x":  -4.087689E+02, "membrane_force_y":  -1.039092E+02, "membrane_force_xy": -2.371936E+01,
+                "bending_moment_x":   3.176510E-01, "bending_moment_y":   2.775008E-01, "bending_moment_xy": -1.973886E-01,
+                "shear_force_x":      1.240139E-28, "shear_force_y":     -1.142409E-28, 
+                "stress_bot_fiber_x":-1.567368E+04, "stress_bot_fiber_y":-1.032947E+03, "tau_bot_fiber_xy":  -4.146797E+03,
+                "von_mises_bot":      1.679669E+04, "major_principal_bot": 5.999166E+01, "minor_principal_bot":-1.676662E+04,
+                "stress_top_fiber_x":-2.520321E+04, "stress_top_fiber_y":-9.357971E+03, "tau_top_fiber_xy":   1.774861E+03,
+                "von_mises_top":      2.227943E+04, "major_principal_top":-9.161599E+03, "minor_principal_top":-2.539958E+04
+            },
+            # Elemento 101
+            101: {
+                "membrane_force_x":   6.889222E+02, "membrane_force_y":   1.722289E+02, "membrane_force_xy":  3.444594E+02,
+                "bending_moment_x":   7.410485E-03, "bending_moment_y":   1.852621E-03, "bending_moment_xy":  3.705242E-03,
+                "shear_force_x":      1.563150E-28, "shear_force_y":     -1.769721E-29, 
+                "stress_bot_fiber_x": 6.933685E+04, "stress_bot_fiber_y": 1.733405E+04, "tau_bot_fiber_xy":   3.466826E+04,
+                "von_mises_bot":      8.667090E+04, "major_principal_bot": 8.667090E+04, "minor_principal_bot":-3.223686E-07,
+                "stress_top_fiber_x": 6.844759E+04, "stress_top_fiber_y": 1.711173E+04, "tau_top_fiber_xy":   3.422363E+04,
+                "von_mises_top":      8.555933E+04, "major_principal_top": 8.555933E+04, "minor_principal_top":-3.265523E-07
+            },
+            # Elemento 102
+            102: {
+                "membrane_force_x":   1.810581E+01, "membrane_force_y":   3.973164E+02, "membrane_force_xy":  5.460204E+02,
+                "bending_moment_x":   3.251303E-03, "bending_moment_y":   8.287009E-03, "bending_moment_xy": -1.467831E-02,
+                "shear_force_x":     -7.778275E-30, "shear_force_y":     -1.354816E-28, 
+                "stress_bot_fiber_x": 2.005659E+03, "stress_bot_fiber_y": 4.022886E+04, "tau_bot_fiber_xy":   5.372134E+04,
+                "von_mises_bot":      1.009933E+05, "major_principal_bot": 7.813687E+04, "minor_principal_bot":-3.590235E+04,
+                "stress_top_fiber_x": 1.615502E+03, "stress_top_fiber_y": 3.923442E+04, "tau_top_fiber_xy":   5.548274E+04,
+                "von_mises_top":      1.035064E+05, "major_principal_top": 7.900935E+04, "minor_principal_top":-3.815942E+04
+            },
+            # Elemento 103
+            103: {
+                "membrane_force_x":   8.237398E+01, "membrane_force_y":   4.165969E+02, "membrane_force_xy":  1.391202E+02,
+                "bending_moment_x":   1.279500E-03, "bending_moment_y":   7.695468E-03, "bending_moment_xy":  1.483860E-02,
+                "shear_force_x":      1.857650E-29, "shear_force_y":     -1.451728E-28, 
+                "stress_bot_fiber_x": 8.314168E+03, "stress_bot_fiber_y": 4.212142E+04, "tau_bot_fiber_xy":   1.480234E+04,
+                "von_mises_bot":      4.637308E+04, "major_principal_bot": 4.768648E+04, "minor_principal_bot": 2.749109E+03,
+                "stress_top_fiber_x": 8.160628E+03, "stress_top_fiber_y": 4.119796E+04, "tau_top_fiber_xy":   1.302171E+04,
+                "von_mises_top":      4.400410E+04, "major_principal_top": 4.571334E+04, "minor_principal_top": 3.645246E+03
+            },
+            # Elemento 104
+            104: {
+                "membrane_force_x":   1.282722E+02, "membrane_force_y":   3.202947E+01, "membrane_force_xy":  6.409753E+01,
+                "bending_moment_x":  -7.830944E-03, "bending_moment_y":  -1.957736E-03, "bending_moment_xy": -3.915472E-03,
+                "shear_force_x":     -1.775262E-28, "shear_force_y":     -1.224049E-29, 
+                "stress_bot_fiber_x": 1.235737E+04, "stress_bot_fiber_y": 3.085483E+03, "tau_bot_fiber_xy":   6.174824E+03,
+                "von_mises_bot":      1.544285E+04, "major_principal_bot": 1.544285E+04, "minor_principal_bot":-9.641954E-04,
+                "stress_top_fiber_x": 1.329708E+04, "stress_top_fiber_y": 3.320411E+03, "tau_top_fiber_xy":   6.644681E+03,
+                "von_mises_top":      1.661749E+04, "major_principal_top": 1.661749E+04, "minor_principal_top":-8.960393E-04
+            }
+        }
+
+    },
+    #endregion
 ]
 
 
@@ -2276,20 +2435,6 @@ class TestNastranEndToEnd:
         displacements = results["displacements"]
         reactions = results["reactions"]
         elem_stresses = results["stresses"]
-        
-        if case_data['case_name'] in ['Ej21_Multi_CTRIA3_Patch', 'Ej22_Bending_Simple', 'Ej23_Mixed_Materials']:
-            print(f"\nCAPTURING RESULTS FOR {case_data['case_name']}:")
-            print(f"DISPLACEMENTS TYPE: {type(displacements)}")
-            print(f"DISPLACEMENTS: {displacements}")
-            
-            # If it is a dict, iterate. If array, just printed.
-            if isinstance(displacements, dict):
-                for nid, disps in displacements.items():
-                    print(f"Node {nid}: {disps}")
-            
-            print("ELEMENT STRESSES:")
-            # stresses might be a dict of dicts
-            print(elem_stresses)
 
         # 4. COMPARE RESULTS
         fallback_rel_tol = case_data.get("rel_tol", 1e-2)
