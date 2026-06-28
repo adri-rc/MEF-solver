@@ -395,35 +395,3 @@ class CTRIA3ElementSolver:
             'stress_bot_fiber_x': sig_x_bot, 'stress_bot_fiber_y': sig_y_bot, 'tau_bot_fiber_xy': tau_xy_bot,
             'von_mises_bot': vm_bot, 'major_principal_bot': s_maj_bot, 'minor_principal_bot': s_min_bot
         }
-        
-
-        '''
-        OLD RESULT REPORT:
-        return {
-            'sigma_x': sig_x, 
-            'sigma_y': sig_y, 
-            'tau_xy': tau_xy,
-            'von_mises': vm_stress, 
-            'major_principal': s_major, 
-            'minor_principal': s_minor,
-
-            # Additional Bending Info
-            'bending_moment_x': m_x, 
-            'bending_moment_y': m_y, 
-            'bending_moment_xy': m_xy,
-            'stress_fiber_top_x': sig_x_top, 
-            'stress_fiber_bot_x': sig_x_bot,
-            'stress_fiber_top_y': sig_y_top, 
-            'stress_fiber_bot_y': sig_y_bot,
-            'tau_fiber_top_xy': tau_xy_top, 
-            'tau_fiber_bot_xy': tau_xy_bot,
-
-            # Forces
-            'membrane_force_x': f_x, 
-            'membrane_force_y': f_y, 
-            'membrane_force_xy': f_xy,
-            'shear_force_x': q_x, 
-            'shear_force_y': q_y
-        }
-        '''
-    

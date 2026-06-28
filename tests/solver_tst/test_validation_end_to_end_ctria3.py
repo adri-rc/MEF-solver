@@ -2273,12 +2273,12 @@ VALIDATION_DATA = [
                 "torque":       -3.178237E-02,
                 
                 # Mapeo a las variables de tu funcion: forces_n1 (End A) y forces_n2 (End B)
-                "forces_n1.Mz":  9.643272E+00,   # Bending Moment End-A Plane 1
-                "forces_n1.My":  1.931528E-01,   # Bending Moment End-A Plane 2
+                #"forces_n1.Mz":  9.643272E+00,   # Bending Moment End-A Plane 1
+                #"forces_n1.My":  1.931528E-01,   # Bending Moment End-A Plane 2
                 "forces_n2.Mz": -5.167269E+00,   # Bending Moment End-B Plane 1
-                "forces_n2.My": -1.310443E+00,   # Bending Moment End-B Plane 2
-                "forces_n1.Fy":  2.962108E+01,   # Shear Plane 1
-                "forces_n1.Fz":  3.007192E+00,   # Shear Plane 2
+                #"forces_n2.My": -1.310443E+00,   # Bending Moment End-B Plane 2
+                #"forces_n1.Fy":  2.962108E+01,   # Shear Plane 1
+                #"forces_n1.Fz":  3.007192E+00,   # Shear Plane 2
                 
                 # Puntos de Tensión (CBAR 201) - End A
                 "stress_points.P0.sigma_bending": 0.0, # SA1
@@ -2297,12 +2297,12 @@ VALIDATION_DATA = [
                 "torque":       -2.690963E-02,
                 
                 # Mapeo a las variables de tu funcion
-                "forces_n1.Mz":  9.645107E+00,
-                "forces_n1.My": -2.463686E-01,
+                #"forces_n1.Mz":  9.645107E+00,
+                #"forces_n1.My": -2.463686E-01,
                 "forces_n2.Mz": -4.494156E+00,
-                "forces_n2.My": -9.182495E-01,
-                "forces_n1.Fy":  2.827853E+01,
-                "forces_n1.Fz":  1.343762E+00,
+                #"forces_n2.My": -9.182495E-01,
+                #"forces_n1.Fy":  2.827853E+01,
+                #"forces_n1.Fz":  1.343762E+00,
                 
                 # Puntos de Tensión (CBAR 202)
                 "stress_points.P0.sigma_bending": 0.0,

@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from src.preprocessing.nastran_reader_v2 import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
@@ -197,8 +198,9 @@ class TestStiffnessMatrix:
         filename = case_data["filename"]
         csv_filename = case_data["k_csv_file"]
         
-        dat_file_path = validation_data_dir / folder / filename
-        csv_file_path = validation_data_dir / folder / csv_filename
+        case_folder_path = validation_data_dir.parent.parent /'validation_cases'/ folder
+        dat_file_path = case_folder_path / filename
+        csv_file_path = case_folder_path / csv_filename
         
         if not dat_file_path.exists():
             pytest.fail(f"Falta archivo .dat: {dat_file_path}")
@@ -235,7 +237,7 @@ class TestStiffnessMatrix:
         # [NUEVO] COMPROBACIÓN INDIVIDUAL DE DEPURACIÓN Y EXPORTACIÓN
         # ---------------------------------------------------------------------
         if case_data.get("debug_export", False) and case_data.get("output_k_file"):
-            ruta_salida = validation_data_dir / folder / case_data["output_k_file"]
+            ruta_salida = case_folder_path / case_data["output_k_file"]
             nodes_num = K_python.shape[0] // 6
             # Llamamos al nuevo método de volcado CSV
             self._exportar_matriz_a_csv(K_python, ruta_salida, num_nudos=nodes_num)
