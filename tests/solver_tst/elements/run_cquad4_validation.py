@@ -112,7 +112,92 @@ def run_validation():
     output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_manual_cquad\K_cquad4_pure_flex_integracion_completa_python_v4.csv"
     exportar_matriz_python_csv(K_global, num_nudos=4, nombre_archivo=output_path)
 
+
+
+def run_case_51():
+    print("--- CASE 51 ---")
+    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_51\draft_ej51_pure_membrane_integracion_completa_python.csv"
+    
+    # 1. Definir los Nodos (Cuadrado 2x2 en plano XY)
+    n1 = MockNode(1, [0.1, 0.2, 1.0])
+    n2 = MockNode(2, [2.3, 0.1, 1.0])
+    n3 = MockNode(3, [2.1, 2.2, 1.0])
+    n4 = MockNode(4, [0.2, 1.9, 1.0])
+    
+    # 2. Definir Propiedades y Materiales
+    t = 1.0
+    
+    mat_mem = MockMat(E=210000, nu=0.3)  # E=210000, nu=0.3
+    mat_flex = MockMat(E=0.0, nu=0.3)  # E=0.0, nu=0.3
+    mat_shear = MockMat(E=0.0, nu=0.3)  # E=0.0, nu=0.3
+    use_SRI = False
+    
+    prop = MockProp(t=t)
+    # 3. Inicializar tu Solver
+    # Pasamos solo mat_membrane para emular que MID2 y MID3 están en blanco
+    solver = CQUAD4ElementSolver(
+        node1=n1, node2=n2, node3=n3, node4=n4,
+        prop=prop, mat_membrane=mat_mem, mat_bending=mat_flex, mat_shear=mat_shear,
+        use_membrane_SRI=use_SRI
+    )
+    
+    # 4. Obtener la Matriz de Rigidez
+    K_global = solver.get_stiffness_matrix()
+    
+    # 5. AJUSTE K6ROT=0.0
+    # En tu solver se añade un k_diag_small en los DOFs 5, 11, 17, 23.
+    # Como en Nastran definimos PARAM, K6ROT, 0.0, anulamos estos términos 
+    # en Python para que el CSV coincida exactamente a nivel numérico.
+    drill_idx = [5, 11, 17, 23]
+    for idx in drill_idx:
+        K_global[idx, idx] = 0.0
+        
+    # 6. Exportar a CSV
+    exportar_matriz_python_csv(K_global, num_nudos=4, nombre_archivo=output_path)
+
+
+def run_case_52():
+    print("--- CASE 52 ---")
+    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_52\draft_ej52_k_pure_flex_mid3_0_k6rot_0_int_completa_python.csv"
+    
+    # 1. Definir los Nodos (Cuadrado 2x2 en plano XY)
+    n1 = MockNode(1, [0.1, 0.2, 1.0])
+    n2 = MockNode(2, [2.3, 0.1, 1.0])
+    n3 = MockNode(3, [2.1, 2.2, 1.0])
+    n4 = MockNode(4, [0.2, 1.9, 1.0])
+    
+    # 2. Definir Propiedades y Materiales
+    t = 1.0
+    
+    mat_mem = MockMat(E=0.0, nu=0.3)  # E=0.0, nu=0.3
+    mat_flex = MockMat(E=210000, nu=0.3)  # E=210000, nu=0.3
+    mat_shear = MockMat(E=0.0, nu=0.3)  # E=0.0, nu=0.3
+    use_SRI = False
+    
+    prop = MockProp(t=t)
+    # 3. Inicializar tu Solver
+    # Pasamos solo mat_membrane para emular que MID2 y MID3 están en blanco
+    solver = CQUAD4ElementSolver(
+        node1=n1, node2=n2, node3=n3, node4=n4,
+        prop=prop, mat_membrane=mat_mem, mat_bending=mat_flex, mat_shear=mat_shear,
+        use_membrane_SRI=use_SRI
+    )
+    
+    # 4. Obtener la Matriz de Rigidez
+    K_global = solver.get_stiffness_matrix()
+    
+    # 5. AJUSTE K6ROT=0.0
+    # En tu solver se añade un k_diag_small en los DOFs 5, 11, 17, 23.
+    # Como en Nastran definimos PARAM, K6ROT, 0.0, anulamos estos términos 
+    # en Python para que el CSV coincida exactamente a nivel numérico.
+    drill_idx = [5, 11, 17, 23]
+    for idx in drill_idx:
+        K_global[idx, idx] = 0.0
+        
+    # 6. Exportar a CSV
+    exportar_matriz_python_csv(K_global, num_nudos=4, nombre_archivo=output_path)
+
+
+
 if __name__ == "__main__":
-    run_validation()
-
-
+    run_case_52()
