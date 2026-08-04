@@ -1,5 +1,5 @@
-import sys
 from typing import Optional
+import numpy as np
 
 # Intentamos importar pyNastran. Si no está, avisamos al usuario.
 try:
@@ -13,10 +13,9 @@ try:
     from pyNastran.bdf.cards.properties.shell import PSHELL
     from pyNastran.bdf.cards.elements.shell import CTRIA3, CQUAD4
 except ImportError:
-
-    print("[ERROR] 'pyNastran' library is not installed.")
-    print("        Please install it using: pip install pyNastran")
-    sys.exit(1)
+    raise ImportError(
+        "'pyNastran' is required to read Nastran files. Install it with: pip install pyNastran"
+    )
 
 from .data_model import (
     FEMModel, 
@@ -186,6 +185,13 @@ def _map_nodes(bdf_model: BDF, model: FEMModel):
         new_node.x = global_xyz[0]
         new_node.y = global_xyz[1]
         new_node.z = global_xyz[2]
+
+        if node.cd not in (None, 0):
+            coord = node.cd_ref
+            basis_global = np.column_stack([
+                coord.transform_vector_to_global(np.eye(3)[axis]) for axis in range(3)
+            ])
+            new_node.dof_transform = basis_global.T
         
         model.nodes[nid] = new_node
 
@@ -196,6 +202,14 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
     """
     # Set to avoid spamming the same warning 1000 times if there are 1000 identical elements
     unsupported_types = set()
+
+    def material_angle_degrees(shell_element) -> float:
+        _, _, element_x, element_y, _ = shell_element.element_coordinate_system()
+        _, _, material_x, _, _ = shell_element.material_coordinate_system()
+        return round(float(np.degrees(np.arctan2(
+            np.dot(material_x, element_y), np.dot(material_x, element_x)
+        ))), 12)
+
     for eid, elem in bdf_model.elements.items():
         
         # --- CROD ---
@@ -219,9 +233,15 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 if elem.x is not None:
                     orient_vec = list(elem.x)
             
-            # Offsets (wa, wb)
-            wa = list(elem.wa) if elem.wa is not None else [0.0, 0.0, 0.0]
-            wb = list(elem.wb) if elem.wb is not None else [0.0, 0.0, 0.0]
+            # Let pyNastran resolve G0/X, OFFT and the WA/WB coordinate flags.
+            # The returned orientation and offsets are expressed in basic axes.
+            axes_failed, axes = elem.get_axes(bdf_model)
+            if axes_failed:
+                raise ValueError(f"Unable to determine axes for CBAR {eid}.")
+            _, _, yhat, _, wa_basic, wb_basic = axes
+            orient_vec = list(yhat)
+            wa = list(wa_basic)
+            wb = list(wb_basic)
             
             model.elements[eid] = BarElement(
                 eid=eid,
@@ -242,7 +262,7 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 eid=eid,
                 prop_id=elem.Pid(),
                 nodes=elem.node_ids,
-                theta=elem.theta_mcid
+                theta=material_angle_degrees(elem)
             )
         
         # --- CQUAD4 ---
@@ -251,7 +271,7 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 eid=eid,
                 prop_id=elem.Pid(),
                 nodes=elem.node_ids,
-                theta=elem.theta_mcid if hasattr(elem, 'theta_mcid') else 0.0
+                theta=material_angle_degrees(elem)
             )
 
         # --- CATCH-ALL FOR UNSUPPORTED ELEMENTS ---
@@ -270,7 +290,12 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
         print(error_msg)
         raise ValueError(error_msg)
 
-def _map_loads(bdf_model: BDF, model: FEMModel):
+def _map_loads(
+    bdf_model: BDF,
+    model: FEMModel,
+    load_sid: Optional[int] = None,
+    map_all_base_cards: bool = True,
+):
     """
     @brief Translates loads (FORCE, MOMENT) to data_model objects.
     @details 
@@ -278,9 +303,30 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
     pyNastran groups loads by Set ID (SID) in bdf_model.loads.
     """
     unsupported_loads = set()
-    # bdf_model.loads is a dict {sid: [LoadCard1, LoadCard2, ...]}
-    for sid, loads_list in bdf_model.loads.items():
-        for load in loads_list:
+    if load_sid is not None and not (bdf_model.loads or bdf_model.load_combinations):
+        selected_loads = []
+    elif load_sid is not None:
+        loads_list, scale_factors, _ = bdf_model.get_reduced_loads(
+            load_sid, consider_load_combinations=True
+        )
+        selected_loads = zip(loads_list, scale_factors)
+    elif map_all_base_cards:
+        selected_loads = (
+            (load, 1.0)
+            for loads_list in bdf_model.loads.values()
+            for load in loads_list
+        )
+    else:
+        selected_loads = []
+
+    for load, combination_scale in selected_loads:
+            sid = load_sid if load_sid is not None else load.sid
+            if load.type not in ('FORCE', 'MOMENT'):
+                unsupported_loads.add(load.type)
+                continue
+            vector_global = np.asarray(load.xyz, dtype=float)
+            if load.cid not in (None, 0):
+                vector_global = load.cid_ref.transform_vector_to_global(vector_global)
             
             # pyNastran has a “type” attribute to identify the card
             if load.type == 'FORCE':
@@ -288,18 +334,18 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
                 model.loads.append(SinglePointLoad(
                     sid=sid,
                     appnode_id=load.node_id,
-                    module=load.mag,
-                    vector=list(load.xyz),
-                    cid=load.cid
+                    module=combination_scale * load.mag,
+                    vector=list(vector_global),
+                    cid=0
                 ))
             
             elif load.type == 'MOMENT':
                 model.loads.append(SinglePointMoment(
                     sid=sid,
                     appnode_id=load.node_id,
-                    module=load.mag,
-                    vector=list(load.xyz),
-                    cid=load.cid
+                    module=combination_scale * load.mag,
+                    vector=list(vector_global),
+                    cid=0
                 ))
             # --- CATCH-ALL FOR UNSUPPORTED LOADS ---
             else:
@@ -315,7 +361,12 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
         print(error_msg)
         raise ValueError(error_msg)
 
-def _map_constraints(bdf_model: BDF, model: FEMModel):
+def _map_constraints(
+    bdf_model: BDF,
+    model: FEMModel,
+    spc_sid: Optional[int] = None,
+    map_all_base_cards: bool = True,
+):
     """
     @brief Translates SPCs (Single Point Constraints) to data_model project classes.
     @details 
@@ -335,9 +386,24 @@ def _map_constraints(bdf_model: BDF, model: FEMModel):
     # or master/slave elimination, we must forbid them.
     if bdf_model.mpcs or bdf_model.rigid_elements:
         unsupported_constraints.add("MPC / Rigid Elements (RBE2, RBE3)")
+
+    for node in model.nodes.values():
+        if node.ps:
+            model.constraints.append(SPCConstraint(
+                sid=0, node_id=node.nid, components=str(node.ps), value=0.0
+            ))
     
     # --- 2. CHECK FOR SINGLE-POINT CONSTRAINTS (SPCs) ---
-    for sid, spcs_list in bdf_model.spcs.items():
+    if spc_sid is not None and not (bdf_model.spcs or bdf_model.spcadds):
+        spc_groups = []
+    elif spc_sid is not None:
+        spc_groups = [(spc_sid, bdf_model.get_reduced_spcs(spc_sid, consider_spcadd=True))]
+    elif map_all_base_cards:
+        spc_groups = bdf_model.spcs.items()
+    else:
+        spc_groups = []
+
+    for sid, spcs_list in spc_groups:
         for spc in spcs_list:
             if spc.type == 'SPC1':
                 # SPC1 applies to a list of nodes with 0 enforced displacement
@@ -378,7 +444,35 @@ def _map_constraints(bdf_model: BDF, model: FEMModel):
         print(error_msg)
         raise ValueError(error_msg)
 
-def parse_nastran_input(entry_file_path: str) -> FEMModel:
+def _select_case_control(bdf: BDF, requested_subcase_id: Optional[int]):
+    """Select one analysis SUBCASE and return its LOAD/SPC set IDs."""
+    analysis_subcases = sorted(sid for sid in bdf.subcases if sid != 0)
+    if requested_subcase_id is not None:
+        if requested_subcase_id not in analysis_subcases:
+            raise ValueError(
+                f"SUBCASE {requested_subcase_id} does not exist. Available: {analysis_subcases}"
+            )
+        selected_id = requested_subcase_id
+    elif len(analysis_subcases) == 1:
+        selected_id = analysis_subcases[0]
+    elif len(analysis_subcases) > 1:
+        raise ValueError(
+            "The input contains multiple analysis subcases. Pass subcase_id explicitly "
+            f"to parse_nastran_input(). Available: {analysis_subcases}"
+        )
+    else:
+        global_subcase = bdf.subcases.get(0)
+        if global_subcase is None or not ({'LOAD', 'SPC'} & set(global_subcase.params)):
+            return None, None, None
+        selected_id = 0
+
+    subcase = bdf.subcases[selected_id]
+    load_sid = subcase.get_parameter('LOAD')[0] if 'LOAD' in subcase.params else None
+    spc_sid = subcase.get_parameter('SPC')[0] if 'SPC' in subcase.params else None
+    return selected_id, load_sid, spc_sid
+
+
+def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) -> FEMModel:
     """
     @brief Main entry point using pyNastran.
     @param entry_file_path Path to the .bdf or .dat file.
@@ -420,6 +514,10 @@ def parse_nastran_input(entry_file_path: str) -> FEMModel:
     
     # 2. Initialize our container
     model = FEMModel()
+    selected_subcase, load_sid, spc_sid = _select_case_control(bdf, subcase_id)
+    model.active_subcase_id = selected_subcase
+    model.active_load_sid = load_sid
+    model.active_spc_sid = spc_sid
 
     # --- EXTRAER PARÁMETROS DEL DECK DE NASTRAN ---
     if 'K6ROT' in bdf.params:
@@ -433,8 +531,10 @@ def parse_nastran_input(entry_file_path: str) -> FEMModel:
         _map_properties(bdf, model)
         _map_nodes(bdf, model)
         _map_elements(bdf, model)
-        _map_loads(bdf, model)
-        _map_constraints(bdf, model)
+        bulk_only = selected_subcase is None
+        _map_loads(bdf, model, load_sid=load_sid, map_all_base_cards=bulk_only)
+        _map_constraints(bdf, model, spc_sid=spc_sid, map_all_base_cards=bulk_only)
+        model.validate(require_elements=False)
         
     except Exception as e:
         print(f"[ERROR] Error during data mapping: {e}")

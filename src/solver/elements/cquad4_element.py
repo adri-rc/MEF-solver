@@ -45,7 +45,7 @@ class CQUAD4ElementSolver:
     def __init__(self, node1: Node, node2: Node, node3: Node, node4: Node, 
                  prop: ShellProperty, mat_membrane: IsotropicMaterial, 
                  mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None,
-                 use_membrane_SRI: bool = False):
+                 use_membrane_SRI: bool = True, k6rot: float = 0.0, theta: float = 0.0):
         """
         @brief Initialize the CQUAD4 Element Solver.
         @param mat_bending Optional material for bending stiffness (if different from membrane).
@@ -54,6 +54,8 @@ class CQUAD4ElementSolver:
         self.nodes = [node1, node2, node3, node4]
         self.prop = prop
         self.use_membrane_SRI = use_membrane_SRI
+        self.k6rot = float(k6rot)
+        self.theta = float(theta)
         
         # Asignación explícita de materiales
         self.mat_membrane = mat_membrane
@@ -95,13 +97,23 @@ class CQUAD4ElementSolver:
         mid_14 = 0.5 * (self.coords[0] + self.coords[3])
         mid_23 = 0.5 * (self.coords[1] + self.coords[2])
         vx = mid_23 - mid_14
-        vx = vx / np.linalg.norm(vx)
+        vx_norm = np.linalg.norm(vx)
+        if vx_norm < 1e-12:
+            raise ValueError("Degenerate CQUAD4 element: local X axis cannot be defined.")
+        vx = vx / vx_norm
         
         # Y-axis: Completes the orthogonal system
         vy = np.cross(vz, vx)
         vy = vy / np.linalg.norm(vy)
         
         self.local_x_axis, self.local_y_axis, self.local_z_axis = vx, vy, vz
+
+        projected_z = (self.coords - self.origin) @ vz
+        characteristic_length = max(
+            np.linalg.norm(self.coords[(i + 1) % 4] - self.coords[i]) for i in range(4)
+        )
+        if np.ptp(projected_z) > 0.2 * characteristic_length:
+            raise ValueError("CQUAD4 element is excessively warped.")
         
         R = CoordinateTransformation.get_rotation_matrix_3x3(vx, vy, vz)
         self.T = CoordinateTransformation.build_full_transformation_matrix(
@@ -186,8 +198,8 @@ class CQUAD4ElementSolver:
             # kappa_y = -d(th_x)/dy
             # kappa_xy = d(th_y)/dy - d(th_x)/dx
             B_b[0, 3*i + 2] = dN_dx[i]   # kappa_x depende de th_y
-            B_b[1, 3*i + 1] = dN_dy[i]  #antes -dN_dy[i]  # kappa_y depende de -th_x
-            B_b[2, 3*i + 1] = dN_dx[i]  #antes -dN_dx[i]  # kappa_xy depende de -th_x
+            B_b[1, 3*i + 1] = -dN_dy[i]
+            B_b[2, 3*i + 1] = -dN_dx[i]
             B_b[2, 3*i + 2] = dN_dy[i]   # kappa_xy depende de th_y
             
         # 3. B_shear (2 x 12)
@@ -198,7 +210,7 @@ class CQUAD4ElementSolver:
             B_s[0, 3*i]     = dN_dx[i]
             B_s[0, 3*i + 2] = N[i]
             B_s[1, 3*i]     = dN_dy[i]
-            B_s[1, 3*i + 1] = N[i] #Antes: -N[i]
+            B_s[1, 3*i + 1] = -N[i]
             
         return B_m, B_b, B_s, detJ
 
@@ -231,7 +243,7 @@ class CQUAD4ElementSolver:
         @brief Pure Constitutive Matrix for Transverse Shear (MID3)
         """
         E, nu = self.mat_shear.E, self.mat_shear.nu
-        G = E / (2.0 * (1.0 + nu))
+        G = getattr(self.mat_shear, 'G', E / (2.0 * (1.0 + nu)))
         return G * np.eye(2)
 
     '''
@@ -248,6 +260,7 @@ class CQUAD4ElementSolver:
         K_mem = np.zeros((8, 8))
         K_bend = np.zeros((12, 12))
         K_shear = np.zeros((12, 12))
+        K_shear_full = np.zeros((12, 12))
         
         D_m = self._get_D_membrane()
         D_b = self._get_D_bending()
@@ -268,7 +281,7 @@ class CQUAD4ElementSolver:
                 eta = pts_2[j]
                 w = weights_2[i] * weights_2[j]
                 
-                B_m, B_b, _, detJ = self._get_B_matrices(xi, eta)
+                B_m, B_b, B_s_full, detJ = self._get_B_matrices(xi, eta)
                 
                 # Elemento Diferencial de Área
                 dA = detJ * w
@@ -278,18 +291,33 @@ class CQUAD4ElementSolver:
                 
                 # Ensamblaje Flexión: K_b = (B^T * D_b * B) * (Area * I_bend)
                 if has_bending:
-                    K_bend += (B_b.T @ D_b @ B_b) * (dA * I_bend)
+                    B_b_normal = B_b[0:2, :]
+                    K_bend += (
+                        B_b_normal.T @ D_b[0:2, 0:2] @ B_b_normal
+                    ) * (dA * I_bend)
+                    K_shear_full += (
+                        B_s_full.T @ D_s @ B_s_full
+                    ) * (dA * A_shear)
                     
         # --- 2. TRANSVERSE SHEAR (1x1 Selective Reduced Integration) ---
         if has_bending:
             xi_s, eta_s = pts_1[0], pts_1[0]
             w_s = weights_1[0] * weights_1[0] 
             
-            _, _, B_s, detJ_s = self._get_B_matrices(xi_s, eta_s)
+            _, B_b_center, B_s, detJ_s = self._get_B_matrices(xi_s, eta_s)
             dA_s = detJ_s * w_s
+            B_b_twist = B_b_center[2:3, :]
+            K_bend += (
+                B_b_twist.T @ D_b[2:3, 2:3] @ B_b_twist
+            ) * (dA_s * I_bend)
             
             # Ensamblaje Cortante: K_s = (B^T * D_s * B) * (Area * A_shear)
             K_shear += (B_s.T @ D_s @ B_s) * (dA_s * A_shear)
+            # A small full-integration contribution controls the two reduced-
+            # integration hourglass modes without reintroducing the full shear
+            # locking of a plain Q4 Mindlin element.
+            hourglass_factor = 1.0e-3
+            K_shear = K_shear + hourglass_factor * (K_shear_full - K_shear)
 
         # --- 3. SCATTER INTO LOCAL 24x24 MATRIX ---
         # Membrane: DOFs 0 (Tx), 1 (Ty) per node
@@ -335,6 +363,7 @@ class CQUAD4ElementSolver:
         K_mem = np.zeros((8, 8))
         K_bend = np.zeros((12, 12))
         K_shear = np.zeros((12, 12))
+        K_shear_full = np.zeros((12, 12))
         
         D_m = self._get_D_membrane()
         D_b = self._get_D_bending()
@@ -360,7 +389,7 @@ class CQUAD4ElementSolver:
                 xi, eta = pts_2[i], pts_2[j]
                 w = weights_2[i] * weights_2[j]
                 
-                B_m, B_b, _, detJ = self._get_B_matrices(xi, eta)
+                B_m, B_b, B_s_full, detJ = self._get_B_matrices(xi, eta)
                 dA = detJ * w
                 
                 # Ensamblaje Membrana
@@ -374,7 +403,13 @@ class CQUAD4ElementSolver:
                 
                 # Ensamblaje Flexión (Reissner-Mindlin bending)
                 if has_bending:
-                    K_bend += (B_b.T @ D_b @ B_b) * (dA * I_bend)
+                    B_b_normal = B_b[0:2, :]
+                    K_bend += (
+                        B_b_normal.T @ D_b[0:2, 0:2] @ B_b_normal
+                    ) * (dA * I_bend)
+                    K_shear_full += (
+                        B_s_full.T @ D_s @ B_s_full
+                    ) * (dA * A_shear)
                     
         # --- 2. SELECTIVE REDUCED INTEGRATION (1x1) ---
         # A) Membrana: Evaluamos el cortante parasito en el centro
@@ -394,9 +429,15 @@ class CQUAD4ElementSolver:
             xi_s, eta_s = pts_1[0], pts_1[0]
             w_s = weights_1[0] * weights_1[0] 
             
-            _, _, B_s, detJ_s = self._get_B_matrices(xi_s, eta_s)
+            _, B_b_center, B_s, detJ_s = self._get_B_matrices(xi_s, eta_s)
             dA_s = detJ_s * w_s
+            B_b_twist = B_b_center[2:3, :]
+            K_bend += (
+                B_b_twist.T @ D_b[2:3, 2:3] @ B_b_twist
+            ) * (dA_s * I_bend)
             K_shear += (B_s.T @ D_s @ B_s) * (dA_s * A_shear)
+            hourglass_factor = 1.0e-3
+            K_shear = K_shear + hourglass_factor * (K_shear_full - K_shear)
 
         # --- 3. SCATTER INTO LOCAL 24x24 MATRIX ---
         mem_idx = [0, 1, 6, 7, 12, 13, 18, 19]
@@ -406,26 +447,36 @@ class CQUAD4ElementSolver:
                 
         if has_bending:
             K_plate_RM = K_bend + K_shear
-            T_node = np.array([
-                [1.0,  0.0,  0.0],
-                [0.0,  0.0,  -1.0], # Rx = ty  -> th_y = Rx -> No, Nastran Ry = -th_x
-                [0.0,  1.0,  0.0]   # Nastran Rx = th_y
-            ])
-            T_map = np.kron(np.eye(4), T_node)
-            K_plate_nastran = T_map.T @ K_plate_RM @ T_map
-            
             bend_idx = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
             for i, r in enumerate(bend_idx):
                 for j, c in enumerate(bend_idx):
-                    K_local[r, c] += K_plate_nastran[i, j]
-                    
-        '''
-        # --- 4. STABILIZATION (Drilling DOFs) ---
-        k_diag_small = 0.3845 * self.mat_membrane.E * (t**3)
-        drill_idx = [5, 11, 17, 23]
-        for idx in drill_idx:
-            K_local[idx, idx] += k_diag_small
-        '''
+                    K_local[r, c] += K_plate_RM[i, j]
+
+        if self.k6rot > 0.0:
+            drill_local = np.zeros((12, 12))
+            shear_modulus = getattr(
+                self.mat_membrane, 'G',
+                self.mat_membrane.E / (2.0 * (1.0 + self.mat_membrane.nu)),
+            )
+            penalty = self.k6rot * 1e-6 * shear_modulus * t
+            for i, xi in enumerate(pts_2):
+                for j, eta in enumerate(pts_2):
+                    N, dN_dxi, dN_deta = self._get_shape_functions(xi, eta)
+                    jacobian, det_jacobian = self._get_jacobian(dN_dxi, dN_deta)
+                    derivatives = np.linalg.inv(jacobian) @ np.vstack((dN_dxi, dN_deta))
+                    dN_dx, dN_dy = derivatives
+                    b_drill = np.zeros(12)
+                    for node_index in range(4):
+                        base = 3 * node_index
+                        b_drill[base] = 0.5 * dN_dy[node_index]
+                        b_drill[base + 1] = -0.5 * dN_dx[node_index]
+                        b_drill[base + 2] = N[node_index]
+                    weight = weights_2[i] * weights_2[j]
+                    drill_local += penalty * np.outer(b_drill, b_drill) * det_jacobian * weight
+            drill_idx = [0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23]
+            for i, row in enumerate(drill_idx):
+                for j, column in enumerate(drill_idx):
+                    K_local[row, column] += drill_local[i, j]
             
         return K_local
 
@@ -436,7 +487,6 @@ class CQUAD4ElementSolver:
         K_loc = self._build_local_stiffness()
         return self.T.T @ K_loc @ self.T
 
-    '''
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
         @brief Calculates Membrane Stresses, Moments and Shear Forces at element center.
@@ -470,6 +520,18 @@ class CQUAD4ElementSolver:
         stresses = D_mem @ strains 
         
         sig_x, sig_y, tau_xy = stresses
+        angle = np.radians(self.theta)
+        cosine, sine = np.cos(angle), np.sin(angle)
+
+        def rotate_symmetric(x_value, y_value, xy_value):
+            return (
+                cosine**2*x_value + sine**2*y_value + 2*cosine*sine*xy_value,
+                sine**2*x_value + cosine**2*y_value - 2*cosine*sine*xy_value,
+                -cosine*sine*x_value + cosine*sine*y_value
+                + (cosine**2-sine**2)*xy_value,
+            )
+
+        sig_x, sig_y, tau_xy = rotate_symmetric(sig_x, sig_y, tau_xy)
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
         
         # Tensiones Principales
@@ -494,13 +556,7 @@ class CQUAD4ElementSolver:
                 u_loc[20], u_loc[21], u_loc[22]
             ])
             
-            T_node = np.array([
-                [1.0,  0.0,  0.0],
-                [0.0,  0.0,  -1.0],
-                [0.0, 1.0,  0.0]
-            ])
-            T_map = np.kron(np.eye(4), T_node)
-            u_bend_RM = T_map @ u_bend_nastran
+            u_bend_RM = u_bend_nastran
             
             # Momentos Flectores: M = D_b * (t^3 / 12) * Curvatura
             kappa = B_b @ u_bend_RM
@@ -509,6 +565,7 @@ class CQUAD4ElementSolver:
             moments = (D_b * I_bend) @ kappa
             
             m_x, m_y, m_xy = moments[0], moments[1], moments[2]
+            m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
             # Fuerzas Cortantes Transversales: Q = D_s * (k * t) * Deformacion_Angular
             gamma_s = B_s @ u_bend_RM
@@ -518,6 +575,7 @@ class CQUAD4ElementSolver:
             shear_forces = (D_s * A_shear) @ gamma_s
             
             q_x, q_y = shear_forces[0], shear_forces[1]
+            q_x, q_y = cosine*q_x + sine*q_y, -sine*q_x + cosine*q_y
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             
@@ -534,6 +592,19 @@ class CQUAD4ElementSolver:
         sig_x_bot = sig_x + sb_x
         sig_y_bot = sig_y + sb_y
         tau_xy_bot = tau_xy + sb_xy
+
+        def principal_and_vm(sx, sy, txy):
+            average = 0.5 * (sx + sy)
+            radius = np.hypot(0.5 * (sx - sy), txy)
+            von_mises = np.sqrt(sx**2 - sx*sy + sy**2 + 3.0*txy**2)
+            return average + radius, average - radius, von_mises
+
+        major_top, minor_top, vm_top = principal_and_vm(
+            sig_x_top, sig_y_top, tau_xy_top
+        )
+        major_bot, minor_bot, vm_bot = principal_and_vm(
+            sig_x_bot, sig_y_bot, tau_xy_bot
+        )
         
         return {
             'sigma_x': sig_x,
@@ -552,6 +623,24 @@ class CQUAD4ElementSolver:
             'stress_fiber_bot_y': sig_y_bot,
             'tau_fiber_top_y': tau_xy_top,
             'tau_fiber_bot_y': tau_xy_bot,
+            'stress_top_fiber_x': sig_x_top,
+            'stress_top_fiber_y': sig_y_top,
+            'tau_top_fiber_xy': tau_xy_top,
+            'stress_z1_fiber_x': sig_x_top,
+            'stress_z1_fiber_y': sig_y_top,
+            'tau_z1_fiber_xy': tau_xy_top,
+            'stress_bot_fiber_x': sig_x_bot,
+            'stress_bot_fiber_y': sig_y_bot,
+            'tau_bot_fiber_xy': tau_xy_bot,
+            'stress_z2_fiber_x': sig_x_bot,
+            'stress_z2_fiber_y': sig_y_bot,
+            'tau_z2_fiber_xy': tau_xy_bot,
+            'major_principal_top': major_top,
+            'minor_principal_top': minor_top,
+            'von_mises_top': vm_top,
+            'major_principal_bot': major_bot,
+            'minor_principal_bot': minor_bot,
+            'von_mises_bot': vm_bot,
             
             'membrane_force_x': f_x,
             'membrane_force_y': f_y,
@@ -559,5 +648,4 @@ class CQUAD4ElementSolver:
             'shear_force_x': q_x,
             'shear_force_y': q_y
         }
-    '''
 

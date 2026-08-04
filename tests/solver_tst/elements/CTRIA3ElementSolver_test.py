@@ -12,7 +12,7 @@ Validates the physics of the Triangular Shell element:
 
 import pytest
 import numpy as np
-from src.solver.elements.ctria3_element_FINALL import CTRIA3ElementSolver
+from src.solver.elements.ctria3_element import CTRIA3ElementSolver
 
 # --- MOCKS (Data Objects Simulation) ---
 class MockNode:
@@ -625,10 +625,6 @@ def test_bending_stiffness_integration_check(element_setup):
     
     # --- SOLUCIÓN: Añadimos la estabilización a la matriz teórica ---
     # Para poder comparar de forma idéntica, replicamos el factor matemático del solver
-    diag_val = 1e-6 * np.mean(np.diag(K_plate_theoretical))
-    if diag_val < 1e-12: diag_val = 1e-6
-    K_plate_theoretical += np.eye(9) * diag_val
-    
     # 3. Extraer la matriz de Placa del solver para comparar
     K_local_full = solver._build_local_stiffness()
     

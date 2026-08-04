@@ -91,7 +91,11 @@ class CoordinateTransformation:
                 v_aux = np.array([1.0, 0.0, 0.0])
         else:
             # For CBAR: Use the given vector, normalized
-            v_aux = v_aux / np.linalg.norm(v_aux)
+            v_aux = np.asarray(v_aux, dtype=float)
+            norm_aux = np.linalg.norm(v_aux)
+            if not np.isfinite(norm_aux) or norm_aux < 1e-12:
+                raise ValueError("The orientation vector must be finite and non-zero.")
+            v_aux = v_aux / norm_aux
 
         # 3. Local Z axis (Normal to the X-Aux plane)
         # v_z = x CROSS v_aux

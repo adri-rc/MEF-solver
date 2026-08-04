@@ -17,7 +17,6 @@ Design Philosophy:
 
 import numpy as np
 from scipy.sparse import lil_matrix
-from scipy.sparse.linalg import spsolve
 import warnings
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
@@ -96,8 +95,13 @@ class LinearStaticSolver:
     def assemble(self):
         """
         @brief Master method to build the Global Stiffness Matrix (K) and Load Vector (F).
+
+        This method is intentionally cumulative at present: it must be called
+        exactly once for each solver instance.  Calling it again adds the same
+        element and load contributions a second time.
         """
         print(f"--- STARTING MODEL ASSEMBLY (Total DOFs: {self.n_dofs}) ---") 
+        self.model.validate()
         self.build_stiffness_matrix()
         self.build_load_vector()        
         print("--- MODEL ASSEMBLY COMPLETED ---\n")
@@ -169,11 +173,16 @@ class LinearStaticSolver:
         
         # Validate Orientation (Crucial for Beam Physics)
         orientation = element.orientation_vector
-        if not orientation or np.linalg.norm(orientation) < 1e-6:
+        if element.g0 is not None:
+            orientation = self.model.get_node(element.g0).get_coords() - n1.get_coords()
+        if orientation is None or np.linalg.norm(orientation) < 1e-6:
              # Fallback to Y-axis if missing (though Reader usually checks this)
              orientation = [0.0, 1.0, 0.0]
 
-        solver = BarElementSolver(n1, n2, prop, mat, orientation=orientation)
+        solver = BarElementSolver(
+            n1, n2, prop, mat, orientation=orientation,
+            wa=element.wa, wb=element.wb, pa=element.pa, pb=element.pb,
+        )
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid]
 
     def _solve_ctria3_element(self, element: CTRIA3Element) -> tuple:
@@ -195,7 +204,7 @@ class LinearStaticSolver:
         if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
              mat_shear = self.model.materials[prop.mat_id_shear]
 
-        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot)
+        solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot, theta=element.theta)
         
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
 
@@ -224,7 +233,9 @@ class LinearStaticSolver:
             prop, 
             mat_membrane=mat_membrane, 
             mat_bending=mat_bending,
-            mat_shear=mat_shear
+            mat_shear=mat_shear,
+            k6rot=self.k6rot,
+            theta=element.theta,
         )
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid, n4.nid]
 
@@ -236,6 +247,8 @@ class LinearStaticSolver:
         @brief Maps and adds the local element matrix into the global system matrix.
         """
         global_indices = self._get_global_dof_indices(node_ids)
+        nodal_transform = self._get_nodal_frame_transform(node_ids)
+        k_elem = nodal_transform @ k_elem @ nodal_transform.T
 
         # Iterative assembly
         rows = len(global_indices)
@@ -246,6 +259,25 @@ class LinearStaticSolver:
                 val = k_elem[i, j]
                 if val != 0.0:
                     self.K_global[gi, gj] += val
+
+    def _get_nodal_frame_transform(self, node_ids: list[int]) -> np.ndarray:
+        """Map basic/global element vectors to the DOF frame of each GRID."""
+        transform = np.zeros((6 * len(node_ids), 6 * len(node_ids)))
+        for position, node_id in enumerate(node_ids):
+            rotation = np.asarray(self.model.get_node(node_id).dof_transform)
+            start = 6 * position
+            transform[start:start+3, start:start+3] = rotation
+            transform[start+3:start+6, start+3:start+6] = rotation
+        return transform
+
+    def _displacements_in_basic(self) -> np.ndarray:
+        result = np.zeros_like(self.displacements)
+        for node_id in self.model.nodes:
+            indices = self._get_global_dof_indices(node_id)
+            rotation = np.asarray(self.model.get_node(node_id).dof_transform)
+            result[indices[:3]] = rotation.T @ self.displacements[indices[:3]]
+            result[indices[3:]] = rotation.T @ self.displacements[indices[3:]]
+        return result
     
     def build_load_vector(self):
         """
@@ -277,6 +309,7 @@ class LinearStaticSolver:
                 
                 # Calculation
                 force_vec = scale_factor * vec
+                force_vec = np.asarray(self.model.get_node(nid).dof_transform) @ force_vec
                 
                 # Assembly: Force affects Translational DOFs (Tx, Ty, Tz) -> Indices 0, 1, 2
                 dof_indices = self._get_global_dof_indices(nid)
@@ -300,6 +333,7 @@ class LinearStaticSolver:
                 
                 # Calculation
                 moment_vec = scale * vec
+                moment_vec = np.asarray(self.model.get_node(nid).dof_transform) @ moment_vec
                 
                 # Assembly: Moment affects Rotational DOFs (Rx, Ry, Rz) -> Indices 3, 4, 5
                 dof_indices = self._get_global_dof_indices(nid) 
@@ -320,7 +354,7 @@ class LinearStaticSolver:
         print(f"[Solver] Applied forces: {count_forces} Forces, {count_moments} Moments.")
     
     # ================= SOLUTION PHASE =================
-    def solve(self)-> np.ndarray:
+    def solve(self) -> dict:
         """
         @brief Partitions the system and solves for unknown displacements.
         @details
@@ -336,9 +370,6 @@ class LinearStaticSolver:
         # 1. Identify Boundary Conditions
         free_dofs, fixed_dofs, u_s_dict = self._get_dof_partition()
         
-        if not free_dofs:
-            raise ValueError("Model is fully constrained or empty. Nothing to solve.")
-
         # 2. Optimization: Convert LIL (List of List) to CSC (Compressed Sparse Column)
         # CSC is efficient for column slicing (needed for K_fs) and linear algebra.
         K_csc = self.K_global.tocsc()
@@ -360,6 +391,11 @@ class LinearStaticSolver:
             if global_idx in u_s_dict:
                 u_s[i] = u_s_dict[global_idx]
         
+        if not free_dofs:
+            self.displacements[fixed_dofs] = u_s
+            print("[Solver] Model is fully constrained; calculating reactions only.")
+            return self.reactions_and_stresses()
+
         # 6. Calculate Effective Load Vector (RHS)
         # Equation: K_ff * u_f + K_fs * u_s = F_f  =>  K_ff * u_f = F_f - K_fs * u_s
         # If u_s is all zeros, the term K_fs * u_s vanishes (standard clamping).
@@ -367,6 +403,20 @@ class LinearStaticSolver:
         
         # 7. Numerical Solution
         print(f"[Solver] Solving linear system of size {K_ff.shape}...")
+
+        if not np.all(np.isfinite(K_ff.data)) or not np.all(np.isfinite(rhs)):
+            raise ValueError("[Solver Error] K_ff or the right-hand side contains NaN/Inf values.")
+        asymmetry = K_ff - K_ff.T
+        if asymmetry.nnz and np.max(np.abs(asymmetry.data)) > max(1.0, np.max(np.abs(K_ff.data))) * 1e-10:
+            raise ValueError("[Solver Error] The assembled stiffness matrix is not symmetric.")
+        row_norms = np.asarray(np.abs(K_ff).sum(axis=1)).ravel()
+        zero_rows = np.flatnonzero(row_norms == 0.0)
+        if zero_rows.size:
+            global_zero_dofs = [free_dofs[index] for index in zero_rows]
+            raise ValueError(
+                "[Solver Error] The stiffness matrix is singular; free DOFs without stiffness were found: "
+                f"{self._describe_dofs(global_zero_dofs)}"
+            )
 
         # SECURITY BLOCK FOR SINGULAR MATRIX
         try:
@@ -376,8 +426,8 @@ class LinearStaticSolver:
                 u_f = spsolve(K_ff, rhs)
                 
             # Double check: If Scipy returned NaNs without warning (happens in some backends)
-            if np.any(np.isnan(u_f)):
-                raise ValueError("Solver returned NaNs.")
+            if not np.all(np.isfinite(u_f)):
+                raise ValueError("Solver returned NaN/Inf values.")
 
         except (MatrixRankWarning, RuntimeError, ValueError) as e:
             raise ValueError(
@@ -394,6 +444,16 @@ class LinearStaticSolver:
 
         # 9. Post-Process (Reactions and Stresses)
         return self.reactions_and_stresses()
+
+    def _describe_dofs(self, indices: list[int]) -> list[str]:
+        labels = ("T1", "T2", "T3", "R1", "R2", "R3")
+        descriptions = []
+        node_ids = list(self.model.nodes.keys())
+        for index in indices[:20]:
+            descriptions.append(f"GRID {node_ids[index // 6]} {labels[index % 6]}")
+        if len(indices) > 20:
+            descriptions.append(f"... and {len(indices) - 20} more")
+        return descriptions
 
     def reactions_and_stresses(self) -> dict:
         """
@@ -418,7 +478,7 @@ class LinearStaticSolver:
         print("[Solver] Post-processing results (Reactions & Stresses)...")
         
         results = {
-            "displacements": self.displacements,
+            "displacements": self.displacements.copy(),
             "reactions": {},
             "stresses": {}
         }
@@ -441,13 +501,14 @@ class LinearStaticSolver:
                 results["reactions"][node_id] = R_total[indices]
 
         # --- B. ELEMENT STRESSES ---
+        displacements_basic = self._displacements_in_basic()
         for eid, element in self.model.elements.items():
             
             # ---------------------------------------------------------
             # 0. FAIL-FAST CHECK
             # ---------------------------------------------------------
             # If the element is not supported -> abort
-            if not isinstance(element, (RodElement, BarElement, CTRIA3Element)):
+            if not isinstance(element, (RodElement, BarElement, CTRIA3Element, CQUAD4Element)):
 
                 elem_type = type(element).__name__
                 raise NotImplementedError(
@@ -469,7 +530,7 @@ class LinearStaticSolver:
                 elem_solver = RodElementSolverV2(n1, n2, prop, mat)
                 
                 # Call the specific stress recovery method
-                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data = elem_solver.calculate_stresses(displacements_basic, self.dof_mapper)
                 stress_data['type'] = 'CROD'  # Etiqueta identificativa
 
                 results["stresses"][eid] = stress_data
@@ -483,11 +544,18 @@ class LinearStaticSolver:
                 prop = self.model.properties[element.prop_id]
                 mat = self.model.materials[prop.mat_id]
                 
-                orientation = element.orientation_vector if element.orientation_vector else [0.0, 1.0, 0.0]
+                orientation = element.orientation_vector
+                if element.g0 is not None:
+                    orientation = self.model.get_node(element.g0).get_coords() - n1.get_coords()
+                if orientation is None:
+                    orientation = [0.0, 1.0, 0.0]
 
-                elem_solver = BarElementSolver(n1, n2, prop, mat, orientation=orientation)
+                elem_solver = BarElementSolver(
+                    n1, n2, prop, mat, orientation=orientation,
+                    wa=element.wa, wb=element.wb, pa=element.pa, pb=element.pb,
+                )
 
-                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data = elem_solver.calculate_stresses(displacements_basic, self.dof_mapper)
                 stress_data['type'] = 'CBAR'  # Etiqueta identificativa
 
                 results["stresses"][eid] = stress_data
@@ -512,11 +580,29 @@ class LinearStaticSolver:
                 if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
                     mat_shear = self.model.materials[prop.mat_id_shear]
                 
-                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot)
+                elem_solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat, mat_bending=mat_bending, mat_shear=mat_shear, k6rot=self.k6rot, theta=element.theta)
 
-                stress_data = elem_solver.calculate_stresses(self.displacements, self.dof_mapper)
+                stress_data = elem_solver.calculate_stresses(displacements_basic, self.dof_mapper)
                 stress_data['type'] = 'CTRIA3' 
 
+                results["stresses"][eid] = stress_data
+
+            elif isinstance(element, CQUAD4Element):
+                nodes = [self.model.get_node(nid) for nid in element.nodes]
+                prop = self.model.properties[element.prop_id]
+                mat_membrane = self.model.materials[prop.mat_id]
+                mat_bending = self.model.materials.get(prop.mat_id_bending)
+                mat_shear = self.model.materials.get(prop.mat_id_shear)
+                elem_solver = CQUAD4ElementSolver(
+                    *nodes, prop,
+                    mat_membrane=mat_membrane,
+                    mat_bending=mat_bending,
+                    mat_shear=mat_shear,
+                    k6rot=self.k6rot,
+                    theta=element.theta,
+                )
+                stress_data = elem_solver.calculate_stresses(displacements_basic, self.dof_mapper)
+                stress_data['type'] = 'CQUAD4'
                 results["stresses"][eid] = stress_data
 
         
@@ -549,9 +635,16 @@ class LinearStaticSolver:
                         
                         fixed_dofs.add(global_idx)
                         
-                        # If there is imposed displacement (not zero)
-                        if constraint.value != 0.0:
-                            enforced_displacements[global_idx] = constraint.value
+                        if global_idx in enforced_displacements and not np.isclose(
+                            enforced_displacements[global_idx], constraint.value,
+                            rtol=1e-12, atol=1e-15,
+                        ):
+                            raise ValueError(
+                                "Conflicting SPC values for "
+                                f"{self._describe_dofs([global_idx])[0]}: "
+                                f"{enforced_displacements[global_idx]} and {constraint.value}."
+                            )
+                        enforced_displacements[global_idx] = constraint.value
             
             # ERROR - UNKNOWN CONSTRAIN 
             else:

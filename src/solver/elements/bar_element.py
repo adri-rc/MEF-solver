@@ -43,7 +43,11 @@ class BarElementSolver:
     IDX_BEND_XY = [1, 5, 7, 11] # Bending XY depends on Ty and Rz at both nodes -> Matrix 4x4, Order: [Ty1, Rz1, Ty2, Rz2]
     IDX_BEND_XZ = [2, 4, 8, 10]     # Bending XZ depends on Tz and Ry at both nodes -> Matrix 4x4, Order: [Tz1, Ry1, Tz2, Ry2]
     
-    def __init__(self, node1: Node, node2: Node, prop: BarProperty, mat: IsotropicMaterial, orientation: list, n_gaussp: int = 2):
+    def __init__(
+        self, node1: Node, node2: Node, prop: BarProperty,
+        mat: IsotropicMaterial, orientation: list, n_gaussp: int = 2,
+        wa=None, wb=None, pa: int = 0, pb: int = 0,
+    ):
         self.node1 = node1
         self.node2 = node2
         self.prop = prop
@@ -52,7 +56,15 @@ class BarElementSolver:
 
         self.n1_coords = node1.get_coords()
         self.n2_coords = node2.get_coords()
-        self.orientation_vector = np.array(orientation)
+        self.orientation_vector = np.asarray(orientation, dtype=float)
+        if self.orientation_vector.shape != (3,) or not np.all(np.isfinite(self.orientation_vector)):
+            raise ValueError("CBAR orientation must contain three finite components.")
+        self.wa = np.zeros(3) if wa is None else np.asarray(wa, dtype=float)
+        self.wb = np.zeros(3) if wb is None else np.asarray(wb, dtype=float)
+        if self.wa.shape != (3,) or self.wb.shape != (3,):
+            raise ValueError("CBAR offsets WA/WB must contain three components.")
+        self.pa = int(pa or 0)
+        self.pb = int(pb or 0)
         
         diff = self.n2_coords - self.n1_coords
         self.L = np.linalg.norm(diff)
@@ -64,6 +76,51 @@ class BarElementSolver:
         
         # Pre-compute internal geometric props for speed
         self.J = self.L / 2.0 # Jacobian
+
+    @staticmethod
+    def _skew(vector: np.ndarray) -> np.ndarray:
+        x, y, z = vector
+        return np.array([[0.0, -z, y], [z, 0.0, -x], [-y, x, 0.0]])
+
+    def _offset_transform_global(self) -> np.ndarray:
+        """Map GRID DOFs to the two offset CBAR end DOFs."""
+        transform = np.eye(12)
+        transform[0:3, 3:6] = -self._skew(self.wa)
+        transform[6:9, 9:12] = -self._skew(self.wb)
+        return transform
+
+    @staticmethod
+    def _timoshenko_bending(EI: float, kGA: float, length: float, flip_rotation=False):
+        phi = 12.0 * EI / (kGA * length**2)
+        scale = EI / (length**3 * (1.0 + phi))
+        matrix = scale * np.array([
+            [12.0, 6.0*length, -12.0, 6.0*length],
+            [6.0*length, (4.0+phi)*length**2, -6.0*length, (2.0-phi)*length**2],
+            [-12.0, -6.0*length, 12.0, -6.0*length],
+            [6.0*length, (2.0-phi)*length**2, -6.0*length, (4.0+phi)*length**2],
+        ])
+        if flip_rotation:
+            signs = np.diag([1.0, -1.0, 1.0, -1.0])
+            matrix = signs @ matrix @ signs
+        return matrix
+
+    def _apply_releases(self, stiffness: np.ndarray) -> np.ndarray:
+        released = []
+        for flag, offset in ((self.pa, 0), (self.pb, 6)):
+            for component in str(flag):
+                if component in "123456":
+                    released.append(offset + int(component) - 1)
+        released = sorted(set(released))
+        if not released:
+            return stiffness
+        retained = [index for index in range(12) if index not in released]
+        k_rr = stiffness[np.ix_(retained, retained)]
+        k_rq = stiffness[np.ix_(retained, released)]
+        k_qq = stiffness[np.ix_(released, released)]
+        condensed = k_rr - k_rq @ np.linalg.pinv(k_qq, rcond=1e-12) @ k_rq.T
+        result = np.zeros_like(stiffness)
+        result[np.ix_(retained, retained)] = condensed
+        return 0.5 * (result + result.T)
 
 
     def _compute_transformation(self):
@@ -145,6 +202,7 @@ class BarElementSolver:
         k_torsion = np.zeros((2, 2))
         k_bend_xy = np.zeros((4, 4))
         k_bend_xz = np.zeros((4, 4))
+        k_bend_coupling = np.zeros((8, 8))
         
         # Numerical Integration Loop
         for xi, w in zip(points, weights):
@@ -171,6 +229,30 @@ class BarElementSolver:
             B_bend_xz[1] *= -1.0 
             B_bend_xz[3] *= -1.0 
             k_bend_xz += np.outer(B_bend_xz, B_bend_xz) * self.mat.E * self.prop.I2 * detJ_w
+
+            i12 = getattr(self.prop, 'I12', 0.0)
+            if i12 != 0.0:
+                B_pair = np.zeros((2, 8))
+                B_pair[0, :4] = B_bend
+                B_pair[1, 4:] = B_bend_xz
+                inertia_coupling = self.mat.E * np.array([
+                    [0.0, i12], [i12, 0.0]
+                ])
+                k_bend_coupling += B_pair.T @ inertia_coupling @ B_pair * detJ_w
+
+        if getattr(self.prop, 'K1', 0.0) > 0.0:
+            k_bend_xy = self._timoshenko_bending(
+                self.mat.E * self.prop.I1,
+                self.prop.K1 * self.prop.A * self.mat.G,
+                self.L,
+            )
+        if getattr(self.prop, 'K2', 0.0) > 0.0:
+            k_bend_xz = self._timoshenko_bending(
+                self.mat.E * self.prop.I2,
+                self.prop.K2 * self.prop.A * self.mat.G,
+                self.L,
+                flip_rotation=True,
+            )
             
         # --- ASSEMBLY INTO 12x12 LOCAL MATRIX ---
         K_local = np.zeros((12, 12))
@@ -180,8 +262,11 @@ class BarElementSolver:
         self._add_to_block(K_local, k_torsion, self.IDX_TORSION)
         self._add_to_block(K_local, k_bend_xy, self.IDX_BEND_XY)
         self._add_to_block(K_local, k_bend_xz, self.IDX_BEND_XZ)
+        self._add_to_block(
+            K_local, k_bend_coupling, self.IDX_BEND_XY + self.IDX_BEND_XZ
+        )
         
-        return K_local
+        return self._apply_releases(K_local)
    
     def get_stiffness_matrix(self) -> np.ndarray:
         """
@@ -192,7 +277,9 @@ class BarElementSolver:
         """
         K_loc = self._build_local_stiffness()
         
-        return self.T.T @ K_loc @ self.T
+        k_offset_ends = self.T.T @ K_loc @ self.T
+        offset_transform = self._offset_transform_global()
+        return offset_transform.T @ k_offset_ends @ offset_transform
 
     def _add_to_block(self, K_full: np.ndarray, K_sub: np.ndarray, indices: list[int]):
         """
@@ -218,7 +305,8 @@ class BarElementSolver:
         u_elem_global = np.concatenate([u_global_vector[idxs_n1], u_global_vector[idxs_n2]])
         
         # 2. Transform global displacements to local element system
-        u_loc = self.T @ u_elem_global
+        u_offset_global = self._offset_transform_global() @ u_elem_global
+        u_loc = self.T @ u_offset_global
         
         
         # 3. Calculate Internal Forces via Stiffness: F_loc = K_loc * u_loc
@@ -280,50 +368,53 @@ class BarElementSolver:
         # but technically P/A = (-f_local[0]) / A.
         
         stress_results = {}
+        stress_results_end_b = {}
         # If no points defined, use default point (0,0)
         points_to_calc = self.prop.stress_points if self.prop.stress_points else [(0.0, 0.0)]
 
         # List to collect all total stresses for Max/Min calculation
         computed_total_stresses = []
+        i12 = getattr(self.prop, 'I12', 0.0)
+        inertia = np.array([[self.prop.I1, i12], [i12, self.prop.I2]])
+        end_moments = (
+            (-f_local[5], -f_local[4]),
+            ( f_local[11], f_local[10]),
+        )
+        stress_sets = (stress_results, stress_results_end_b)
         
-        for i, (y, z) in enumerate(points_to_calc):
-            # Normal Stress = (Axial + Bending)
-            
-            #1. Pure Bending
-            # Navier Formula: Sigma = -Mz*y/I1 + My*z/I2
-            sigma_bend_z = -(M_z_int * y) / self.prop.I1 if self.prop.I1 else 0
-            sigma_bend_y = (M_y_int * z) / self.prop.I2 if self.prop.I2 else 0
-            
-            sigma_bending_total = sigma_bend_z + sigma_bend_y
-
-            #2. Combined Total -> What is normally used for Yield Check
-            sigma_tot = sigma_ax + sigma_bending_total
-
-            # Collect for max/min calculation
-            computed_total_stresses.append(sigma_tot)
-            
-            # Shear Stress (Torsion)
-            r = np.sqrt(y**2 + z**2)
-            tau_tor = (torque_val * r) / self.prop.J if self.prop.J else 0
-            
-            stress_results[f"P{i}"] = {
-                'sigma_total': sigma_tot,             # Axial + Bending
-                'sigma_bending': sigma_bending_total, # Pure bending (equivalen to to SA1 value in .f06)
-                'sigma_axial': sigma_ax,              # Pure Axil (equivalent to AXIAL STRESS 'SA' in .f06)
-                'tau_xy': tau_tor, # simplified
-                'y': y, 'z': z
-            }
+        for result_set, (moment_z, moment_y) in zip(stress_sets, end_moments):
+            # Coefficients of sigma_b = a*y + b*z for a general I12.
+            coefficients = np.linalg.solve(inertia, np.array([-moment_z, moment_y]))
+            for i, (y, z) in enumerate(points_to_calc):
+                sigma_bending_total = coefficients[0] * y + coefficients[1] * z
+                sigma_tot = sigma_ax + sigma_bending_total
+                computed_total_stresses.append(sigma_tot)
+                radius = np.hypot(y, z)
+                tau_tor = (torque_val * radius) / self.prop.J if self.prop.J else 0.0
+                result_set[f"P{i}"] = {
+                    'sigma_total': sigma_tot,
+                    'sigma_bending': sigma_bending_total,
+                    'sigma_axial': sigma_ax,
+                    'tau_xy': tau_tor,
+                    'y': y, 'z': z
+                }
         
         # Calculate Max and Min Total Stress (Equivalent to SA-MAX / SA-MIN from .f06  CBAR results)
-        max_total_stress = max(computed_total_stresses) if computed_total_stresses else 0.0
-        min_total_stress = min(computed_total_stresses) if computed_total_stresses else 0.0
+        end_a_totals = [point['sigma_total'] for point in stress_results.values()]
+        max_total_stress = max(end_a_totals) if end_a_totals else 0.0
+        min_total_stress = min(end_a_totals) if end_a_totals else 0.0
+        max_element_stress = max(computed_total_stresses) if computed_total_stresses else 0.0
+        min_element_stress = min(computed_total_stresses) if computed_total_stresses else 0.0
 
         return {
             # --- CAMPOS UNIFICADOS (CROD compatibility) ---
             'axial_force': axial_force_val,
             'axial_stress': sigma_ax,
             'torque': torque_val,
-            'torsional_stress': 0.0, # (Opcional: max shear stress)
+            'torsional_stress': max(
+                (abs(point['tau_xy']) for points in stress_sets for point in points.values()),
+                default=0.0,
+            ),
             
             # --- CAMPOS ESPECÍFICOS DE VIGA ---
             'axial_strain': axial_strain,
@@ -331,8 +422,12 @@ class BarElementSolver:
             'forces_n1': forces_n1,
             'forces_n2': forces_n2,
             'stress_points': stress_results,
+            'stress_points_end_a': stress_results,
+            'stress_points_end_b': stress_results_end_b,
 
             # --- EXTREMES (Comparison with SA-MAX / SA-MIN from .f06  CBAR results) ---
             'max_total_stress': max_total_stress,
-            'min_total_stress': min_total_stress
+            'min_total_stress': min_total_stress,
+            'max_element_stress': max_element_stress,
+            'min_element_stress': min_element_stress,
         }

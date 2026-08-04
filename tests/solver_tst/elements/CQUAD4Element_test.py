@@ -124,7 +124,9 @@ def element_setup(request):
     prop = MockProp(t=data["thick"], mat_bending=mat_bend)
     
     # 4. Instanciar Solver
-    solver = CQUAD4ElementSolver(n1, n2, n3, n4, prop, mat_mem, mat_bending=mat_bend)
+    solver = CQUAD4ElementSolver(
+        n1, n2, n3, n4, prop, mat_mem, mat_bending=mat_bend, k6rot=100.0
+    )
     
     return {
         "solver": solver,
@@ -157,13 +159,12 @@ def test_rigid_body_modes(element_setup):
     eigenvalues = np.sort(np.linalg.eigvalsh(K))
     
     # Para elementos de placa (con drilling DOF artificial), debería haber 6 modos ~ 0.
-    rbm = eigenvalues[:6]
-    
     max_k = np.max(np.abs(K))
     tolerance = max_k * 1e-9
 
-    assert np.all(np.abs(rbm) < tolerance), \
-        f"Fallo en modos de cuerpo rígido. Autovalores menores: {rbm}"
+    zero_modes = np.count_nonzero(np.abs(eigenvalues) < tolerance)
+    assert zero_modes == 6, \
+        f"Expected 6 rigid-body modes, found {zero_modes}: {eigenvalues[:12]}"
 
 def test_local_axes_orientation(element_setup):
     """

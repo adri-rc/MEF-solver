@@ -19,7 +19,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, # 
-        "debug_export": True, # Activa/desactiva la exportación para este caso
+        "debug_export": False, # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej_manual_Kglobal_MID3_cero_K6rot_0.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -33,7 +33,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, # 
-        "debug_export": True, # Activa/desactiva la exportación para este caso
+        "debug_export": False, # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej_manual_Kglobal_MID3_cero_K6rot_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -47,7 +47,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "Validación de K_global para 2 elementos en plano YZ.",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_0.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -61,7 +61,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "Validación de K_global para 2 elementos en plano YZ.",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej32_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -89,7 +89,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej34_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -103,7 +103,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "Test del K6ROT",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej35_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -117,7 +117,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "Ejemplo con Offset de cordenadas, y enormes dimensiones frente al espesor.",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej36_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     },
     #endregion
@@ -138,7 +138,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej44_KGlobal_CTRIA3_K6ROT_100.0_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
@@ -153,7 +153,7 @@ STIFFNESS_VALIDATION_DATA = [
         "description": "",
         "rel_tol": 1e-4,
         "abs_tol": 1e-1, 
-        "debug_export": True,                  # Activa/desactiva la exportación para este caso
+        "debug_export": False,                  # Activa/desactiva la exportación para este caso
         "output_k_file": "draft_Ej46_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },

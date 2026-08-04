@@ -19,7 +19,9 @@ try:
     from src.preprocessing.nastran_reader_v2 import parse_nastran_input
     from src.solver.linear_static_solver import LinearStaticSolver
     from src.preprocessing.data_model import (
-        SinglePointLoad, SinglePointMoment, SPCConstraint, RodElement
+        SinglePointLoad, SinglePointMoment, SPCConstraint,
+        RodElement, BarElement, CTRIA3Element, CQUAD4Element,
+        RodProperty, BarProperty, ShellProperty,
     )
 except ImportError as e:
     print("\n[CRITICAL ERROR] The project modules could not be imported.")
@@ -37,6 +39,7 @@ def main():
     parser = argparse.ArgumentParser(description="PyFEM Solver - Linear Static Analysis")
     parser.add_argument('--file', type=str, help="Path to a specific .dat file")
     parser.add_argument('--all', action='store_true', help="Run all .dat files in the input folder")
+    parser.add_argument('--subcase', type=int, help="SUBCASE ID to solve when a deck contains several")
     
     args = parser.parse_args()
 
@@ -50,14 +53,14 @@ def main():
 
     if args.file:
         file_path = Path(args.file)
-        run_analysis_job(file_path)
+        run_analysis_job(file_path, subcase_id=args.subcase)
     elif args.all:
         print(f"[INFO] Batch processing all .dat files in {INPUT_DIR}...")
         files = list(INPUT_DIR.glob("*.dat"))
         if not files:
             print("[WARNING] No .dat files found in input directory.")
         for f in files:
-            run_analysis_job(f)
+            run_analysis_job(f, subcase_id=args.subcase)
     else:
         print("[INFO] No arguments were specified. Searching in /input...")
 
@@ -65,11 +68,11 @@ def main():
         
         if len(files) > 0:
             file_to_run = files[0]
-            run_analysis_job(file_to_run)
+            run_analysis_job(file_to_run, subcase_id=args.subcase)
         else:
             print("[ERROR] No .dat found in input/")
 
-def run_analysis_job(file_path: Path):
+def run_analysis_job(file_path: Path, subcase_id: int | None = None):
     """
     @brief Orchestrates the analysis for a single file: Parse -> Solve -> Report.
     """
@@ -84,7 +87,7 @@ def run_analysis_job(file_path: Path):
     try:
         # --- STEP 1: PRE-PROCESSING ---
         print(f"[{time()-t0:.4f}s] Parsing input file...")
-        model = parse_nastran_input(str(file_path))
+        model = parse_nastran_input(str(file_path), subcase_id=subcase_id)
         
         # --- STEP 2: SOLVER INITIALIZATION ---
         print(f"[{time()-t0:.4f}s] Initializing Solver...")
@@ -108,7 +111,7 @@ def run_analysis_job(file_path: Path):
 
     except Exception as e:
         print(f"\n[ERROR] Job Failed: {e}")
-        # import traceback; traceback.print_exc() # Uncomment for deep debugging
+        raise
 
 def write_report(path: Path, job_name: str, model, results, solver):
     """
@@ -123,10 +126,17 @@ def write_report(path: Path, job_name: str, model, results, solver):
     # Nodes, Materials, Properties
     count_grid = len(model.nodes)
     count_mat1 = len(model.materials)
-    count_prod = len(model.properties)
-
-    # Elements
-    count_crod = sum(1 for l in model.loads if isinstance(l, SinglePointLoad))
+    property_counts = {
+        'PROD': sum(isinstance(prop, RodProperty) for prop in model.properties.values()),
+        'PBAR': sum(isinstance(prop, BarProperty) for prop in model.properties.values()),
+        'PSHELL': sum(isinstance(prop, ShellProperty) for prop in model.properties.values()),
+    }
+    element_counts = {
+        'CROD': sum(isinstance(element, RodElement) for element in model.elements.values()),
+        'CBAR': sum(isinstance(element, BarElement) for element in model.elements.values()),
+        'CTRIA3': sum(isinstance(element, CTRIA3Element) for element in model.elements.values()),
+        'CQUAD4': sum(isinstance(element, CQUAD4Element) for element in model.elements.values()),
+    }
     
     # Loads
     count_force = sum(1 for l in model.loads if isinstance(l, SinglePointLoad))
@@ -146,9 +156,10 @@ def write_report(path: Path, job_name: str, model, results, solver):
         f.write(f"      {'-'*15:<15} {'-'*20:>20}\n")
         
         if count_grid > 0:   f.write(f"      {'GRID':<15} {count_grid:>20}\n")
-        if count_crod > 0:   f.write(f"      {'CROD':<15} {count_crod:>20}\n")
         if count_mat1 > 0:   f.write(f"      {'MAT1':<15} {count_mat1:>20}\n")
-        if count_prod > 0:   f.write(f"      {'PROD':<15} {count_prod:>20}\n")
+        for card_name, count in {**property_counts, **element_counts}.items():
+            if count:
+                f.write(f"      {card_name:<15} {count:>20}\n")
         if count_force > 0:  f.write(f"      {'FORCE':<15} {count_force:>20}\n")
         if count_moment > 0: f.write(f"      {'MOMENT':<15} {count_moment:>20}\n")
         if count_spc > 0:    f.write(f"      {'SPC1':<15} {count_spc:>20}\n")
@@ -188,20 +199,28 @@ def write_report(path: Path, job_name: str, model, results, solver):
         f.write("\n")
 
         # --- 3. ELEMENT FORCES & STRESSES ---
-        f.write("3. ELEMENT FORCES AND STRESSES (CROD)\n")
+        f.write("3. ELEMENT FORCES AND STRESSES\n")
         f.write("-" * 60 + "\n")
-        f.write(f"{'ELEM':<8} {'AXIAL FORCE':<15} {'AXIAL STRESS':<15} {'TORQUE':<15} {'TORSIONAL STRESS':<18}\n")
+        f.write(f"{'ELEM':<8} {'TYPE':<9} {'PRIMARY 1':<15} {'PRIMARY 2':<15} {'PRIMARY 3':<15} {'PRIMARY 4':<15}\n")
         f.write("-" * 60 + "\n")
 
         for eid in sorted(stresses.keys()):
             data = stresses[eid]
-            # Handle potential missing keys gracefully
-            ax_f = data.get('axial_force', 0.0)
-            ax_s = data.get('axial_stress', 0.0)
-            torq = data.get('torque', 0.0)
-            tau  = data.get('torsional_stress', 0.0)
-            
-            f.write(f"{eid:<8} {ax_f:<15.4e} {ax_s:<15.4e} {torq:<15.4e} {tau:<18.4e}\n")
+            element_type = data.get('type', 'UNKNOWN')
+            if element_type in ('CROD', 'CBAR'):
+                values = (
+                    data.get('axial_force', 0.0), data.get('axial_stress', 0.0),
+                    data.get('torque', 0.0), data.get('torsional_stress', 0.0),
+                )
+            else:
+                values = (
+                    data.get('membrane_force_x', 0.0), data.get('membrane_force_y', 0.0),
+                    data.get('bending_moment_x', 0.0), data.get('bending_moment_y', 0.0),
+                )
+            f.write(
+                f"{eid:<8} {element_type:<9} "
+                + " ".join(f"{value:<15.4e}" for value in values) + "\n"
+            )
             
 
 if __name__ == "__main__":

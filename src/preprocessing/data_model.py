@@ -49,6 +49,20 @@ class Node:
     y: float = 0.0
     z: float = 0.0
 
+    # Maps vectors expressed in the basic/global frame to the GRID displacement
+    # frame (CD).  It is the identity for CD=0.  The solver uses the same frame
+    # for nodal translations and rotations, exactly as Nastran does.
+    dof_transform: np.ndarray = field(
+        default_factory=lambda: np.eye(3), repr=False, compare=False
+    )
+
+    def __post_init__(self):
+        if self.nid <= 0:
+            raise ValueError("Node ID must be a positive integer.")
+        raw = np.asarray([self.x1, self.x2, self.x3], dtype=float)
+        if not np.all(np.isfinite(raw)):
+            raise ValueError(f"Node {self.nid} contains non-finite coordinates.")
+
     def get_coords(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
     
@@ -100,6 +114,10 @@ class IsotropicMaterial(Material):
 
             # --- CALC ---
                         
+            supplied = [value for value in (self.E, self.G, self.nu) if value is not None]
+            if not all(np.isfinite(value) for value in supplied):
+                raise ValueError(f"Material '{self.mid}' contains non-finite elastic constants.")
+
             if self.E is None: # CASE 1: Missing E -> (G, nu) Known
                 self.E = 2 * self.G * (1 + self.nu) # Formula: E = 2G(1 + nu)
 
@@ -118,7 +136,9 @@ class IsotropicMaterial(Material):
 
             else: # CASE 4: The three parameters (E, G and nu) were given -> Consistency validation
                 E_calculated = 2 * self.G * (1 + self.nu) # We verify whether the three values given comply with physics.
-                error = abs(self.E - E_calculated) / self.E
+                if self.E == 0.0:
+                    raise ValueError(f"Review inputs in material '{self.mid}'\nE must be greater than zero.")
+                error = abs(self.E - E_calculated) / abs(self.E)
                 
                 
                 if error > 0.05: # If the error is greater than 5%, it´s notified (engineering tolerance).
@@ -128,6 +148,15 @@ class IsotropicMaterial(Material):
                         f"        User input E:               {self.E:.2e}\n"
                         f"        Difference is > 5% ({error:.1%}). Review material inputs."
                     )
+
+            if self.E <= 0.0 or self.G <= 0.0:
+                raise ValueError(f"Material '{self.mid}' requires E > 0 and G > 0.")
+            if not (-1.0 < self.nu <= 0.5):
+                raise ValueError(
+                    f"Material '{self.mid}' requires -1 < nu <= 0.5."
+                )
+            if self.rho is not None and (not np.isfinite(self.rho) or self.rho < 0.0):
+                raise ValueError(f"Material '{self.mid}' requires a finite, non-negative density.")
                     
 
     def __repr__(self):
@@ -160,6 +189,15 @@ class RodProperty(Property):
     J: float     #: Torsion constant (Polar inertia for circulars coordinates)
     C: float     #: Coefficient for calculating torsional stresses
     NSM: float   #: Non-structural mass per unit length
+
+    def __post_init__(self):
+        values = (self.A, self.J, self.C, self.NSM)
+        if not all(np.isfinite(value) for value in values):
+            raise ValueError(f"RodProperty {self.pid} contains non-finite values.")
+        if self.A <= 0.0:
+            raise ValueError(f"RodProperty {self.pid} requires A > 0.")
+        if self.J < 0.0 or self.NSM < 0.0:
+            raise ValueError(f"RodProperty {self.pid} requires J and NSM to be non-negative.")
 # endregion RodProperty(Property)
 
 # region BarProperty(Property)
@@ -186,9 +224,15 @@ class BarProperty(Property):
     stress_points: List[tuple] = field(default_factory=list)
     
     def __post_init__(self):
-        # physical consistency validation (Teorema de ejes paralelos/Mohr)
-        # I1 * I2 must be greater than I12^2 for the section to be physically real.
-        if (self.I1 * self.I2) < (self.I12 ** 2):
+        values = (self.A, self.I1, self.I2, self.J, self.I12, self.K1, self.K2, self.NSM)
+        if not all(np.isfinite(value) for value in values):
+            raise ValueError(f"BarProperty {self.pid} contains non-finite values.")
+        if self.A <= 0.0 or self.I1 <= 0.0 or self.I2 <= 0.0:
+            raise ValueError(f"BarProperty {self.pid} requires A, I1 and I2 to be positive.")
+        if self.J < 0.0 or self.K1 < 0.0 or self.K2 < 0.0 or self.NSM < 0.0:
+            raise ValueError(f"BarProperty {self.pid} requires J, K1, K2 and NSM to be non-negative.")
+        # A positive-definite centroidal inertia tensor requires a strict inequality.
+        if (self.I1 * self.I2) <= (self.I12 ** 2):
             raise ValueError(f"Inconsistent inertial properties in BarProperty with id: {self.pid}")
 # endregion BarProperty(Property)
 
@@ -206,6 +250,8 @@ class ShellProperty(Property):
     mat_id_shear: int = -1   #: Material ID for Transverse Shear (MID3) (Default: same as MID2)
 
     def __post_init__(self):
+        if not np.isfinite(self.t) or self.t <= 0.0:
+            raise ValueError(f"ShellProperty {self.pid} requires a finite thickness t > 0.")
         if self.mat_id_bending == -1:
             self.mat_id_bending = self.mat_id
         if self.mat_id_shear == -1:
@@ -298,6 +344,13 @@ class SinglePointLoad(LoadCase):
     module: float        #: Force module (F, scale factor)
     vector: List[float]  #: Director vector [N1, N2, N3]
     cid: int = 0    #: Coordinate system ID (CID) where the vector is defined. 0=Global.
+
+    def __post_init__(self):
+        vector = np.asarray(self.vector, dtype=float)
+        if vector.shape != (3,) or not np.all(np.isfinite(vector)):
+            raise ValueError("FORCE direction must contain three finite components.")
+        if not np.isfinite(self.module):
+            raise ValueError("FORCE magnitude must be finite.")
 # endregion SinglePointLoad(LoadCase) (FORCE)
 
 # region SinglePointMoment(LoadCase) (MOMENT)
@@ -312,6 +365,13 @@ class SinglePointMoment(LoadCase):
     module: float        #: Moment module (M, scale factor)
     vector: List[float]  #: Director vector [N1, N2, N3]
     cid: int = 0         #: Coordinate system ID (CID) where the vector is defined. 0=Global.
+
+    def __post_init__(self):
+        vector = np.asarray(self.vector, dtype=float)
+        if vector.shape != (3,) or not np.all(np.isfinite(vector)):
+            raise ValueError("MOMENT direction must contain three finite components.")
+        if not np.isfinite(self.module):
+            raise ValueError("MOMENT magnitude must be finite.")
 # endregion SinglePointMoment(LoadCase) (MOMENT)
 
 # endregion LOADS Classes
@@ -336,6 +396,15 @@ class SPCConstraint(Constraint):
     node_id: int        #: Grid ID (Gi)
     components: str     #: Componentes restringidas (ej. "123456" o "3")
     value: float = 0.0  #: Enforced displacement (Di). Default=0.0 (empotramiento).
+
+    def __post_init__(self):
+        components = str(self.components)
+        if not components or any(component not in "123456" for component in components):
+            raise ValueError(f"Invalid SPC components '{self.components}'.")
+        if len(set(components)) != len(components):
+            raise ValueError(f"Repeated SPC components in '{self.components}'.")
+        if not np.isfinite(self.value):
+            raise ValueError("SPC enforced displacement must be finite.")
 # endregion SPCConstraint
 
 # endregion Constraints
@@ -364,6 +433,44 @@ class FEMModel:
 
         # --- PARÁMETROS GLOBALES DE NASTRAN ---
         self.k6rot: float = 0.0                     #: Factor de rigidez de drilling (PARAM, K6ROT)
+        self.active_subcase_id: Optional[int] = None
+        self.active_load_sid: Optional[int] = None
+        self.active_spc_sid: Optional[int] = None
+
+    def validate(self, require_elements: bool = True) -> None:
+        """Validate references and finite geometry before matrix assembly."""
+        if require_elements and not self.nodes:
+            raise ValueError("The FEM model does not contain any GRID nodes.")
+        if require_elements and not self.elements:
+            raise ValueError("The FEM model does not contain supported finite elements.")
+        for node in self.nodes.values():
+            coords = node.get_coords()
+            if not np.all(np.isfinite(coords)):
+                raise ValueError(f"Node {node.nid} contains non-finite global coordinates.")
+            transform = np.asarray(node.dof_transform, dtype=float)
+            if transform.shape != (3, 3) or not np.all(np.isfinite(transform)):
+                raise ValueError(f"Node {node.nid} has an invalid CD transformation.")
+            if not np.allclose(transform @ transform.T, np.eye(3), atol=1e-10):
+                raise ValueError(f"Node {node.nid} CD transformation is not orthonormal.")
+        for element in self.elements.values():
+            if element.prop_id not in self.properties:
+                raise ValueError(f"Element {element.eid} references missing property {element.prop_id}.")
+            missing_nodes = [nid for nid in element.nodes if nid not in self.nodes]
+            if missing_nodes:
+                raise ValueError(f"Element {element.eid} references missing nodes {missing_nodes}.")
+            prop = self.properties[element.prop_id]
+            for attribute in ("mat_id", "mat_id_bending", "mat_id_shear"):
+                mid = getattr(prop, attribute, None)
+                if mid is not None and mid not in self.materials:
+                    raise ValueError(f"Property {prop.pid} references missing material {mid}.")
+        for load in self.loads:
+            if load.appnode_id not in self.nodes:
+                raise ValueError(f"Load SID {load.sid} references missing node {load.appnode_id}.")
+        for constraint in self.constraints:
+            if constraint.node_id not in self.nodes:
+                raise ValueError(
+                    f"Constraint SID {constraint.sid} references missing node {constraint.node_id}."
+                )
 
     def get_node(self, node_id: int) -> Node:
         """

@@ -43,7 +43,7 @@ class CTRIA3ElementSolver:
     # Global Local Vector indices: 
     # Node 1: 0-5, Node 2: 6-11, Node 3: 12-17
     
-    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None, k6rot: float = 0.0):
+    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None, k6rot: float = 0.0, theta: float = 0.0):
         """
         @brief Initialize the CTRIA3 Element Solver.
         @param mat_bending Optional material for bending stiffness (if different from membrane).
@@ -53,6 +53,7 @@ class CTRIA3ElementSolver:
         self.node3 = node3
         self.prop = prop
         self.k6rot = k6rot
+        self.theta = float(theta)
         self.mat = mat # MID1
         
         # Use bending material if provided, otherwise use the same as membrane
@@ -106,12 +107,20 @@ class CTRIA3ElementSolver:
         v13 = self.n3_coords - self.n1_coords
 
         # 1. Eje X Local: Directamente del Nodo 1 al Nodo 2
-        vx = v12 / np.linalg.norm(v12)
+        length_12 = np.linalg.norm(v12)
+        if length_12 < 1e-12:
+            raise ValueError(f"Zero length edge in CTRIA3: Nodes {self.node1.nid}-{self.node2.nid}")
+        vx = v12 / length_12
 
         # 2. Eje Z Local (Normal): Regla de la mano derecha (X cruz v13)
         # Esto define físicamente hacia dónde mira la cara superior (Top Face / Z1)
         vz_cross = np.cross(vx, v13)
-        vz = vz_cross / np.linalg.norm(vz_cross)
+        normal_norm = np.linalg.norm(vz_cross)
+        if normal_norm < 1e-12:
+            raise ValueError(
+                f"Zero area triangle: Nodes {self.node1.nid}, {self.node2.nid}, {self.node3.nid}"
+            )
+        vz = vz_cross / normal_norm
 
         # 3. Eje Y Local: Producto cruzado para cerrar el triedro (Z cruz X)
         vy = np.cross(vz, vx)
@@ -167,7 +176,7 @@ class CTRIA3ElementSolver:
 
         # --- COMPORTAMIENTO A CORTANTE TRANSVERSAL (MID3) ---
         E_s, nu_s = self.mat_shear.E, self.mat_shear.nu
-        G_c = E_s / (2.0 * (1.0 + nu_s)) # Deducción del módulo G para material isótropo
+        G_c = getattr(self.mat_shear, 'G', E_s / (2.0 * (1.0 + nu_s)))
         k_shear = 5.0 / 6.0              # Factor de corrección de Mindlin
         factor_c = k_shear * G_c * t
         
@@ -229,6 +238,18 @@ class CTRIA3ElementSolver:
             B_c[1, col+1] = -N[i]
 
         return B_m, B_f, B_c, detJ
+
+    def _get_B_bending_Nastran(self):
+        return self._get_B_matrices_isoparametricas()[1]
+
+    def _get_B_shear_Nastran(self, *_natural_coordinates):
+        return self._get_B_matrices_isoparametricas()[2]
+
+    def _get_D_bending(self):
+        return self._get_matrices_constitutivas()[1]
+
+    def _get_D_shear(self):
+        return self._get_matrices_constitutivas()[2]
 
     def _build_local_stiffness(self) -> np.ndarray:
         """
@@ -312,7 +333,8 @@ class CTRIA3ElementSolver:
         @brief Computes K_global = T.T * K_local * T
         """
         K_loc = self._build_local_stiffness()
-        return self.T.T @ K_loc @ self.T
+        stiffness = self.T.T @ K_loc @ self.T
+        return 0.5 * (stiffness + stiffness.T)
 
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
@@ -333,6 +355,19 @@ class CTRIA3ElementSolver:
         strains = B_m @ u_mem 
         stresses = D_m @ strains 
         sig_x, sig_y, tau_xy = stresses
+
+        angle = np.radians(self.theta)
+        cosine, sine = np.cos(angle), np.sin(angle)
+
+        def rotate_symmetric(x_value, y_value, xy_value):
+            return (
+                cosine**2*x_value + sine**2*y_value + 2*cosine*sine*xy_value,
+                sine**2*x_value + cosine**2*y_value - 2*cosine*sine*xy_value,
+                -cosine*sine*x_value + cosine*sine*y_value
+                + (cosine**2-sine**2)*xy_value,
+            )
+
+        sig_x, sig_y, tau_xy = rotate_symmetric(sig_x, sig_y, tau_xy)
         
         '''        
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
@@ -352,10 +387,12 @@ class CTRIA3ElementSolver:
             moments = D_f @ kappa
             # INVERSIÓN DE SIGNOS PARA COINCIDIR CON NASTRAN
             m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
+            m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
             gamma_s = B_c @ u_bend_RM
             shear_forces = D_c @ gamma_s
             q_x, q_y = shear_forces[0], shear_forces[1]
+            q_x, q_y = cosine*q_x + sine*q_y, -sine*q_x + cosine*q_y
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             
@@ -389,9 +426,13 @@ class CTRIA3ElementSolver:
 
             # Top Fiber (Z1)
             'stress_top_fiber_x': sig_x_top, 'stress_top_fiber_y': sig_y_top, 'tau_top_fiber_xy': tau_xy_top,
+            'stress_fiber_top_x': sig_x_top, 'stress_fiber_top_y': sig_y_top,
+            'stress_z1_fiber_x': sig_x_top, 'stress_z1_fiber_y': sig_y_top, 'tau_z1_fiber_xy': tau_xy_top,
             'von_mises_top': vm_top, 'major_principal_top': s_maj_top, 'minor_principal_top': s_min_top,
 
             # Bottom Fiber (Z2)
             'stress_bot_fiber_x': sig_x_bot, 'stress_bot_fiber_y': sig_y_bot, 'tau_bot_fiber_xy': tau_xy_bot,
+            'stress_fiber_bot_x': sig_x_bot, 'stress_fiber_bot_y': sig_y_bot,
+            'stress_z2_fiber_x': sig_x_bot, 'stress_z2_fiber_y': sig_y_bot, 'tau_z2_fiber_xy': tau_xy_bot,
             'von_mises_bot': vm_bot, 'major_principal_bot': s_maj_bot, 'minor_principal_bot': s_min_bot
         }
