@@ -158,7 +158,7 @@ def run_case_51():
 
 def run_case_52():
     print("--- CASE 52 ---")
-    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_52\draft_ej52_k_pure_flex_mid3_0_k6rot_0_int_completa_python.csv"
+    output_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_52\draft_ej52_k_pure_flex_mid3_0_k6rot_0_int_completa_python_CAMBIO2.csv"
     
     # 1. Definir los Nodos (Cuadrado 2x2 en plano XY)
     n1 = MockNode(1, [0.1, 0.2, 1.0])

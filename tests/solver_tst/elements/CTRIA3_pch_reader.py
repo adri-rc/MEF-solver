@@ -104,9 +104,9 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
 # EJECUCIÓN PRINCIPAL
 # ==========================================
 
-input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_46\ej46_ksolution_k6rot_100.pch"
-output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_46\ej46_ksolution_k6rot_100_Nastran.csv"
-CASE = 'CTRIA' # 'CTRIA' or 'CQUAD'
+input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_52\ej52_k_pure_flex_mid3_0_k6rot_0.pch"
+output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_52\ej52_k_pure_flex_mid3_0_k6rot_0_Nastran.csv"
+CASE = 'CQUAD' # 'CTRIA' or 'CQUAD'
 
 
 # ==========================================
@@ -121,8 +121,11 @@ if __name__ == "__main__":
     else:
         raise ValueError('¿Es un "CTRIA" o un "CQUAD" ?')
     
-    # 1. Leemos la matriz Global de Rigidez (KAAX) asumiendo 3 nudos
+    # 1. Leemos la matriz Global de Rigidez (KAAX)
     K_global_nastran = leer_dmig_pch(archivo_punch, nombre_matriz='KAAX', num_nudos=nodes_num)
     
     # 2. Exportamos a CSV
     exportar_matriz_pch_csv(K_global_nastran, num_nudos=nodes_num, nombre_archivo=output_K_csv_file_path)
+
+
+    

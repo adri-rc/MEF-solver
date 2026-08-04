@@ -186,8 +186,8 @@ class CQUAD4ElementSolver:
             # kappa_y = -d(th_x)/dy
             # kappa_xy = d(th_y)/dy - d(th_x)/dx
             B_b[0, 3*i + 2] = dN_dx[i]   # kappa_x depende de th_y
-            B_b[1, 3*i + 1] = -dN_dy[i]  # kappa_y depende de -th_x
-            B_b[2, 3*i + 1] = -dN_dx[i]  # kappa_xy depende de -th_x
+            B_b[1, 3*i + 1] = dN_dy[i]  #antes -dN_dy[i]  # kappa_y depende de -th_x
+            B_b[2, 3*i + 1] = dN_dx[i]  #antes -dN_dx[i]  # kappa_xy depende de -th_x
             B_b[2, 3*i + 2] = dN_dy[i]   # kappa_xy depende de th_y
             
         # 3. B_shear (2 x 12)
@@ -198,7 +198,7 @@ class CQUAD4ElementSolver:
             B_s[0, 3*i]     = dN_dx[i]
             B_s[0, 3*i + 2] = N[i]
             B_s[1, 3*i]     = dN_dy[i]
-            B_s[1, 3*i + 1] = -N[i]
+            B_s[1, 3*i + 1] = N[i] #Antes: -N[i]
             
         return B_m, B_b, B_s, detJ
 
@@ -234,6 +234,7 @@ class CQUAD4ElementSolver:
         G = E / (2.0 * (1.0 + nu))
         return G * np.eye(2)
 
+    '''
     def _build_local_stiffness_old(self) -> np.ndarray:
         """
         @brief Computes Element Stiffness in Local Coordinates (24x24).
@@ -323,6 +324,7 @@ class CQUAD4ElementSolver:
             K_local[idx, idx] += k_diag_small
             
         return K_local
+        '''
     
     def _build_local_stiffness(self) -> np.ndarray:
         K_local = np.zeros((24, 24))
@@ -406,8 +408,8 @@ class CQUAD4ElementSolver:
             K_plate_RM = K_bend + K_shear
             T_node = np.array([
                 [1.0,  0.0,  0.0],
-                [0.0,  0.0,  1.0],
-                [0.0, -1.0,  0.0]
+                [0.0,  0.0,  -1.0], # Rx = ty  -> th_y = Rx -> No, Nastran Ry = -th_x
+                [0.0,  1.0,  0.0]   # Nastran Rx = th_y
             ])
             T_map = np.kron(np.eye(4), T_node)
             K_plate_nastran = T_map.T @ K_plate_RM @ T_map
@@ -417,11 +419,13 @@ class CQUAD4ElementSolver:
                 for j, c in enumerate(bend_idx):
                     K_local[r, c] += K_plate_nastran[i, j]
                     
+        '''
         # --- 4. STABILIZATION (Drilling DOFs) ---
         k_diag_small = 0.3845 * self.mat_membrane.E * (t**3)
         drill_idx = [5, 11, 17, 23]
         for idx in drill_idx:
             K_local[idx, idx] += k_diag_small
+        '''
             
         return K_local
 
@@ -432,6 +436,7 @@ class CQUAD4ElementSolver:
         K_loc = self._build_local_stiffness()
         return self.T.T @ K_loc @ self.T
 
+    '''
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
         @brief Calculates Membrane Stresses, Moments and Shear Forces at element center.
@@ -491,8 +496,8 @@ class CQUAD4ElementSolver:
             
             T_node = np.array([
                 [1.0,  0.0,  0.0],
-                [0.0,  0.0,  1.0],
-                [0.0, -1.0,  0.0]
+                [0.0,  0.0,  -1.0],
+                [0.0, 1.0,  0.0]
             ])
             T_map = np.kron(np.eye(4), T_node)
             u_bend_RM = T_map @ u_bend_nastran
@@ -554,8 +559,5 @@ class CQUAD4ElementSolver:
             'shear_force_x': q_x,
             'shear_force_y': q_y
         }
-    
+    '''
 
-
-
-    
