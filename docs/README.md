@@ -6,6 +6,7 @@ Esta documentación describe el estado observado en el repositorio el **4 de ago
 
 ## Índice
 
+- [Documento de traspaso](TRASPASO.md): contexto autocontenido para continuar el proyecto en otra sesión u ordenador.
 - [Uso del programa](uso.md): entorno, ejecución, formato de entrada y resultados.
 - [Arquitectura](arquitectura.md): módulos, modelo de datos y flujo del análisis.
 - [Formulación matemática](formulacion.md): ecuaciones, convenciones y formulación de los elementos.
@@ -20,12 +21,12 @@ Esta documentación describe el estado observado en el repositorio el **4 de ago
 | CROD + PROD + MAT1 | Sí | Sí | Sí | Axil y torsión | Unitaria y casos Nastran de extremo a extremo |
 | CBAR + PBAR + MAT1 | Sí | Sí | Sí | Fuerzas de extremo y tensiones simplificadas | Unitaria y casos Nastran de extremo a extremo |
 | CTRIA3 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Amplia comparación de extremo a extremo y de `K_global` |
-| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Parcial | No activa | Pruebas de rigidez parciales; comparación Nastran aún no superada |
+| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Integración global y comparación de los bloques activos de los casos Nastran 51/52 con error normalizado inferior al 3 % |
 | FORCE / MOMENT | Sí | Sí | Sí | En coordenadas globales | Cubierto por pruebas |
 | SPC / SPC1 | Sí | Sí | Sí | Reacciones | Cubierto por pruebas |
 | Sólidos 3D | No | No | No | No | Trabajo futuro |
 
-“Solución global parcial” para CQUAD4 significa que su matriz se ensambla, pero `LinearStaticSolver.solve()` termina llamando al postproceso, que rechaza CQUAD4. Además, la ausencia actual de estabilización *drilling* y los modos espurios de la integración reducida pueden hacer singular el sistema.
+La formulación CQUAD4 sigue en validación: incorpora integración reducida selectiva, estabilización *hourglass* y *drilling*, y ya participa en el postproceso global. La comparación completa depende de la semántica deliberada de sustitución automática de los MID vacíos de `PSHELL`; véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
 
 ## Alcance físico actual
 
