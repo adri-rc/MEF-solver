@@ -13,7 +13,11 @@ Validates the physics of the 4-node Quadrilateral Shell element:
 
 import pytest
 import numpy as np
-from src.solver.elements.cquad4_element import CQUAD4ElementSolver
+from src.solver.elements.cquad4_nastran_element import CQUAD4NastranElementSolver
+from src.solver.elements.cquad4_reissner_mindlin_element import (
+    CQUAD4ReissnerMindlinElementSolver,
+)
+
 
 # --- MOCKS (Data Objects Simulation) ---
 class MockNode:
@@ -124,7 +128,7 @@ def element_setup(request):
     prop = MockProp(t=data["thick"], mat_bending=mat_bend)
     
     # 4. Instanciar Solver
-    solver = CQUAD4ElementSolver(
+    solver = CQUAD4NastranElementSolver(
         n1, n2, n3, n4, prop, mat_mem, mat_bending=mat_bend, k6rot=100.0
     )
     
@@ -150,6 +154,55 @@ def test_stiffness_symmetry(element_setup):
     
     np.testing.assert_allclose(K, K.T, rtol=1e-5, atol=1e-8, 
                                err_msg="La matriz de rigidez no es simétrica.")
+
+def test_nastran_hourglass_eigenvalues_on_square():
+    """The two bilinear membrane modes match the Nastran E/3 result."""
+    nodes = [
+        MockNode(1, [0.0, 0.0, 0.0]),
+        MockNode(2, [2.0, 0.0, 0.0]),
+        MockNode(3, [2.0, 2.0, 0.0]),
+        MockNode(4, [0.0, 2.0, 0.0]),
+    ]
+    young_modulus = 210000.0
+    element = CQUAD4NastranElementSolver(
+        *nodes,
+        MockProp(1.0),
+        MockMat(young_modulus, 0.3),
+        mat_bending=MockMat(0.0, 0.3),
+        mat_shear=MockMat(0.0, 0.3),
+    )
+    assert element.formulation == "nastran"
+
+    membrane_dofs = [0, 1, 6, 7, 12, 13, 18, 19]
+    membrane = element._build_local_stiffness()[np.ix_(membrane_dofs, membrane_dofs)]
+    eigenvalues = np.linalg.eigvalsh(membrane)
+    np.testing.assert_allclose(
+        eigenvalues[3:5], [young_modulus / 3.0] * 2, rtol=1e-12
+    )
+
+
+def test_reissner_mindlin_is_an_independent_full_integration_formulation():
+    nodes = [
+        MockNode(1, [0.0, 0.0, 0.0]),
+        MockNode(2, [2.0, 0.0, 0.0]),
+        MockNode(3, [2.2, 1.5, 0.0]),
+        MockNode(4, [0.1, 1.8, 0.0]),
+    ]
+    prop = MockProp(0.2)
+    material = MockMat(210000.0, 0.3)
+    nastran = CQUAD4NastranElementSolver(*nodes, prop, material, k6rot=100.0)
+    mindlin = CQUAD4ReissnerMindlinElementSolver(
+        *nodes, prop, material, k6rot=100.0
+    )
+
+    assert nastran.formulation == "nastran"
+    assert mindlin.formulation == "reissner-mindlin"
+    np.testing.assert_allclose(
+        mindlin.get_stiffness_matrix(), mindlin.get_stiffness_matrix().T
+    )
+    assert not np.allclose(
+        mindlin.get_stiffness_matrix(), nastran.get_stiffness_matrix()
+    )
 
 def test_rigid_body_modes(element_setup):
     """Valida que existen 6 modos de cuerpo rígido (Autovalores cercanos a 0)."""
@@ -259,7 +312,7 @@ def test_constant_strain_patch_x_tension():
     
     prop = MockProp(t=1.0)
     mat = MockMat(E=1000.0, nu=0.3)
-    elem = CQUAD4ElementSolver(n1, n2, n3, n4, prop, mat)
+    elem = CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
     
     eps_x = 0.001
     eps_y = -mat.nu * eps_x
@@ -293,7 +346,7 @@ def test_degenerate_element_error():
     mat = MockMat(E=1e5, nu=0.3)
     
     with pytest.raises(ValueError, match="Degenerate CQUAD4"):
-        CQUAD4ElementSolver(n1, n2, n3, n4, prop, mat)
+        CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
 
 def test_negative_jacobian_error():
     """@test Detecta un cuadrilátero tipo 'pajarita' (bow-tie) mal numerado."""
@@ -307,7 +360,7 @@ def test_negative_jacobian_error():
     
     # El eje Z y X se crearán bien (diagonales no paralelas), 
     # pero el _get_jacobian fallará en la cuadratura.
-    elem = CQUAD4ElementSolver(n1, n2, n3, n4, prop, mat)
+    elem = CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
     
     with pytest.raises(ValueError, match="Negative or zero Jacobian"):
         elem.get_stiffness_matrix()

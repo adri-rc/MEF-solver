@@ -1,6 +1,6 @@
 # Documento de traspaso
 
-Fecha de referencia: **4 de agosto de 2026**  
+Fecha de referencia: **5 de agosto de 2026**
 Repositorio: **MEF-solver**  
 Rama: **`feat/ctria3`**  
 Commit verificado: **`a374c52` (`feat(review_fixes): main workflow refactors and fixes`)**
@@ -44,7 +44,7 @@ El commit de referencia está en `origin/feat/ctria3` y el árbol estaba limpio 
 
 ```text
 python -m pytest -q
-294 passed in 3.69s
+298 passed in 1.88s
 
 python -m compileall -q src tests main.py
 sin errores
@@ -66,7 +66,7 @@ La ejecución generó el informe `output/Ej1_v1.rpt` y recuperó correctamente d
 | CROD | Rigidez, ensamblaje y recuperación de tensión validados |
 | CBAR | Orientación, offsets, releases, acoplamiento `I12`, corrección de Timoshenko y resultados de extremos implementados |
 | CTRIA3 | Membrana, flexión, cortante y recuperación de tensiones integrados; quedan discrepancias numéricas concretas por estudiar |
-| CQUAD4 | Rigidez y postproceso global integrados; estabilización y SRI implementadas; validación Nastran activa con error normalizado inferior al 3 % en el bloque comparable |
+| CQUAD4 | Formulaciones Nastran y Reissner-Mindlin separadas; postproceso integrado; casos DMIG 51-54 automatizados |
 | Case Control | Selección de un subcase, `LOAD`, `SPC`, `LOAD` combinado y `SPCADD` implementados |
 | Sistemas de coordenadas | Transformaciones de `FORCE`/`MOMENT`, `GRID.CD`, `GRID.PS`, `THETA/MCID` y orientación de `CBAR` implementadas |
 | Reacciones | Incluido el caso de modelos totalmente restringidos |
@@ -74,16 +74,16 @@ La ejecución generó el informe `output/Ej1_v1.rpt` y recuperó correctamente d
 
 ### Situación específica de CQUAD4
 
-La implementación actual usa integración reducida selectiva para cortantes relevantes, una estabilización pequeña de *hourglass* y estabilización de la rotación *drilling*. En los casos unitarios estabilizados presenta exactamente seis modos rígidos.
+La implementación activa usa deformación uniforme y modos bilineales con métrica de líneas medias, integración reducida estabilizada para cortante, `K6ROT` y una corrección de equilibrio para elementos alabeados. La formulación Reissner-Mindlin clásica vive en una clase independiente.
 
-La comparación automatizada con los casos originales 51 y 52 de Nastran mide el bloque activo comparable y exige un error relativo de Frobenius inferior al 3 %; el valor observado es aproximadamente **2,725 %**. No se afirma igualdad término a término con Nastran.
+La comparación automatizada obtiene **0,152382 %** en los casos 51 y 52, **0,372560 %** en el caso 53 y **2,150270 %** en la matriz completa del caso 54 alabeado. Los casos planos exigen menos del 1 % y el alabeado menos del 3 %. No se afirma igualdad término a término con el código propietario de Nastran.
 
 La matriz completa del caso 51 presenta una discrepancia aproximada del **50,26 %** porque el archivo representa una configuración de membrana pura para Nastran, mientras que la decisión vigente de sustituir automáticamente los MID vacíos de `PSHELL` activa contribuciones adicionales en MEF-solver. Por esa razón, mientras se mantenga esa decisión, la comparación correcta es el bloque de membrana activo y no la matriz completa.
 
 ### Limitaciones conocidas que no bloquean la suite
 
 - Los casos CTRIA3 36, 38, 44, 45, 48 y 49 conservan diferencias en magnitudes de flexión o reacciones que requieren un estudio numérico dedicado.
-- La formulación CQUAD4 se aproxima a los resultados de Nastran, pero aún no replica exactamente una formulación comercial concreta como QUAD4/MITC4.
+- La reconstrucción CQUAD4 está contrastada con cuatro DMIG, pero el caso alabeado aún conserva un error del 2,15 % y necesita más geometrías independientes.
 - El parser resuelve un único subcase seleccionado por ejecución; todavía no devuelve ni resuelve todos los subcases de un modelo en una sola llamada.
 - Quedan campos de propiedades y elementos shell pendientes de tratamiento físico completo, entre ellos `12I/T³`, `TS/T`, `Z1/Z2`, `MID4`, `NSM`, `ZOFFS`, `TFLAG` y espesores nodales `Ti`.
 - El informe de salida puede mejorar la nomenclatura y separación de resultados por tipo de elemento.
@@ -124,7 +124,9 @@ El commit `a374c52` modifica 27 archivos, con 1797 inserciones y 189 eliminacion
 | `src/solver/transformations.py` | Valida vectores de orientación nulos o no finitos. |
 | `src/solver/elements/bar_element.py` | Implementa ejes resueltos, offsets rígidos, releases, `I12`, corrección de Timoshenko y recuperación ampliada de tensiones. |
 | `src/solver/elements/ctria3_element.py` | Mejora validaciones geométricas, simetría, uso de `G`, rotación de resultados y compatibilidad de nombres `Z1/Z2`. |
-| `src/solver/elements/cquad4_element.py` | Completa tensiones y postproceso, corrige cinemática, aplica integración reducida selectiva y estabilizaciones, y añade comprobaciones geométricas y rotación de resultados. |
+| `src/solver/elements/cquad4_element.py` | Base compartida de geometría, constitutivas, `K6ROT` y recuperación de resultados. |
+| `src/solver/elements/cquad4_nastran_element.py` | Rigidez Nastran reconstruida, modos bilineales y corrección de alabeo. |
+| `src/solver/elements/cquad4_reissner_mindlin_element.py` | Formulación clásica Reissner-Mindlin con integración completa. |
 
 ### Pruebas
 
@@ -132,10 +134,10 @@ El commit `a374c52` modifica 27 archivos, con 1797 inserciones y 189 eliminacion
 |---|---|
 | `tests/preprocessing_tst/test_case_control_and_coordinates.py` | Cubre subcases, combinaciones `LOAD`, `SPCADD`, `CID/CD` y `GRID.PS`. |
 | `tests/solver_tst/test_solver_regressions.py` | Cubre reacciones con restricción total, conflictos SPC y postproceso global CQUAD4. |
-| `tests/solver_tst/elements/test_cquad4_nastran_matrix.py` | Compara las matrices de los casos Nastran 51 y 52 con el criterio normalizado vigente. |
+| `tests/solver_tst/elements/test_cquad4_nastran_matrix.py` | Compara automáticamente las DMIG Nastran de los casos 51 a 54. |
 | `tests/solver_tst/elements/CQUAD4Element_test.py` | Comprueba seis modos rígidos y estabilización *drilling*. |
 | `tests/solver_tst/elements/CTRIA3ElementSolver_test.py` | Repara importaciones y compatibilidad de la prueba. |
-| `tests/solver_tst/elements/run_cquad4_validation.py` | Sustituye rutas absolutas locales por rutas relativas al proyecto. |
+| `tests/solver_tst/elements/run_cquad4_validation.py` | Mantiene compatibilidad y delega en la comparación portable de los casos 51-54. |
 | `tests/solver_tst/elements/test_E2E_CTRIA_K_solution.py` | Corrige rutas/literales copiados y evita exportaciones de depuración. |
 | `tests/solver_tst/test_validation_end_to_end.py` | Corrige un literal de referencia copiado. |
 | `tests/solver_tst/test_validation_end_to_end_ctria3.py` | Corrige literales de referencia copiados sin cambiar tolerancias. |
@@ -155,7 +157,7 @@ Los informes generados bajo `output`, como `output/Ej1_v1.rpt`, tampoco son fuen
 Orden propuesto para continuar:
 
 1. **Auditoría numérica de CTRIA3:** estudiar los casos 36, 38, 44, 45, 48 y 49 sin cambiar aún sus tolerancias. Añadir métricas diagnósticas separadas para error absoluto, relativo y magnitudes próximas a cero.
-2. **Consolidar CQUAD4:** documentar y, si se busca mayor coincidencia, implementar una formulación identificable —por ejemplo MITC4 o una formulación de deformaciones asumidas— y compararla con los casos 51/52, pruebas de parche, convergencia, distorsión y alabeo.
+2. **Consolidar CQUAD4:** añadir más casos alabeados y de cortante, pruebas de parche multielemento y convergencia, y estudiar la diferencia residual del caso 54.
 3. **Ampliar validación de CBAR:** crear casos combinados con `I12`, `K1/K2`, offsets y releases, comparados directamente con salidas originales de Nastran.
 4. **Completar parámetros shell:** incorporar progresivamente el efecto físico de los campos pendientes de `PSHELL` y `CQUAD4`, manteniendo la entrada `.dat` compatible y sin convertir lo no implementado en un rechazo general.
 5. **Arquitectura multicaso:** separar modelo base, configuración de cada subcase y resultados para resolver varios subcases en una misma ejecución.

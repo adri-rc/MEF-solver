@@ -1,145 +1,78 @@
 # Estado y validación
 
-## Principio de validación
+## Línea base reproducida
 
-Para un solver de elementos finitos no basta con obtener desplazamientos plausibles. La validación debe separar:
-
-1. geometría y transformación;
-2. funciones de forma, Jacobiano y matrices B;
-3. ley constitutiva;
-4. matriz local;
-5. transformación y ensamblaje global;
-6. imposición de contorno y solución;
-7. reacciones y recuperación de tensiones;
-8. convergencia de malla.
-
-El repositorio ya sigue parcialmente esta estructura mediante pruebas unitarias, *patch tests* y casos comparados con archivos F06/PCH/CSV de MSC Nastran.
-
-## Resultado reproducido en esta auditoría
-
-Fecha: **4 de agosto de 2026**. Entorno: `.venv` incluido en el repositorio.
-
-La ejecución global:
+Fecha: **5 de agosto de 2026**. Entorno: `.venv` del repositorio.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-se detiene durante la colección con tres errores:
-
-1. dos pruebas de `src/preprocessing/deprecated/` importan `src.preprocessing.nastran_reader`, aunque el fichero está dentro de `deprecated/`;
-2. `CTRIA3ElementSolver_test.py` importa `ctria3_element_FINALL`, módulo que ya no existe en fuentes, aunque queda un `.pyc` antiguo.
-
-Al limitar la ejecución a `tests/` e ignorar ese test CTRIA obsoleto:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest tests -q --ignore=tests/solver_tst/elements/CTRIA3ElementSolver_test.py
-```
-
-el resultado observado fue:
+Resultado:
 
 ```text
-193 passed, 8 failed
+298 passed in 1.88s
 ```
 
-Los ocho fallos son explicables y reproducibles:
+También se ejecutó `python -m compileall -q src tests main.py` sin errores. La
+suite completa queda limpia; ya no es necesario excluir pruebas históricas.
 
-- 7 fallos CQUAD4: `calculate_stresses()` no existe en la clase activa porque su implementación está comentada (seis casos parametrizados y un *patch test*).
-- 1 fallo de datos: el caso 18 se espera en `validation_cases/case_18`, pero está almacenado en `validation_cases/case_22/case_18`.
+## Estrategia
 
-Por tanto, las 193 pruebas correctas son una señal sólida para el núcleo activo, pero no equivalen a una suite global limpia.
+La validación distingue geometría, matrices constitutivas, rigidez elemental,
+transformación global, ensamblaje, condiciones de contorno, solución,
+reacciones y recuperación. Se usan pruebas analíticas, invariantes, *patch
+tests* y comparaciones con F06/PCH/CSV de Nastran.
 
-## Cobertura por componente
+## Cobertura resumida
 
-### Preproceso y modelo de datos
+- preproceso: `GRID`, materiales, propiedades, elementos, `INCLUDE`, Case
+  Control, combinaciones `LOAD`, `SPCADD` y sistemas de coordenadas;
+- núcleo: mapeo de GDL, cuadratura, transformaciones, ensamblaje disperso,
+  singularidades, desplazamientos impuestos y reacciones;
+- CROD/CBAR: rigidez, transformaciones 3D, fuerzas y tensiones;
+- CTRIA3: membrana, flexión, cortante, orientaciones 3D y comparación de
+  matrices globales;
+- CQUAD4: dos formulaciones separadas, postproceso, `K6ROT`, modos rígidos y
+  comparación automática de los casos 51 a 54.
 
-Las pruebas cubren:
+## CQUAD4 frente a Nastran
 
-- creación y consulta de entidades;
-- cierre de constantes elásticas y errores de consistencia;
-- lectura de deck completo y *punch*;
-- `INCLUDE` simples y múltiples;
-- mapeo CROD, CBAR, CTRIA3 y CQUAD4;
-- cargas, restricciones y rechazo de entidades no soportadas;
-- puntos de recuperación PBAR.
-
-Faltan pruebas sobre selección real de SUBCASE/SID, combinaciones de carga, `GRID.PS`, sistemas de coordenadas de cargas y semántica completa de PSHELL.
-
-### Utilidades y solver global
-
-Se prueban:
-
-- mapeo de IDs arbitrarios a GDL;
-- reglas de Gauss de orden 1 a 3;
-- ortogonalidad, conservación de energía y regla de la mano derecha en transformaciones;
-- partición libre/restringida;
-- desplazamientos impuestos;
-- detección de matrices singulares;
-- reacciones y tensiones de CROD/CBAR;
-- ensamblajes rotados y multimaterial.
-
-### CROD y CBAR
-
-Hay ensayos analíticos de rigidez, transformaciones 3D y recuperación. Además, `test_validation_end_to_end.py` declara 18 casos Nastran para barras y estructuras mixtas. Uno de esos casos no se ejecuta por la ubicación incorrecta del caso 18; los restantes pasaron en la ejecución auditada.
-
-### CTRIA3
-
-`test_validation_end_to_end_ctria3.py` declara 22 casos que incluyen:
-
-- membrana, flexión y cortante;
-- planos XY, XZ, YZ y planos 3D arbitrarios;
-- mallas de varios elementos;
-- materiales múltiples y elementos distorsionados;
-- distintos valores de K6ROT;
-- una estructura mixta CTRIA3/CBAR.
-
-Hay además 10 comparaciones explícitas de `K_global` con matrices CSV exportadas de Nastran. Estos casos pasaron en la ejecución auditada. No obstante, el test unitario histórico más extenso de CTRIA3 no se recoge por su import obsoleto; debe actualizarse para que valide la clase que realmente usa el solver.
-
-## Estado de CQUAD4
-
-Las pruebas activas que no dependen de recuperación de tensiones sí pasan para seis geometrías: cuadrado, trasladado, distorsionado, con materiales desacoplados, con gran *offset* de coordenadas y ligeramente alabeado. Comprueban forma `24 x 24`, simetría, ejes locales, desacoplamiento membrana/flexión y errores geométricos.
-
-Sin embargo, la prueba denominada `test_rigid_body_modes` solo verifica que los seis autovalores menores sean pequeños; no verifica que existan **exactamente** seis. Para el cuadrado canónico auditado se observaron 12 autovalores bajo el umbral usado por el propio test. La prueba debe comprobar nulidad, modos físicos y modos de energía cero por separado.
-
-### Comparación exploratoria con matrices Nastran
-
-Se regeneró la matriz del código actual con la geometría y propiedades de los scripts de los casos 51 y 52, y se comparó directamente con los CSV Nastran de igual orden de GDL.
-
-| Caso | Bloque aislado | Error relativo de Frobenius | Mediana del error relativo en entradas Nastran no nulas |
+| Caso | Comparación | Error de Frobenius | Criterio |
 |---|---|---:|---:|
-| 51 | Membrana | 12.56 % | 12.80 % |
-| 52 | Flexión | 78.02 % | 61.42 % |
+| 51 | bloque de membrana | `0.152382 %` | `< 1 %` |
+| 52 | bloque de flexión | `0.152382 %` | `< 1 %` |
+| 53 | bloque activo combinado | `0.372560 %` | `< 1 %` |
+| 54 | matriz global completa `24 x 24` | `2.150270 %` | `< 3 %` |
 
-Estas cifras son diagnósticas, no criterios finales de aceptación. Confirman que la matriz CQUAD4 actual todavía no reproduce la referencia, especialmente en flexión. El script `run_cquad4_validation.py` exporta CSV manualmente y contiene rutas absolutas; la comparación debe convertirse en pruebas automáticas, portables y sin escritura sobre los datos de referencia.
+El caso 54 es inclinado y alabeado: todos los GDL globales reciben
+contribuciones. La comparación no elimina filas ni columnas y verifica la
+corrección de fuerzas y momentos entre el plano medio y los nodos reales. El
+resultado cumple el umbral del proyecto, pero debe describirse como
+coincidencia aproximada, no como identidad numérica.
 
-## Criterios recomendados
+El detalle de formulación, resultados y fuentes está en [cquad4.md](cquad4.md).
 
-Para cada elemento nuevo o corregido:
+## Criterios para nuevas capacidades
 
-- simetría: `||K-Kᵀ|| / ||K||` cercana a precisión de máquina;
-- invariancia ante traslación y rotación del elemento;
-- exactamente los modos de cuerpo rígido esperados después de tratar *drilling*;
-- energía no negativa para desplazamientos arbitrarios;
-- *patch test* de deformación constante;
-- reproducción analítica en geometrías regulares;
+- simetría de `K` próxima a precisión de máquina;
+- invariancia ante traslación y rotación rígida;
+- número y forma de los modos de cuerpo rígido esperados;
+- energía no negativa;
+- *patch test* y solución analítica en geometrías regulares;
 - sensibilidad controlada a distorsión y espesor;
-- comparación independiente con Nastran u otra referencia;
-- convergencia de desplazamientos y energía al refinar malla;
-- equilibrio global: suma de cargas y reacciones dentro de tolerancia.
+- comparación independiente con tolerancias justificadas;
+- convergencia con refinamiento de malla;
+- equilibrio entre cargas y reacciones.
 
-Para comparar coeficientes de matrices conviene usar simultáneamente tolerancia absoluta y relativa:
+Las entradas próximas a cero deben evaluarse con tolerancia absoluta. Para una
+matriz completa se informa además del máximo absoluto, pero el criterio global
+principal es el error relativo de Frobenius.
 
-```python
-np.testing.assert_allclose(K_python, K_ref, rtol=rtol, atol=atol)
-```
+## Trabajo pendiente de validación
 
-Los valores cercanos a cero deben evaluarse con `atol`; aplicar solo error relativo produce cocientes sin significado. También conviene comparar bloques físicos separados antes de comparar la matriz completa.
-
-## Acciones inmediatas sobre la suite
-
-1. Añadir configuración pytest para recoger únicamente `tests/`.
-2. Actualizar o retirar imports de módulos obsoletos.
-3. Mover el caso 18 a la ruta declarada o corregir su `folder`.
-4. Convertir casos 51/52 en tests CQUAD4 automáticos.
-5. Evitar que los tests escriban CSV dentro de `validation_cases`.
-6. Registrar tolerancias y origen/versionado de cada referencia Nastran.
+1. Añadir más DMIG CQUAD4 alabeadas y con cortante transversal no nulo.
+2. Ampliar los estudios de convergencia y *patch tests* multielemento.
+3. Documentar la versión exacta de Nastran que genera cada referencia.
+4. Consolidar los casos CTRIA3 con diferencias pequeñas aún conocidas.
+5. Incorporar CI para publicar automáticamente el resultado de la suite.

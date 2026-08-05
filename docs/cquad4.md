@@ -1,127 +1,101 @@
 # Desarrollo y validación de CQUAD4
 
-## Objetivo
+## Estado actual
 
-El CQUAD4 pretende representar una lámina cuadrilateral isoparamétrica de cuatro nodos con membrana, flexión Reissner-Mindlin y cortante transversal. La clase activa es [`CQUAD4ElementSolver`](../src/solver/elements/cquad4_element.py) y produce una matriz `24 x 24`.
+El elemento se mantiene en dos implementaciones independientes:
 
-El elemento está en fase de desarrollo: su ensamblaje existe y varias propiedades algebraicas pasan las pruebas, pero la equivalencia con Nastran, la estabilidad y el postproceso no están cerrados.
+- `CQUAD4NastranElementSolver`: reconstrucción de la rigidez de Nastran y
+  formulación activa en `LinearStaticSolver`;
+- `CQUAD4ReissnerMindlinElementSolver`: formulación isoparamétrica clásica de
+  Reissner-Mindlin con integración completa `2 x 2`.
 
-## Algoritmo implementado
+`CQUAD4ElementBase` contiene únicamente la geometría, el sistema local, las
+matrices constitutivas, `K6ROT` y la recuperación de tensiones comunes. Las dos
+clases producen matrices `24 x 24`, pero no comparten el cálculo de rigidez.
 
-1. Calcula el centro geométrico y un triedro local basado en diagonales y puntos medios.
-2. Proyecta los nodos sobre el plano local `(x, y)`.
-3. Evalúa las cuatro funciones de forma bilineales y sus derivadas naturales.
-4. Construye el Jacobiano `2 x 2`; rechaza determinantes no positivos.
-5. Construye:
-   - `B_m` de tamaño `3 x 8` para membrana;
-   - `B_b` de tamaño `3 x 12` para curvaturas;
-   - `B_s` de tamaño `2 x 12` para cortante transversal.
-6. Integra membrana y flexión con `2 x 2` puntos.
-7. Integra cortante transversal con `1 x 1` puntos.
-8. Mapea `[w, theta_x, theta_y]` a `[Tz, Rx, Ry]` y dispersa los bloques en `24 x 24`.
-9. Transforma la matriz local a global con `Tᵀ K T`.
+## Formulación Reissner-Mindlin
 
-Existe una opción `use_membrane_SRI` que integra las deformaciones normales con `2 x 2` y el cortante en el plano con `1 x 1`. El solver global no expone esta opción y utiliza siempre `False`.
+La implementación clásica integra con una regla `2 x 2` los bloques de
+membrana, flexión y cortante transversal. Es una referencia teórica útil y no
+pretende reproducir las decisiones internas de Nastran. Como es habitual en un
+elemento de bajo orden, puede presentar bloqueo de cortante en placas delgadas.
 
-## Qué está verificado
+## Reconstrucción Nastran
 
-- tamaño de matriz;
-- simetría dentro de las tolerancias actuales;
-- triedro local en geometría canónica;
-- ausencia de acoplamiento artificial entre los bloques de membrana y placa en coordenadas locales;
-- uso de material MID1/MID2 separado;
-- rechazo de geometría degenerada y numeración con Jacobiano no positivo;
-- ejecución de la rigidez en elementos trasladados, distorsionados y ligeramente alabeados.
+Para elementos planos, la ruta Nastran combina:
 
-## Bloqueos actuales
+1. deformación uniforme evaluada en el centro;
+2. dos modos bilineales ortogonales a traslaciones y campos lineales;
+3. estabilización *hourglass* basada en las dos líneas medias del
+   cuadrilátero, con coeficiente isotrópico `E/12`;
+4. el mismo operador para membrana y curvaturas, con el mapeo
+   `p = [theta_y, -theta_x]`;
+5. integración reducida del cortante transversal más una estabilización suave;
+6. penalización *drilling* opcional cuando `K6ROT > 0`.
 
-### 1. Recuperación de tensiones desactivada
+En elementos alabeados se forma primero la rigidez sobre el plano que pasa por
+los puntos medios de las aristas. Después se aplica una transformación de
+equilibrio que traslada los resultantes a los nodos reales:
 
-`calculate_stresses()` está dentro de un bloque de cadena multilínea y no forma parte de la clase ejecutable. `LinearStaticSolver.reactions_and_stresses()` permite solo CROD, CBAR y CTRIA3, por lo que cualquier modelo con CQUAD4 falla después de resolver los desplazamientos.
+- las fuerzas de membrana se resuelven sobre las dos aristas incidentes y
+  generan fuerzas transversales autoequilibradas (*kick-off forces*);
+- los momentos se hacen tangentes al plano nodal y su componente normal se
+  equilibra mediante fuerzas en el plano.
 
-El código comentado puede servir como borrador, pero antes de activarlo hay que hacer coincidir sus convenciones de giro y signos con las utilizadas realmente en `_build_local_stiffness()`.
+Si `W` transforma los resultantes del plano medio, la operación implementada es:
 
-### 2. Rotación drilling sin rigidez
+```text
+K_warped = W K_mean W^T
+K_global = T^T K_warped T
+```
 
-Los índices locales `[5, 11, 17, 23]` no reciben rigidez. Una penalización diagonal antigua permanece comentada y no usa `PARAM,K6ROT`. Esto introduce mecanismos cuando `Rz` no está restringido y no reproduce la estrategia usada en CTRIA3.
+## Validación frente a DMIG
 
-La solución no debe ser simplemente imponer una diagonal arbitraria. Debe elegirse y documentarse una formulación consistente —penalización basada en macrorrotación, *drilling* compatible o restricción controlada— y estudiar su influencia en energía y condicionamiento.
+La prueba `test_cquad4_nastran_matrix.py` lee cada deck, ensambla la matriz y la
+compara con la DMIG `KAAX` exportada a CSV. Los casos planos comparan sus GDL
+físicamente activos con tolerancia del `1 %`; el caso 54 compara los 24 GDL con
+tolerancia del `3 %`, porque incluye la reconstrucción pública de alabeo y no
+el código propietario de la versión comercial usada para generar la DMIG.
 
-### 3. Modos de energía cero
+Error relativo de Frobenius observado:
 
-En el cuadrado canónico se midieron 12 autovalores menores que `max(abs(K))*1e-9`. La prueba actual solo comprueba que al menos los seis menores sean pequeños. Además de los GDL *drilling*, la integración reducida de cortante puede introducir modos espurios (*hourglass*).
+| Caso | Geometría y bloque | Nastran | Reissner-Mindlin |
+|---|---|---:|---:|
+| 51 | distorsionada, membrana | `0.152382 %` | `12.557935 %` |
+| 52 | distorsionada, flexión | `0.152382 %` | `12.557935 %` |
+| 53 | plana sesgada, membrana + flexión | `0.372560 %` | `25.279406 %` |
+| 54 | inclinada y alabeada, matriz `24 x 24` | `2.150270 %` | `45.074180 %` |
 
-Se necesita inspeccionar los autovectores y clasificar:
+Sin la corrección de alabeo, el error Nastran del caso 54 era `38.551436 %`.
+La corrección lo reduce a `2.150270 %`; por tanto, el caso queda cubierto por el
+criterio de aceptación del `3 %`, aunque no existe igualdad término a término.
 
-- 6 movimientos rígidos;
-- modos asociados a `Rz` sin rigidez;
-- modos espurios de cortante/flexión;
-- posibles duplicidades dependientes de la tolerancia.
+La comparación puede reproducirse con:
 
-### 4. Diferencia respecto a Nastran
+```powershell
+.\.venv\Scripts\python.exe tests/solver_tst/elements/run_cquad4_nastran_comparison.py
+```
 
-La comparación exploratoria dio un error relativo de Frobenius del 12.56 % en membrana para el caso 51 y del 78.02 % en flexión para el caso 52. Deben aislarse las causas por bloque, no ajustarse coeficientes globales a ciegas.
+La opción `--export-dir ruta` guarda las matrices calculadas sin modificar las
+referencias de validación.
 
-Hipótesis a contrastar:
+## Fuentes y trazabilidad
 
-- definición exacta de ejes y plano medio en cuadriláteros distorsionados;
-- signos y orden de `Rx/Ry` frente a `theta_x/theta_y`;
-- formulación de curvaturas `B_b`;
-- semántica PSHELL de MID2/MID3 en blanco;
-- integración y formulación específica que emplea el CQUAD4 de Nastran;
-- ausencia de términos de estabilización o mejora contra *locking/hourglass*;
-- efecto de alabeo y proyección a un único plano.
+- R. H. MacNeal, [A simple quadrilateral shell element](https://www.sciencedirect.com/science/article/pii/0045794978900202), *Computers & Structures*, 8(2), 175-183, 1978, DOI `10.1016/0045-7949(78)90020-2`.
+- R. H. MacNeal, [Derivation of element stiffness matrices by assumed strain distributions](https://www.sciencedirect.com/science/article/pii/002954938290262X), *Nuclear Engineering and Design*, 70(1), 3-12, 1982, DOI `10.1016/0029-5493(82)90262-X`.
+- NASA, [nasa/NASTRAN-95](https://github.com/nasa/NASTRAN-95): código histórico público; para CQUAD4 son relevantes `mis/quad4s.f`, `mis/quad4d.f`, `mis/q4bmgs.f`, `mis/q4bmgd.f`, `mis/trplms.f` y `mis/trplmd.f`.
+- B. P. Naganarayana y G. Prathap, [Force and moment corrections for the warped four-node quadrilateral plane shell element](https://repository.ias.ac.in/39268/1/138_PUB.pdf), *Computers & Structures*, 33(4), 1107-1115, 1989.
 
-Nastran no tiene por qué usar el mismo elemento bilineal Mindlin básico. La meta del TFM debe expresarse como reproducir casos y tendencias dentro de tolerancias definidas, o documentar conscientemente las diferencias de formulación.
+Las dos publicaciones de MacNeal describen la base conceptual de QUAD4 y las
+deformaciones asumidas. NASTRAN-95 permite rastrear una implementación pública
+histórica, pero no es el código de MSC Nastran actual. La ruta `nastran` de este
+proyecto es, por ello, una reconstrucción contrastada contra DMIG, no una copia
+literal de una formulación comercial propietaria.
 
-### 5. Semántica PSHELL
+## Validación pendiente
 
-El lector convierte MID2/MID3 vacíos a `-1`, pero `ShellProperty.__post_init__()` los reemplaza por otros materiales. En Nastran, un MID vacío puede desactivar el comportamiento correspondiente; no equivale necesariamente a reutilizar MID1. Los casos actuales recurren a materiales con `E` casi cero para aislar bloques.
-
-Debe representarse explícitamente “sin material/sin rigidez” mediante `None`, sin sobrecargar un ID negativo ni crear materiales artificiales.
-
-## Plan de validación propuesto
-
-### Fase 1: pruebas cinemáticas y constitutivas
-
-1. Verificar partición de la unidad y suma nula de derivadas de `N`.
-2. Comparar Jacobiano y derivadas físicas con cálculo manual en cuadrado y trapecio.
-3. Aplicar campos rígidos y comprobar deformaciones exactamente nulas en cada punto de Gauss.
-4. Aplicar campos lineales de membrana y comprobar deformación constante.
-5. Aplicar campos de curvatura y cortante controlados, verificando signos por separado.
-
-### Fase 2: matrices por bloque
-
-1. Exponer para test `K_mem`, `K_bend`, `K_shear` y `K_drill`, además de la matriz compuesta.
-2. Comparar membrana del cuadrado con la solución Q4 clásica.
-3. Comparar flexión y cortante con una implementación de referencia publicada.
-4. Verificar rango, autovectores y energía de cada bloque.
-5. Ensayar espesores desde placa delgada hasta moderadamente gruesa para detectar *locking*.
-
-### Fase 3: referencia Nastran
-
-1. Automatizar los casos 51 y 52 sin rutas absolutas.
-2. Añadir casos puros: membrana `x`, membrana `y`, cortante `xy`, flexión `x`, flexión `y`, torsión y cortante transversal.
-3. Comparar geometría cuadrada antes de introducir distorsión.
-4. Incorporar rotaciones rígidas 3D y gran *offset* de coordenadas.
-5. Comparar matriz, desplazamientos, reacciones y resultantes por separado.
-
-### Fase 4: solución de malla
-
-1. *Patch test* con varios CQUAD4.
-2. Voladizo de placa con refinamientos `1x1`, `2x2`, `4x4`, `8x8`.
-3. Placa simplemente apoyada con solución analítica.
-4. Mallas distorsionadas y alabeadas con métricas geométricas.
-5. Equilibrio de resultantes y convergencia de energía.
-
-## Criterio de terminado
-
-CQUAD4 puede declararse integrado cuando:
-
-- no genera mecanismos no físicos en modelos correctamente restringidos;
-- supera *patch tests* de membrana y flexión;
-- tiene estrategia *drilling/hourglass* documentada y estable;
-- reproduce los casos Nastran aceptados con tolerancias justificadas;
-- recupera resultantes/tensiones con convenciones verificadas;
-- completa `LinearStaticSolver.solve()` y el informe sin excepciones;
-- sus casos forman parte de una suite pytest limpia y portable.
+- casos alabeados adicionales para separar error de forma y error de alabeo;
+- cortante transversal con un `MID3` físicamente representativo;
+- materiales ortótropos, laminados, `MID4`, `ZOFFS` y espesores nodales;
+- *patch tests* multielemento y estudios de convergencia de placa;
+- estudio de sensibilidad a aspecto, *skew*, *taper* y espesor.

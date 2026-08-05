@@ -120,7 +120,8 @@ Elemento cuadrilateral bilineal de cuatro nodos y 24 GDL. Su sistema local se de
 - `x` entre los puntos medios de los lados 1-4 y 2-3;
 - `y = z x x`.
 
-La formulación actual suma tres bloques:
+La formulación Reissner-Mindlin suma tres bloques integrados con una regla
+completa `2 x 2`:
 
 ```text
 K_mem   = integral(B_mᵀ D_m B_m t dA)
@@ -128,13 +129,25 @@ K_bend  = integral(B_bᵀ D_b B_b t³/12 dA)
 K_shear = integral(B_sᵀ D_s B_s (5/6)t dA)
 ```
 
-- Membrana: integración completa `2 x 2`, o integración reducida selectiva opcional para el cortante en el plano.
+- Membrana: integración completa `2 x 2`.
 - Flexión: integración completa `2 x 2`.
-- Cortante transversal: integración reducida `1 x 1` para reducir *shear locking*.
+- Cortante transversal: integración completa `2 x 2`.
 
-Los bloques se dispersan en `[Tx, Ty]` y `[Tz, Rx, Ry]`. La transformación interna entre rotaciones Reissner-Mindlin y la convención Nastran es una de las áreas que aún se está contrastando.
+La reconstrucción Nastran utiliza deformación uniforme y dos modos bilineales
+estabilizados con una métrica de líneas medias. El cortante transversal usa
+integración reducida y una estabilización suave. Para un elemento alabeado se
+trasladan las fuerzas y momentos desde el plano medio a los nodos reales antes
+de aplicar la transformación global.
 
-La estabilización *drilling* está comentada y `PARAM,K6ROT` no llega a CQUAD4. En un cuadrado plano canónico, la auditoría obtuvo 12 autovalores por debajo de `max(abs(K))*1e-9`, no solo los seis modos rígidos esperados. Esto evidencia GDL sin rigidez y/o modos espurios que deben resolverse antes de validar soluciones globales.
+Los bloques se dispersan en `[Tx, Ty]` y `[Tz, Rx, Ry]`. `PARAM,K6ROT` llega a
+CQUAD4 y activa una penalización *drilling* cuando es positivo. Las clases
+`CQUAD4NastranElementSolver` y `CQUAD4ReissnerMindlinElementSolver` mantienen
+separadas las dos formulaciones; la geometría y la recuperación se comparten en
+`CQUAD4ElementBase`.
+
+Los casos DMIG 51-53 verifican los bloques planos con error inferior al `1 %`.
+El caso 54 verifica la matriz global `24 x 24` de un elemento inclinado y
+alabeado con error `2.150270 %` y criterio del `3 %`.
 
 El análisis detallado y el plan de cierre se encuentran en [cquad4.md](cquad4.md).
 

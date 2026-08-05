@@ -131,6 +131,6 @@ El postproceso está todavía integrado dentro del solver:
 - CROD: deformación/tensión axial, fuerza, giro por unidad de longitud, torsor y tensión torsional.
 - CBAR: fuerzas de extremo, tensión axial, torsión y tensiones normales en puntos PBAR.
 - CTRIA3: tensiones y resultantes de membrana, momentos, cortantes y fibras superior/inferior.
-- CQUAD4: código de recuperación existente pero comentado; no disponible en ejecución.
+- CQUAD4: membrana, momentos, cortantes, fibras superior/inferior e invariantes; compartido por las formulaciones Nastran y Reissner-Mindlin.
 
 `src/postprocessing/` está reservado, pero vacío. Una evolución natural es mover allí la recuperación, los invariantes, la selección de puntos y los escritores de resultados.

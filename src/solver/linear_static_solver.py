@@ -26,7 +26,7 @@ from .utilities import DofMapper
 from .elements.rod_element_v2 import RodElementSolverV2
 from .elements.bar_element import BarElementSolver
 from .elements.ctria3_element import CTRIA3ElementSolver
-from .elements.cquad4_element import CQUAD4ElementSolver
+from .elements.cquad4_nastran_element import CQUAD4NastranElementSolver
 
 # --- DATA MODEL ---
 from src.preprocessing.data_model import (
@@ -209,6 +209,7 @@ class LinearStaticSolver:
         return solver.get_stiffness_matrix(), [n1.nid, n2.nid, n3.nid]
 
     def _solve_cquad4_element(self, element: CQUAD4Element) -> tuple:
+        """Build one CQUAD4 with the active Nastran reconstruction."""
         n1 = self.model.get_node(element.nodes[0])
         n2 = self.model.get_node(element.nodes[1])
         n3 = self.model.get_node(element.nodes[2])
@@ -228,7 +229,7 @@ class LinearStaticSolver:
         if hasattr(prop, 'mat_id_shear') and prop.mat_id_shear in self.model.materials:
             mat_shear = self.model.materials[prop.mat_id_shear]
 
-        solver = CQUAD4ElementSolver(
+        solver = CQUAD4NastranElementSolver(
             n1, n2, n3, n4, 
             prop, 
             mat_membrane=mat_membrane, 
@@ -593,7 +594,7 @@ class LinearStaticSolver:
                 mat_membrane = self.model.materials[prop.mat_id]
                 mat_bending = self.model.materials.get(prop.mat_id_bending)
                 mat_shear = self.model.materials.get(prop.mat_id_shear)
-                elem_solver = CQUAD4ElementSolver(
+                elem_solver = CQUAD4NastranElementSolver(
                     *nodes, prop,
                     mat_membrane=mat_membrane,
                     mat_bending=mat_bending,

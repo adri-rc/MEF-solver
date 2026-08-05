@@ -2,7 +2,7 @@
 
 MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático lineal y a la comparación con modelos de MSC Nastran. El proyecto ya dispone de un flujo `BDF/DAT -> modelo interno -> ensamblaje -> solución -> resultados`, pero no debe considerarse todavía un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas y varias capacidades, especialmente CQUAD4, siguen en validación.
 
-Esta documentación describe el estado observado en el repositorio el **4 de agosto de 2026**. Distingue entre una tarjeta que puede leerse, un elemento cuya rigidez puede ensamblarse y una capacidad validada de extremo a extremo.
+Esta documentación describe el estado observado en el repositorio el **5 de agosto de 2026**. Distingue entre una tarjeta que puede leerse, un elemento cuya rigidez puede ensamblarse y una capacidad validada de extremo a extremo.
 
 ## Índice
 
@@ -21,12 +21,12 @@ Esta documentación describe el estado observado en el repositorio el **4 de ago
 | CROD + PROD + MAT1 | Sí | Sí | Sí | Axil y torsión | Unitaria y casos Nastran de extremo a extremo |
 | CBAR + PBAR + MAT1 | Sí | Sí | Sí | Fuerzas de extremo y tensiones simplificadas | Unitaria y casos Nastran de extremo a extremo |
 | CTRIA3 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Amplia comparación de extremo a extremo y de `K_global` |
-| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Integración global y comparación de los bloques activos de los casos Nastran 51/52 con error normalizado inferior al 3 % |
+| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Casos DMIG 51-53 por debajo del 1 % y caso 54 alabeado por debajo del 3 % |
 | FORCE / MOMENT | Sí | Sí | Sí | En coordenadas globales | Cubierto por pruebas |
 | SPC / SPC1 | Sí | Sí | Sí | Reacciones | Cubierto por pruebas |
 | Sólidos 3D | No | No | No | No | Trabajo futuro |
 
-La formulación CQUAD4 sigue en validación: incorpora integración reducida selectiva, estabilización *hourglass* y *drilling*, y ya participa en el postproceso global. La comparación completa depende de la semántica deliberada de sustitución automática de los MID vacíos de `PSHELL`; véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
+CQUAD4 dispone ahora de una reconstrucción Nastran y una formulación clásica Reissner-Mindlin en módulos separados. La primera incorpora estabilización *hourglass*, `K6ROT` y corrección de alabeo; ambas participan en el postproceso compartido. Véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
 
 ## Alcance físico actual
 

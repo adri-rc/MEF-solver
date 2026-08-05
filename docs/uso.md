@@ -58,10 +58,10 @@ Actualmente `run_analysis_job()` captura las excepciones y muestra un mensaje, p
 | Nodos | `GRID` | pyNastran transforma `CP` a coordenadas cartesianas globales. |
 | Materiales | `MAT1` | Se necesitan al menos dos valores de `E`, `G` y `NU`; el tercero se calcula. |
 | Propiedades | `PROD`, `PBAR`, `PSHELL` | Solo se mapea un subconjunto de los campos Nastran. |
-| Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 no completa todavía el postproceso. |
+| Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 usa por defecto la reconstrucción Nastran y completa el postproceso. |
 | Cargas | `FORCE`, `MOMENT` | Solo se aplican si `CID=0`. |
 | Restricciones | `SPC`, `SPC1` | Se admiten desplazamientos impuestos no nulos. |
-| Parámetros | `PARAM,K6ROT` | Solo se utiliza en CTRIA3. |
+| Parámetros | `PARAM,K6ROT` | Se utiliza en CTRIA3 y CQUAD4. |
 
 El lector falla de forma explícita si encuentra elementos, cargas o restricciones no soportados. En particular, rechaza MPC, RBE y elementos rígidos.
 
@@ -112,16 +112,16 @@ El informe de texto de `main.py` es todavía provisional:
 - su tabla de tensiones tiene formato CROD, aunque pueda haber CBAR o CTRIA3;
 - el contador `CROD` usa por error el número de fuerzas nodales;
 - los resultados detallados de CBAR y CTRIA3 no se imprimen;
-- CQUAD4 no llega a generar informe porque el postproceso lo rechaza.
+- el informe puede resumir mejor las magnitudes específicas de CQUAD4.
 
 Para validación y desarrollo resulta más fiable inspeccionar el diccionario devuelto por `solve()`.
 
 ## Ejecución de pruebas
 
-La colección completa contiene actualmente imports obsoletos. El subconjunto activo puede ejecutarse con:
+La colección completa se ejecuta con:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests -q --ignore=tests/solver_tst/elements/CTRIA3ElementSolver_test.py
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
 El resultado observado y sus fallos conocidos están documentados en [validacion.md](validacion.md).
