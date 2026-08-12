@@ -239,3 +239,10 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         warped_stiffness = warping @ mean_plane_stiffness @ warping.T
         stiffness = self.T.T @ warped_stiffness @ self.T
         return 0.5 * (stiffness + stiffness.T)
+
+    def _get_recovery_displacements(
+        self, element_displacements_global: np.ndarray
+    ) -> np.ndarray:
+        """Return work-conjugate displacements on the CQUAD mean plane."""
+        warping = self._build_warping_force_transformation()
+        return warping.T @ self.T @ element_displacements_global

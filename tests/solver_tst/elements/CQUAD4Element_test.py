@@ -197,19 +197,36 @@ def test_k6rot_uses_ctria_nodal_macro_rotation_penalty():
     stiffness = np.zeros((24, 24))
     element._add_drilling_stiffness(stiffness)
 
-    dN_dx = np.array([-0.25, 0.25, 0.25, -0.25])
-    dN_dy = np.array([-0.25, -0.25, 0.25, 0.25])
-    B_drill = np.zeros((4, 12))
-    for residual_node in range(4):
+    corner_derivatives = (
+        (
+            np.array([-0.5, 0.5, 0.0, 0.0]),
+            np.array([-0.5, 0.0, 0.0, 0.5]),
+        ),
+        (
+            np.array([-0.5, 0.5, 0.0, 0.0]),
+            np.array([0.0, -0.5, 0.5, 0.0]),
+        ),
+        (
+            np.array([0.0, 0.0, 0.5, -0.5]),
+            np.array([0.0, -0.5, 0.5, 0.0]),
+        ),
+        (
+            np.array([0.0, 0.0, 0.5, -0.5]),
+            np.array([-0.5, 0.0, 0.0, 0.5]),
+        ),
+    )
+    expected_local = np.zeros((12, 12))
+    shear_modulus = material.E / (2.0 * (1.0 + material.nu))
+    nodal_area = 4.0
+    k_theta = 100.0 * 1.0e-6 * shear_modulus * 0.2 * nodal_area
+    for residual_node, (dN_dx, dN_dy) in enumerate(corner_derivatives):
+        residual = np.zeros(12)
         for node_index in range(4):
             base = 3 * node_index
-            B_drill[residual_node, base] = 0.5 * dN_dy[node_index]
-            B_drill[residual_node, base + 1] = -0.5 * dN_dx[node_index]
-        B_drill[residual_node, 3 * residual_node + 2] = 1.0
-
-    shear_modulus = material.E / (2.0 * (1.0 + material.nu))
-    k_theta = 100.0 * 1.0e-6 * shear_modulus * 0.2
-    expected_local = k_theta * (B_drill.T @ B_drill)
+            residual[base] = 0.5 * dN_dy[node_index]
+            residual[base + 1] = -0.5 * dN_dx[node_index]
+        residual[3 * residual_node + 2] = 1.0
+        expected_local += k_theta * np.outer(residual, residual)
     drill_dofs = [0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23]
 
     np.testing.assert_allclose(

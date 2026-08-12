@@ -25,7 +25,7 @@ class CQUAD4ElementBase(ABC):
     
     Local Coordinate System (Nastran standard):
       z: Normal to the plane defined by the two diagonals (N1->N3 x N2->N4).
-      x: Vector from the midpoint of edge 1-4 to the midpoint of edge 2-3.
+      x: Bisector of the two element diagonals.
       y: Perpendicular in plane (z cross x).
       Origin: Mean of the 4 nodes.
     
@@ -87,10 +87,14 @@ class CQUAD4ElementBase(ABC):
             raise ValueError(f"Degenerate CQUAD4 element. Check node numbering.")
         vz = vz / vz_norm
         
-        # X-axis: Connects midpoint of side 1-4 to midpoint of side 2-3
-        mid_14 = 0.5 * (self.coords[0] + self.coords[3])
-        mid_23 = 0.5 * (self.coords[1] + self.coords[2])
-        vx = mid_23 - mid_14
+        # X-axis: Nastran's CQUAD4 element x-axis bisects the angle between
+        # diagonals G1-G3 and G4-G2.  Normalising each diagonal before adding
+        # is essential for an irregular quadrilateral.
+        diagonal_13 = self.coords[2] - self.coords[0]
+        diagonal_42 = self.coords[1] - self.coords[3]
+        diagonal_13 /= np.linalg.norm(diagonal_13)
+        diagonal_42 /= np.linalg.norm(diagonal_42)
+        vx = diagonal_13 + diagonal_42
         vx_norm = np.linalg.norm(vx)
         if vx_norm < 1e-12:
             raise ValueError("Degenerate CQUAD4 element: local X axis cannot be defined.")
@@ -245,8 +249,9 @@ class CQUAD4ElementBase(ABC):
 
         CTRIA3 penalizes the difference between every nodal drilling rotation
         and the element macro-rotation ``omega = 0.5 * (dv/dx - du/dy)``.
-        For CQUAD4 the same construction is evaluated at the element centre,
-        with one residual equation per corner node.
+        For CQUAD4 there is one residual equation per corner node. Its
+        macro-rotation and Jacobian are evaluated at that corner, which is
+        the four-node counterpart of CTRIA3's constant derivatives/Jacobian.
         """
         if self.k6rot <= 0.0:
             return
@@ -256,30 +261,42 @@ class CQUAD4ElementBase(ABC):
             "G",
             self.mat_membrane.E / (2.0 * (1.0 + self.mat_membrane.nu)),
         )
-        _, dN_dxi, dN_deta = self._get_shape_functions(0.0, 0.0)
-        jacobian, det_jacobian = self._get_jacobian(dN_dxi, dN_deta)
-        dN_dx, dN_dy = np.linalg.inv(jacobian) @ np.vstack(
-            (dN_dxi, dN_deta)
-        )
-
-        # [u1, v1, theta_z1, ..., u4, v4, theta_z4].  Each row is
-        # theta_zi - omega, exactly as in CTRIA3 but with four nodes.
-        B_drill = np.zeros((4, 12))
-        for residual_node in range(4):
-            for node_index in range(4):
-                base = 3 * node_index
-                B_drill[residual_node, base] = 0.5 * dN_dy[node_index]
-                B_drill[residual_node, base + 1] = -0.5 * dN_dx[node_index]
-            B_drill[residual_node, 3 * residual_node + 2] = 1.0
-
-        k_theta = (
+        penalty_factor = (
             self.k6rot
             * 1.0e-6
             * shear_modulus
             * self.prop.t
-            * det_jacobian
         )
-        drill_local = k_theta * (B_drill.T @ B_drill)
+        drill_local = np.zeros((12, 12))
+        natural_corners = (
+            (-1.0, -1.0),
+            (1.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+        )
+
+        for residual_node, (xi, eta) in enumerate(natural_corners):
+            _, dN_dxi, dN_deta = self._get_shape_functions(xi, eta)
+            jacobian, det_jacobian = self._get_jacobian(dN_dxi, dN_deta)
+            dN_dx, dN_dy = np.linalg.inv(jacobian) @ np.vstack(
+                (dN_dxi, dN_deta)
+            )
+
+            # [u1, v1, theta_z1, ..., u4, v4, theta_z4]. The row is
+            # theta_zi - omega at corner i, as in the CTRIA3 penalty.
+            residual = np.zeros(12)
+            for node_index in range(4):
+                base = 3 * node_index
+                residual[base] = 0.5 * dN_dy[node_index]
+                residual[base + 1] = -0.5 * dN_dx[node_index]
+            residual[3 * residual_node + 2] = 1.0
+
+            # The CQUAD natural domain has area four. Nastran therefore
+            # assigns each nodal penalty 4*detJ evaluated at its corner.
+            nodal_area = 4.0 * det_jacobian
+            drill_local += (
+                penalty_factor * nodal_area * np.outer(residual, residual)
+            )
 
         drill_dofs = [0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23]
         stiffness[np.ix_(drill_dofs, drill_dofs)] += drill_local
@@ -302,6 +319,12 @@ class CQUAD4ElementBase(ABC):
         stiffness = self.T.T @ K_loc @ self.T
         return 0.5 * (stiffness + stiffness.T)
 
+    def _get_recovery_displacements(
+        self, element_displacements_global: np.ndarray
+    ) -> np.ndarray:
+        """Transform element displacements to the formulation's local frame."""
+        return self.T @ element_displacements_global
+
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
         @brief Calculates Membrane Stresses, Moments and Shear Forces at element center.
@@ -314,7 +337,7 @@ class CQUAD4ElementBase(ABC):
         u_elem_global = u_global_vector[idxs]
         
         # 2. Desplazamientos Locales
-        u_loc = self.T @ u_elem_global
+        u_loc = self._get_recovery_displacements(u_elem_global)
         
         u_mem = np.array([
             u_loc[0], u_loc[1], u_loc[6], u_loc[7],
@@ -378,8 +401,10 @@ class CQUAD4ElementBase(ABC):
             D_b = self._get_D_bending()
             I_bend = (t**3) / 12.0
             moments = (D_b * I_bend) @ kappa
-            
-            m_x, m_y, m_xy = moments[0], moments[1], moments[2]
+
+            # Nastran's positive shell moment convention is opposite to the
+            # curvature convention used by B_b.
+            m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
             m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
             # Fuerzas Cortantes Transversales: Q = D_s * (k * t) * Deformacion_Angular
@@ -400,13 +425,14 @@ class CQUAD4ElementBase(ABC):
         sb_y = 6.0 * m_y / t**2 if t > 0 else 0.0
         sb_xy = 6.0 * m_xy / t**2 if t > 0 else 0.0
         
-        sig_x_top = sig_x - sb_x
-        sig_y_top = sig_y - sb_y
-        tau_xy_top = tau_xy - sb_xy
-        
+        # Z1 is the negative fibre (first F06 row), Z2 the positive fibre.
         sig_x_bot = sig_x + sb_x
         sig_y_bot = sig_y + sb_y
         tau_xy_bot = tau_xy + sb_xy
+
+        sig_x_top = sig_x - sb_x
+        sig_y_top = sig_y - sb_y
+        tau_xy_top = tau_xy - sb_xy
 
         def principal_and_vm(sx, sy, txy):
             average = 0.5 * (sx + sy)
@@ -441,15 +467,15 @@ class CQUAD4ElementBase(ABC):
             'stress_top_fiber_x': sig_x_top,
             'stress_top_fiber_y': sig_y_top,
             'tau_top_fiber_xy': tau_xy_top,
-            'stress_z1_fiber_x': sig_x_top,
-            'stress_z1_fiber_y': sig_y_top,
-            'tau_z1_fiber_xy': tau_xy_top,
+            'stress_z1_fiber_x': sig_x_bot,
+            'stress_z1_fiber_y': sig_y_bot,
+            'tau_z1_fiber_xy': tau_xy_bot,
             'stress_bot_fiber_x': sig_x_bot,
             'stress_bot_fiber_y': sig_y_bot,
             'tau_bot_fiber_xy': tau_xy_bot,
-            'stress_z2_fiber_x': sig_x_bot,
-            'stress_z2_fiber_y': sig_y_bot,
-            'tau_z2_fiber_xy': tau_xy_bot,
+            'stress_z2_fiber_x': sig_x_top,
+            'stress_z2_fiber_y': sig_y_top,
+            'tau_z2_fiber_xy': tau_xy_top,
             'major_principal_top': major_top,
             'minor_principal_top': minor_top,
             'von_mises_top': vm_top,

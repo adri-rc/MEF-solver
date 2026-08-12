@@ -2,7 +2,7 @@
 
 The originally requested case 21 is a multi-element CTRIA3 model and has no
 KAAX/DMIG matrix reference.  Case 51 is the corresponding CQUAD4 membrane
-case and is therefore used together with CQUAD4 cases 52, 53 and 54.
+case and is therefore used together with CQUAD4 cases 52, 53, 54 and 55.
 """
 
 from pathlib import Path
@@ -60,6 +60,17 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 0.03,
         "debug_export": True,
         "output_k_file": "draft_Ej54_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej55_KGlobal_CQUAD4_Inclined3D_K6ROT_100.0",
+        "folder": "case_55",
+        "filename": "ej55_k_memb-flex-3d_mid3_0_k6rot_100.dat",
+        "k_csv_file": "ej55_k_memb-flex-3d_mid3_0_k6rot_100_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 0.03,
+        "validate_drilling_subspace": True,
+        "debug_export": True,
+        "output_k_file": "draft_Ej55_KGlobal_CQUAD4_python_test.csv",
     },
 ]
 
@@ -149,3 +160,36 @@ class TestCQUAD4StiffnessMatrix:
             f"error relativo de Frobenius={relative_error:.6e}, "
             f"tolerancia={tolerance:.6e}"
         )
+
+        if case_data.get("validate_drilling_subspace", False):
+            element = next(iter(model.elements.values()))
+            coordinates = np.asarray(
+                [model.get_node(nid).get_coords() for nid in element.nodes]
+            )
+            normal = np.cross(
+                coordinates[2] - coordinates[0],
+                coordinates[3] - coordinates[1],
+            )
+            normal /= np.linalg.norm(normal)
+
+            projection = np.zeros((calculated.shape[0], len(element.nodes)))
+            for column, node_id in enumerate(element.nodes):
+                node_dofs = solver.dof_mapper.get_dof_indices(node_id)
+                projection[node_dofs[3:6], column] = normal
+
+            # Project each nodal normal rotation against every global DOF.
+            # This isolates both theta_z-theta_z and theta_z-macro-rotation
+            # terms, preventing the much larger membrane block from hiding
+            # an incorrect K6ROT distribution in the global Frobenius norm.
+            calculated_drilling = projection.T @ calculated
+            reference_drilling = projection.T @ reference
+            np.testing.assert_allclose(
+                calculated_drilling,
+                reference_drilling,
+                rtol=1.0e-5,
+                atol=1.0e-4,
+                err_msg=(
+                    "El subespacio drilling K6ROT no coincide termino a "
+                    f"termino en {case_data['case_name']}"
+                ),
+            )

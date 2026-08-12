@@ -97,15 +97,15 @@ def exportar_matriz_pch_csv(K, num_nudos=3, nombre_archivo="KAAX_Global.csv"):
             fila_valores = [f"{val:.9e}" if abs(val) > 1e-10 else "0.0" for val in K[i]]
             writer.writerow([i, dof_names[i]] + fila_valores)
             
-    print(f"✅ Matriz global extraída del .pch y exportada a: \n   --> '{ruta_completa}'")
+    print(f"Matriz global extraída del .pch y exportada a: \n   --> '{ruta_completa}'")
 
 
 # ==========================================
 # EJECUCIÓN PRINCIPAL
 # ==========================================
 
-input_pch_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_54\ej54_k_memb-flex-3d_mid3_0_k6rot_0.pch"
-output_K_csv_file_path = r"C:\Users\ADRIAN\Desktop\TFM-repo\MEF-solver\tests\solver_tst\validation_cases\case_54\ej54_k_memb-flex-3d_mid3_0_k6rot_0_Nastran.csv"
+input_pch_file_path = r"c:\Users\adria\Desktop\test\MEF-solver\tests\solver_tst\validation_cases\case_55\ej55_k_memb-flex-3d_mid3_0_k6rot_100.pch"
+output_K_csv_file_path = r"c:\Users\adria\Desktop\test\MEF-solver\tests\solver_tst\validation_cases\case_55\ej55_k_memb-flex-3d_mid3_0_k6rot_100_Nastran.csv"
 CASE = 'CQUAD' # 'CTRIA' or 'CQUAD'
 
 

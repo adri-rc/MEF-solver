@@ -403,8 +403,6 @@ class LinearStaticSolver:
         rhs = F_f - (K_fs @ u_s) # subtract the effect of the imposed displacement.
         
         # 7. Numerical Solution
-        print(f"[Solver] Solving linear system of size {K_ff.shape}...")
-
         if not np.all(np.isfinite(K_ff.data)) or not np.all(np.isfinite(rhs)):
             raise ValueError("[Solver Error] K_ff or the right-hand side contains NaN/Inf values.")
         asymmetry = K_ff - K_ff.T
@@ -418,6 +416,8 @@ class LinearStaticSolver:
                 "[Solver Error] The stiffness matrix is singular; free DOFs without stiffness were found: "
                 f"{self._describe_dofs(global_zero_dofs)}"
             )
+
+        print(f"[Solver] Solving linear system of size {K_ff.shape}...")
 
         # SECURITY BLOCK FOR SINGULAR MATRIX
         try:
