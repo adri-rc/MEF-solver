@@ -239,6 +239,320 @@ VALIDATION_DATA = [
         },
     },
     # endregion
+    # region --- CASO 60: Un CQUAD4 3D, carga combinada ---
+    pytest.param(
+        {
+            "case_name": "Ej60_CQUAD4_3D_MembraneCombined_K6ROT100",
+            "folder": "case_60",
+            "filename": "ej60_cquad4_3d_membrane_combined_k6rot_100.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-5,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-3,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-3,
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: 3.813401e-2, 1: 3.075833e-2, 2: -3.152816e-2, 3: 6.862812e-2, 4: 3.902714e-2, 5: 6.157902e-2},
+                3: {0: -1.343920e-1, 1: 4.875672e-2, 2: 2.118898e-1, 3: -1.010686, 4: -1.771978e-1, 5: 2.602758},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_loads": {
+                2: {0: 120.0, 1: 42.0, 2: 54.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 0.0, 3: 5.4, 4: -9.0, 5: 18.0},
+            },
+            "expected_reactions": {
+                1: {0: -139.1122, 1: -30.57184, 2: -68.51225, 3: -7.077306, 4: -1.378350, 5: -3.590417},
+                4: {0: 19.11217, 1: -11.42816, 2: 14.51225, 3: -7.948107, 4: 8.564322e-1, 5: -4.027252},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 102.2945,
+                    "membrane_force_y": -1.129321,
+                    "membrane_force_xy": 26.46212,
+                    "bending_moment_x": 4.506152,
+                    "bending_moment_y": 4.816674,
+                    "bending_moment_xy": 7.430240,
+                    "shear_force_x": -3.350069,
+                    "shear_force_y": 1.043177,
+                    "stress_bot_fiber_x": 1187.396,
+                    "stress_bot_fiber_y": 716.8545,
+                    "tau_bot_fiber_xy": 1246.847,
+                    "major_principal_bot": 2220.974,
+                    "minor_principal_bot": -316.7243,
+                    "von_mises_bot": 2395.095,
+                    "stress_top_fiber_x": -164.4502,
+                    "stress_top_fiber_y": -728.1477,
+                    "tau_top_fiber_xy": -982.2254,
+                    "major_principal_top": 575.5648,
+                    "minor_principal_top": -1468.163,
+                    "von_mises_top": 1825.322,
+                }
+            },
+        },
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="CQUAD4 transverse-shear response does not yet match Nastran",
+        ),
+    ),
+    # endregion
+    # region --- CASO 61: Un CQUAD4 3D, flexion y cortante ---
+    pytest.param(
+        {
+            "case_name": "Ej61_CQUAD4_3D_BendingShear_K6ROT100",
+            "folder": "case_61",
+            "filename": "ej61_cquad4_3d_bending_shear_k6rot_100.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-5,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-3,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-3,
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: -3.861046e-1, 1: -4.386823e-1, 2: 1.589353, 3: 1.587607e-2, 4: -9.315504e-1, 5: -2.538567e-1},
+                3: {0: -3.527754e-1, 1: -3.957811e-1, 2: 1.434782, 3: 6.583501e-1, 4: -3.807450e-1, 5: -2.918398},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_loads": {
+                2: {0: -8.75, 1: 14.0, 2: 35.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 0.0, 3: 17.6, 4: 4.4, 5: -7.7},
+            },
+            "expected_reactions": {
+                1: {0: -17.00022, 1: 2.785153, 2: -7.077040, 3: 1.242536, 4: 29.05329, 5: 8.405140},
+                4: {0: 25.75022, 1: -16.78515, 2: -27.92296, 3: 14.34770, 4: 33.98990, 5: 12.98431},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 3.564738,
+                    "membrane_force_y": -9.692397,
+                    "membrane_force_xy": 8.945280,
+                    "bending_moment_x": 19.25871,
+                    "bending_moment_y": 5.621770,
+                    "bending_moment_xy": -1.550743,
+                    "shear_force_x": 16.20223,
+                    "shear_force_y": -8.993077,
+                    "stress_bot_fiber_x": 5159.421,
+                    "stress_bot_fiber_y": 1434.523,
+                    "tau_bot_fiber_xy": -353.8962,
+                    "major_principal_bot": 5192.746,
+                    "minor_principal_bot": 1401.198,
+                    "von_mises_bot": 4653.160,
+                    "stress_top_fiber_x": -5111.891,
+                    "stress_top_fiber_y": -1563.755,
+                    "tau_top_fiber_xy": 473.1666,
+                    "major_principal_top": -1501.739,
+                    "minor_principal_top": -5173.907,
+                    "von_mises_top": 4610.279,
+                }
+            },
+        },
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="CQUAD4 transverse-shear response does not yet match Nastran",
+        ),
+    ),
+    # endregion
+    # region --- CASO 62: Un CQUAD4 3D alabeado ---
+    pytest.param(
+        {
+            "case_name": "Ej62_CQUAD4_Warped3D_K6ROT100",
+            "folder": "case_62",
+            "filename": "ej62_cquad4_warped_3d_combined_k6rot_100.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-5,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-3,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-3,
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: -4.494573e-1, 1: 4.009662e-1, 2: 1.251216, 3: 1.680891e-2, 4: -7.923170e-1, 5: 2.462922e-1},
+                3: {0: -5.627870e-1, 1: 4.420589e-1, 2: 1.363445, 3: -5.561550e-2, 4: -9.489518e-1, 5: -1.547689e-1},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_loads": {
+                2: {0: 21.6, 1: -9.6, 2: 48.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: -8.1, 1: 16.2, 2: 20.25, 3: 5.6, 4: 14.4, 5: -4.0},
+            },
+            "expected_reactions": {
+                1: {0: -10.90514, 1: -13.83657, 2: -22.42140, 3: 1.783549, 4: 52.43649, 5: -16.03179},
+                4: {0: -2.594864, 1: 7.236567, 2: -45.82860, 3: 13.51465, 4: 66.64035, 5: -15.99628},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 18.64314,
+                    "membrane_force_y": 11.80579,
+                    "membrane_force_xy": -5.357986,
+                    "bending_moment_x": 28.85331,
+                    "bending_moment_y": 3.303237,
+                    "bending_moment_xy": -1.395556,
+                    "shear_force_x": 31.66797,
+                    "shear_force_y": -2.912801,
+                    "stress_bot_fiber_x": 5446.779,
+                    "stress_bot_fiber_y": 677.2983,
+                    "tau_bot_fiber_xy": -288.2028,
+                    "major_principal_bot": 5464.131,
+                    "minor_principal_bot": 659.9463,
+                    "von_mises_bot": 5165.871,
+                    "stress_top_fiber_x": -5239.633,
+                    "stress_top_fiber_y": -546.1228,
+                    "tau_top_fiber_xy": 228.6697,
+                    "major_principal_top": -535.0082,
+                    "minor_principal_top": -5250.748,
+                    "von_mises_top": 5004.737,
+                }
+            },
+        },
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="CQUAD4 transverse-shear/warping response does not yet match Nastran",
+        ),
+    ),
+    # endregion
+    # region --- CASO 63: Dos CQUAD4 3D heterogeneos ---
+    pytest.param(
+        {
+            "case_name": "Ej63_TwoCQUAD4_3D_MultiProperty_K6ROT100",
+            "folder": "case_63",
+            "filename": "ej63_two_cquad4_3d_multi_property_k6rot_100.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-5,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-3,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-3,
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: -3.691579e-1, 1: -1.942659e-1, 2: 1.540182, 3: 3.337634e-1, 4: -1.814028, 5: -1.669471e-1},
+                3: {0: -1.485083, 1: -7.871830e-1, 2: 5.642915, 3: 6.161084e-2, 4: -2.805931, 5: -3.642550e-1},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                5: {0: -5.832232e-1, 1: -2.633127e-1, 2: 2.020006, 3: -2.805432e-1, 4: -2.505428, 5: -4.259940e-1},
+                6: {0: -1.464083, 1: -8.928833e-1, 2: 6.593401, 3: -4.208316e-1, 4: -3.095270, 5: 3.681955},
+            },
+            "expected_loads": {
+                3: {0: 33.0, 1: 13.75, 2: 55.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                6: {0: -8.0, 1: 20.0, 2: 32.0, 3: 9.6, 4: -18.0, 5: 8.4},
+            },
+            "expected_reactions": {
+                1: {0: -113.2634, 1: -30.03426, 2: -47.72432, 3: -12.86677, 4: 96.10630, 5: 10.14978},
+                4: {0: 88.26335, 1: -3.715743, 2: -39.27568, 3: 14.82327, 4: 151.4596, 5: 24.66740},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 26.98990, "membrane_force_y": 5.157083, "membrane_force_xy": 24.85025,
+                    "bending_moment_x": 106.0643, "bending_moment_y": 18.95167, "bending_moment_xy": 2.088861,
+                    "shear_force_x": 40.31793, "shear_force_y": -4.701115,
+                    "stress_bot_fiber_x": 25027.51, "stress_bot_fiber_y": 4474.030, "tau_bot_fiber_xy": 644.8908,
+                    "major_principal_bot": 25047.72, "minor_principal_bot": 4453.816, "von_mises_bot": 23144.48,
+                    "stress_top_fiber_x": -24690.14, "stress_top_fiber_y": -4409.567, "tau_top_fiber_xy": -334.2626,
+                    "major_principal_top": -4404.059, "minor_principal_top": -24695.64, "von_mises_top": 22814.68,
+                },
+                2: {
+                    "membrane_force_x": 28.05237, "membrane_force_y": 10.84191, "membrane_force_xy": 27.73233,
+                    "bending_moment_x": 45.47999, "bending_moment_y": -2.367904, "bending_moment_xy": 13.67368,
+                    "shear_force_x": 38.60492, "shear_force_y": -1.935785,
+                    "stress_bot_fiber_x": 4854.383, "stress_bot_fiber_y": -201.4820, "tau_bot_fiber_xy": 1539.893,
+                    "major_principal_bot": 5286.470, "minor_principal_bot": -633.5685, "von_mises_bot": 5630.055,
+                    "stress_top_fiber_x": -4620.614, "stress_top_fiber_y": 291.8312, "tau_top_fiber_xy": -1308.790,
+                    "major_principal_top": 618.7653, "minor_principal_top": -4947.548, "von_mises_top": 5284.172,
+                },
+            },
+        },
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="Multi-CQUAD4 assembly/recovery does not yet match Nastran",
+        ),
+    ),
+    # endregion
+    # region --- CASO 64: Cuatro CQUAD4 3D heterogeneos ---
+    pytest.param(
+        {
+            "case_name": "Ej64_FourCQUAD4_3D_MultiProperty_K6ROT50",
+            "folder": "case_64",
+            "filename": "ej64_four_cquad4_3d_multi_property_k6rot_50.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-5,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-3,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-3,
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: -2.792466e-1, 1: 1.747818e-1, 2: 1.177326, 3: 3.074804e-1, 4: -1.368515, 5: 2.404414e-1},
+                3: {0: -1.124059, 1: 5.310762e-1, 2: 4.520085, 3: -1.649265e-1, 4: -2.603316, 5: 2.048938e-1},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                5: {0: -4.458979e-1, 1: 2.039389e-1, 2: 1.496189, 3: -5.535511e-2, 4: -1.808607, 5: 1.865230e-1},
+                6: {0: -1.322137, 1: 5.486758e-1, 2: 4.597545, 3: 8.448765e-1, 4: -2.105637, 5: -2.905138},
+                7: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                8: {0: -5.451505e-1, 1: 2.177517e-1, 2: 1.599277, 3: -9.064865e-2, 4: -1.938893, 5: 1.885204e-1},
+                9: {0: -1.566096, 1: 5.717134e-1, 2: 4.796947, 3: -1.238961, 4: -1.830801, 5: 4.132209},
+            },
+            "expected_loads": {
+                3: {0: 35.75, 1: -9.75, 2: 65.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                6: {0: 0.0, 1: 0.0, 2: 0.0, 3: 6.0, 4: 16.0, 5: -8.0},
+                9: {0: -11.25, 1: 20.25, 2: 38.25, 3: -7.2, 4: 2.4, 5: 6.6},
+            },
+            "expected_reactions": {
+                1: {0: -50.67127, 1: -14.74107, 2: -37.29006, 3: -18.79348, 4: 91.18560, 5: -16.78232},
+                4: {0: 33.73421, 1: 6.669904e-2, 2: -41.82976, 3: 7.139945, 4: 143.3819, 5: -17.69257},
+                7: {0: -7.562936, 1: 4.174367, 2: -24.13018, 3: 15.47088, 4: 49.60228, 5: -1.725818},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 43.67000, "membrane_force_y": 4.463222e-1, "membrane_force_xy": 9.024038,
+                    "bending_moment_x": 110.2427, "bending_moment_y": 17.72974, "bending_moment_xy": 7.892079,
+                    "shear_force_x": 51.59974, "shear_force_y": -5.418921,
+                    "stress_bot_fiber_x": 20657.93, "stress_bot_fiber_y": 3285.764, "tau_bot_fiber_xy": 1511.630,
+                    "major_principal_bot": 20788.48, "minor_principal_bot": 3155.212, "von_mises_bot": 19404.23,
+                    "stress_top_fiber_x": -20172.71, "stress_top_fiber_y": -3280.805, "tau_top_fiber_xy": -1411.363,
+                    "major_principal_top": -3163.694, "minor_principal_top": -20289.82, "von_mises_top": 18907.54,
+                },
+                2: {
+                    "membrane_force_x": 56.13656, "membrane_force_y": 16.38319, "membrane_force_xy": 3.295268,
+                    "bending_moment_x": 28.18148, "bending_moment_y": 4.649361, "bending_moment_xy": -5.485991,
+                    "shear_force_x": 21.25297, "shear_force_y": -8.350524,
+                    "stress_bot_fiber_x": 3748.738, "stress_bot_fiber_y": 650.8361, "tau_bot_fiber_xy": -665.1030,
+                    "major_principal_bot": 3885.494, "minor_principal_bot": 514.0792, "von_mises_bot": 3655.666,
+                    "stress_top_fiber_x": -3238.405, "stress_top_fiber_y": -501.8981, "tau_top_fiber_xy": 695.0600,
+                    "major_principal_top": -335.4770, "minor_principal_top": -3404.826, "von_mises_top": 3250.099,
+                },
+                3: {
+                    "membrane_force_x": -4.613405, "membrane_force_y": -9.022007e-1, "membrane_force_xy": -11.53356,
+                    "bending_moment_x": 53.20174, "bending_moment_y": 14.39023, "bending_moment_xy": -9.395336e-1,
+                    "shear_force_x": 21.10210, "shear_force_y": -4.578714e-1,
+                    "stress_bot_fiber_x": 12440.32, "stress_bot_fiber_y": 3367.072, "tau_bot_fiber_xy": -292.2879,
+                    "major_principal_bot": 12449.73, "minor_principal_bot": 3357.666, "von_mises_bot": 11156.51,
+                    "stress_top_fiber_x": -12497.99, "stress_top_fiber_y": -3378.350, "tau_top_fiber_xy": 148.1185,
+                    "major_principal_top": -3375.945, "minor_principal_top": -12500.40, "von_mises_top": 11200.73,
+                },
+                4: {
+                    "membrane_force_x": -15.63139, "membrane_force_y": 14.63915, "membrane_force_xy": 2.042555,
+                    "bending_moment_x": 18.42536, "bending_moment_y": 2.389571, "bending_moment_xy": 9.339068,
+                    "shear_force_x": 51.64058, "shear_force_y": 16.64092,
+                    "stress_bot_fiber_x": 1575.266, "stress_bot_fiber_y": 268.3965, "tau_bot_fiber_xy": 836.7673,
+                    "major_principal_bot": 1983.507, "minor_principal_bot": -139.8451, "von_mises_bot": 2056.998,
+                    "stress_top_fiber_x": -1695.507, "stress_top_fiber_y": -155.7877, "tau_top_fiber_xy": -821.0554,
+                    "major_principal_top": 199.8818, "minor_principal_top": -2051.177, "von_mises_top": 2158.071,
+                },
+            },
+        },
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="Multi-CQUAD4 assembly/recovery does not yet match Nastran",
+        ),
+    ),
+    # endregion
 ]
 
 
@@ -265,6 +579,20 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
     solver = LinearStaticSolver(model)
     solver.assemble()
     calculated = solver.solve()
+
+    for node_id, expected_dofs in case_data.get("expected_loads", {}).items():
+        indices = solver.dof_mapper.get_dof_indices(node_id)
+        for dof, expected in expected_dofs.items():
+            _assert_close(
+                solver.F_global[indices[dof]],
+                expected,
+                rel_tol=case_data["rel_tol_load"],
+                abs_tol=case_data["abs_tol_load"],
+                location=(
+                    f"{case_data['case_name']} carga GRID {node_id} "
+                    f"DOF {dof + 1}"
+                ),
+            )
 
     for node_id, expected_dofs in case_data["expected_displacements"].items():
         indices = solver.dof_mapper.get_dof_indices(node_id)
