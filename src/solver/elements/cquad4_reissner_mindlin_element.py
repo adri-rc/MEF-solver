@@ -54,5 +54,5 @@ class CQUAD4ReissnerMindlinElementSolver(CQUAD4ElementBase):
         self._scatter_block(stiffness, membrane, membrane_dofs)
         if thickness > 0.0:
             self._scatter_block(stiffness, plate, plate_dofs)
-        self._add_drilling_stiffness(stiffness, points, weights)
+        self._add_drilling_stiffness(stiffness)
         return 0.5 * (stiffness + stiffness.T)

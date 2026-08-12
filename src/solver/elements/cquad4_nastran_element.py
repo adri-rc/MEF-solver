@@ -116,7 +116,7 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         self._scatter_block(stiffness, membrane, membrane_dofs)
         if thickness > 0.0:
             self._scatter_block(stiffness, bending + shear, plate_dofs)
-        self._add_drilling_stiffness(stiffness, points, weights)
+        self._add_drilling_stiffness(stiffness)
         return 0.5 * (stiffness + stiffness.T)
 
     def _build_warping_force_transformation(self) -> np.ndarray:
@@ -237,4 +237,5 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         mean_plane_stiffness = self._build_local_stiffness()
         warping = self._build_warping_force_transformation()
         warped_stiffness = warping @ mean_plane_stiffness @ warping.T
-        return self.T.T @ warped_stiffness @ self.T
+        stiffness = self.T.T @ warped_stiffness @ self.T
+        return 0.5 * (stiffness + stiffness.T)

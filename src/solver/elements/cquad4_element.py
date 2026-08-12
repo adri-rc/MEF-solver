@@ -240,10 +240,14 @@ class CQUAD4ElementBase(ABC):
         G = getattr(self.mat_shear, 'G', E / (2.0 * (1.0 + nu)))
         return G * np.eye(2)
 
-    def _add_drilling_stiffness(
-        self, stiffness: np.ndarray, points: np.ndarray, weights: np.ndarray
-    ) -> None:
-        """Add the optional K6ROT penalty to a local 24x24 matrix."""
+    def _add_drilling_stiffness(self, stiffness: np.ndarray) -> None:
+        """Add K6ROT with the same nodal penalty used by CTRIA3.
+
+        CTRIA3 penalizes the difference between every nodal drilling rotation
+        and the element macro-rotation ``omega = 0.5 * (dv/dx - du/dy)``.
+        For CQUAD4 the same construction is evaluated at the element centre,
+        with one residual equation per corner node.
+        """
         if self.k6rot <= 0.0:
             return
 
@@ -252,29 +256,30 @@ class CQUAD4ElementBase(ABC):
             "G",
             self.mat_membrane.E / (2.0 * (1.0 + self.mat_membrane.nu)),
         )
-        penalty = self.k6rot * 1.0e-6 * shear_modulus * self.prop.t
-        drill_local = np.zeros((12, 12))
+        _, dN_dxi, dN_deta = self._get_shape_functions(0.0, 0.0)
+        jacobian, det_jacobian = self._get_jacobian(dN_dxi, dN_deta)
+        dN_dx, dN_dy = np.linalg.inv(jacobian) @ np.vstack(
+            (dN_dxi, dN_deta)
+        )
 
-        for i, xi in enumerate(points):
-            for j, eta in enumerate(points):
-                N, dN_dxi, dN_deta = self._get_shape_functions(xi, eta)
-                jacobian, det_jacobian = self._get_jacobian(dN_dxi, dN_deta)
-                dN_dx, dN_dy = np.linalg.inv(jacobian) @ np.vstack(
-                    (dN_dxi, dN_deta)
-                )
-                b_drill = np.zeros(12)
-                for node_index in range(4):
-                    base = 3 * node_index
-                    b_drill[base] = 0.5 * dN_dy[node_index]
-                    b_drill[base + 1] = -0.5 * dN_dx[node_index]
-                    b_drill[base + 2] = N[node_index]
-                weight = weights[i] * weights[j]
-                drill_local += (
-                    penalty
-                    * np.outer(b_drill, b_drill)
-                    * det_jacobian
-                    * weight
-                )
+        # [u1, v1, theta_z1, ..., u4, v4, theta_z4].  Each row is
+        # theta_zi - omega, exactly as in CTRIA3 but with four nodes.
+        B_drill = np.zeros((4, 12))
+        for residual_node in range(4):
+            for node_index in range(4):
+                base = 3 * node_index
+                B_drill[residual_node, base] = 0.5 * dN_dy[node_index]
+                B_drill[residual_node, base + 1] = -0.5 * dN_dx[node_index]
+            B_drill[residual_node, 3 * residual_node + 2] = 1.0
+
+        k_theta = (
+            self.k6rot
+            * 1.0e-6
+            * shear_modulus
+            * self.prop.t
+            * det_jacobian
+        )
+        drill_local = k_theta * (B_drill.T @ B_drill)
 
         drill_dofs = [0, 1, 5, 6, 7, 11, 12, 13, 17, 18, 19, 23]
         stiffness[np.ix_(drill_dofs, drill_dofs)] += drill_local
@@ -294,7 +299,8 @@ class CQUAD4ElementBase(ABC):
         @brief Computes K_global = T.T * K_local * T
         """
         K_loc = self._build_local_stiffness()
-        return self.T.T @ K_loc @ self.T
+        stiffness = self.T.T @ K_loc @ self.T
+        return 0.5 * (stiffness + stiffness.T)
 
     def calculate_stresses(self, u_global_vector: np.ndarray, dof_mapper) -> dict:
         """
