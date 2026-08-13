@@ -199,3 +199,39 @@ En una nueva tarea de Codex abierta sobre el mismo proyecto:
 > Lee completamente `docs/TRASPASO.md`, comprueba la rama, el commit y `git status`, y ejecuta la suite antes de modificar nada. Continúa con el primer próximo paso pendiente respetando las decisiones de la sección 2. Usa como referencia principal los inputs y resultados originales de Nastran en `tests/solver_tst/validation_cases` y no cambies las tolerancias existentes salvo que yo lo autorice.
 
 Después conviene indicar explícitamente qué próximo paso se quiere abordar, ya que este documento transfiere el contexto técnico pero no inicia trabajo adicional por sí solo.
+
+## 9. Actualización CQUAD4 de 13 de agosto de 2026
+
+Esta sección prevalece sobre las cifras y nombres CQUAD4 anteriores de este
+documento. El estado reproducible actual está descrito en
+`docs/cquad4_tesis.md`, `docs/cquad4.md` y `docs/validacion.md`.
+
+- La suite completa queda en `333 passed, 4 xfailed`. Los `xfail` son 62-64
+  (alabeo) y 78 (`SNORM` predeterminado no implementado), no fallos de CQUAD4
+  coplanar con normal propia.
+- Se incorporaron como literales de test los F06/OP2 84-88. Cubren paneles
+  planos multipropiedad, mezclas CQUAD4/CTRIA3/CBAR/CROD, `K6ROT=50/100`, FORCE,
+  MOMENT y desplazamientos impuestos. El test nunca lee F06/OP2 en ejecución.
+- Las DMIG 83 y 89, junto con 81, demostraron que la flexibilidad aumentada de
+  un paralelogramo oblicuo acopla las dos muestras de cada dirección. La
+  métrica positiva/acotada está en
+  `CQUAD4NastranElementSolver._build_augmented_shear_stiffness`; sus constantes
+  son una identificación DMIG, no una constante publicada por MSC.
+- Los errores completos de 81/83/89 son `1.03e-7`, `3.14e-6` y `8.89e-7` y se
+  comprueban también término a término. No volver al polinomio de cuarto orden:
+  cambiaba de signo para la oblicuidad del caso 60 y rompía una regresión E2E.
+- `MID3` vacío significa `SHRFLX=False` y ninguna flexibilidad física `Z_s`.
+  Aun así, NASTRAN-95 reutiliza internamente `MID2` al formar la corrección
+  residual/torsional; por ello no debe documentarse simplemente como “MID3 no
+  hereda MID2” sin esta precisión.
+- `SNORM` crea normales comunes en GRID compartidos dentro de una tolerancia
+  angular (20 grados por defecto en MSC). El solver usa normales independientes
+  y para compararlo de igual a igual se emplea `PARAM,SNORM,0.0`.
+- La discrepancia coplanar abierta está en la recuperación centroidal `QX/QY`,
+  no en la rigidez. En el caso 84, `U`, reacciones, `N/M` y tensiones coinciden
+  estrechamente, pero un `QX` pequeño difiere `0.00977` (`72 %` relativo).
+  Mantener tolerancias exclusivas para `QX/QY`; no alterar la rigidez cerrada
+  para ajustar esta salida.
+- Los casos 90 (DMIG) y 91 (F06) están preparados para una comprobación
+  predictiva de alta oblicuidad. El siguiente paso es ejecutarlos en Nastran e
+  incorporar resultados sin recalibrar primero la formulación.

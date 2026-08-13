@@ -53,7 +53,11 @@ class CQUAD4ElementBase(ABC):
         
         # Asignación explícita de materiales
         self.mat_membrane = mat_membrane
-        self.mat_bending = mat_bending if mat_bending is not None else self.mat_membrane
+        # A blank PSHELL MID2 is a membrane-only property.  It must not
+        # silently inherit MID1, otherwise a membrane CQUAD4 receives a
+        # fictitious [T3,R1,R2] stiffness that an active-DOF-only DMIG check
+        # can easily hide.
+        self.mat_bending = mat_bending
         # A blank PSHELL MID3 disables physical transverse-shear flexibility.
         # It must not silently inherit MID2; the Nastran QUAD4 retains only its
         # residual bending flexibility in that case.
@@ -231,6 +235,8 @@ class CQUAD4ElementBase(ABC):
         """
         @brief Pure Constitutive Matrix for Plane Stress (Bending - MID2)
         """
+        if self.mat_bending is None:
+            return np.zeros((3, 3))
         E, nu = self.mat_bending.E, self.mat_bending.nu
         factor = E / (1.0 - nu**2)
         return factor * np.array([
@@ -371,18 +377,11 @@ class CQUAD4ElementBase(ABC):
         stresses = D_mem @ strains 
         
         sig_x, sig_y, tau_xy = stresses
-        angle = np.radians(self.theta)
-        cosine, sine = np.cos(angle), np.sin(angle)
-
-        def rotate_symmetric(x_value, y_value, xy_value):
-            return (
-                cosine**2*x_value + sine**2*y_value + 2*cosine*sine*xy_value,
-                sine**2*x_value + cosine**2*y_value - 2*cosine*sine*xy_value,
-                -cosine*sine*x_value + cosine*sine*y_value
-                + (cosine**2-sine**2)*xy_value,
-            )
-
-        sig_x, sig_y, tau_xy = rotate_symmetric(sig_x, sig_y, tau_xy)
+        # MSC Nastran reports CQUAD4 forces and stresses in the element
+        # coordinate system.  THETA or MCID orients the material axes; it
+        # does not rotate isotropic MAT1 output away from the element axes.
+        # Keeping recovery in (x_element, y_element) is also essential when
+        # adjacent elements use different THETA values.
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
         
         # Tensiones Principales
@@ -398,7 +397,7 @@ class CQUAD4ElementBase(ABC):
         f_xy = tau_xy * t
         
         # 4. Esfuerzos de Flexión y Cortadura (Reissner-Mindlin)
-        has_bending = t > 0.0
+        has_bending = t > 0.0 and self.mat_bending is not None
         if has_bending:
             u_bend_nastran = np.array([
                 u_loc[2], u_loc[3], u_loc[4],
@@ -420,7 +419,6 @@ class CQUAD4ElementBase(ABC):
             # Nastran's positive shell moment convention is opposite to the
             # curvature convention used by B_b.
             m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
-            m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
             if hasattr(self, "_recover_transverse_shear_forces"):
                 shear_forces = self._recover_transverse_shear_forces(
@@ -434,7 +432,6 @@ class CQUAD4ElementBase(ABC):
                 shear_forces = (D_s * A_shear) @ gamma_s
             
             q_x, q_y = shear_forces[0], shear_forces[1]
-            q_x, q_y = cosine*q_x + sine*q_y, -sine*q_x + cosine*q_y
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             

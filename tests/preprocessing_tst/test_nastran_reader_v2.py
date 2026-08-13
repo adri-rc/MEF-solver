@@ -263,6 +263,25 @@ CQUAD4, 200, 10, 1, 2, 3, 4
         assert prop.bending_inertia_ratio == pytest.approx(0.75)
         assert prop.shear_thickness_ratio == pytest.approx(0.5)
 
+    def test_pshell_blank_mid2_does_not_inherit_mid1(self, tmp_path):
+        """A membrane-only PSHELL preserves its blank bending material."""
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01
+CQUAD4, 200, 10, 1, 2, 3, 4
+        """
+        path = tmp_path / "pshell_blank_mid2.bdf"
+        path.write_text(bdf_content)
+
+        prop = parse_nastran_input(str(path)).properties[10]
+
+        assert prop.mat_id_bending is None
+        assert prop.mat_id_shear is None
+
 # endregion --- Dummy Nastran texts Tests --
 
 

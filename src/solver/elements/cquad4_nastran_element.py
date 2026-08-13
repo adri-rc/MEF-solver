@@ -2,9 +2,10 @@
 
 The in-plane and curvature blocks use a uniform-strain field plus the two
 orthogonal bilinear modes used by QUAD4.  The geometric hourglass metric is
-built from the two element mid-lines, which is essential for skewed and
-distorted quadrilaterals.  Non-coplanar nodes receive an equilibrium-based
-force and moment correction after the mean-plane stiffness is formed.
+built from the two element mid-lines and normalized for bilinear distortion.
+Transverse shear uses MacNeal's edge-string interpolation.  Non-coplanar
+nodes receive an equilibrium-based force and moment correction after the
+mean-plane stiffness is formed.
 """
 
 import numpy as np
@@ -56,6 +57,25 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         hourglass_operator[0::2, 0] = hourglass_vector
         hourglass_operator[1::2, 1] = hourglass_vector
 
+        # The bilinear distortion contained in ``hourglass_vector`` changes
+        # the work conjugacy of the two non-uniform modes.  The modal energy
+        # must consequently be normalized; using the affine value directly
+        # underestimates both membrane and bending stiffness as the two
+        # diagonals cease to bisect each other.  This is the closed form for
+        # the orthogonalized four-node mode used above.  It is one for every
+        # parallelogram and therefore leaves the exact skew-affine DMIG cases
+        # untouched.
+        distortion_mode = hourglass_vector - base_mode
+        normalization_denominator = (
+            1.0 - np.dot(distortion_mode, distortion_mode) / 12.0
+        )
+        if normalization_denominator <= np.finfo(float).eps:
+            raise ValueError(
+                "Negative or zero Jacobian in CQUAD4: the bilinear map "
+                "does not admit a positive modal normalization."
+            )
+        distortion_normalization = 1.0 / normalization_denominator
+
         # Vectors joining opposite-side midpoints.  Unlike a metric based on
         # the inverse Jacobian at Gauss points, this expression retains the
         # skew coupling present in Nastran's distorted QUAD4 stiffness.
@@ -75,7 +95,12 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             np.outer(midline_x, midline_x) / np.dot(midline_x, midline_x) ** 2
             + np.outer(midline_y, midline_y) / np.dot(midline_y, midline_y) ** 2
         )
-        hourglass_constitutive = young_modulus * metric / 12.0
+        hourglass_constitutive = (
+            young_modulus
+            * metric
+            * distortion_normalization
+            / 12.0
+        )
         stiffness += (
             hourglass_operator
             @ hourglass_constitutive
@@ -88,27 +113,36 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         """Assemble membrane, bending-flexibility and drilling blocks."""
         stiffness = np.zeros((24, 24))
         thickness = self.prop.t
+        has_bending = self.mat_bending is not None
         bending_inertia = (
             thickness**3 / 12.0 * self._get_bending_inertia_ratio()
+            if has_bending
+            else 0.0
         )
 
         membrane = self._build_nastran_plane_stiffness(
             self._get_D_membrane(), self.mat_membrane.E, thickness
         )
-        bending_plane = self._build_nastran_plane_stiffness(
-            self._get_D_bending(), self.mat_bending.E, bending_inertia
-        )
+        bending_plane = np.zeros((8, 8))
+        if has_bending:
+            bending_plane = self._build_nastran_plane_stiffness(
+                self._get_D_bending(), self.mat_bending.E, bending_inertia
+            )
         rotation_to_plane = np.zeros((8, 12))
         for node_index in range(4):
             rotation_to_plane[2 * node_index, 3 * node_index + 2] = 1.0
             rotation_to_plane[2 * node_index + 1, 3 * node_index + 1] = -1.0
         bending = rotation_to_plane.T @ bending_plane @ rotation_to_plane
-        shear = self._build_augmented_shear_stiffness(bending_inertia)
+        shear = (
+            self._build_augmented_shear_stiffness(bending_inertia)
+            if has_bending
+            else np.zeros((12, 12))
+        )
 
         membrane_dofs = [0, 1, 6, 7, 12, 13, 18, 19]
         plate_dofs = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
         self._scatter_block(stiffness, membrane, membrane_dofs)
-        if thickness > 0.0:
+        if thickness > 0.0 and has_bending:
             self._scatter_block(stiffness, bending + shear, plate_dofs)
         self._add_drilling_stiffness(stiffness)
         return 0.5 * (stiffness + stiffness.T)
@@ -130,7 +164,8 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         shear_operator = np.zeros((4, 12))
         jacobian_determinants = np.zeros(4)
         for row, (xi, eta, component) in enumerate(sampling_points):
-            _, _, B_shear, determinant = self._get_B_matrices(xi, eta)
+            B_shear = self._get_nastran_shear_matrix(xi, eta)
+            _, _, _, determinant = self._get_B_matrices(xi, eta)
             shear_operator[row] = B_shear[component]
             jacobian_determinants[row] = determinant
 
@@ -164,6 +199,46 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         beta = epsilon / (
             epsilon + (1.0 - epsilon) * (delta_y / delta_x) ** 2
         )
+
+        # MacNeal's residual bending modes are work-conjugate to two samples
+        # on each natural centreline.  On an oblique affine mapping the two
+        # centreline directions are not orthogonal, which scales the
+        # antisymmetric (torsion-related) flexibility of both sample pairs.
+        # The dual edge-string operator already contains the corresponding
+        # kinematic projection; the flexibility metric therefore needs a
+        # complementary torsion correction.  NASTRAN-95 exposes this structure
+        # as the paired SFCTX1/SFCTX2 and SFCTY1/SFCTY2 terms.  The bounded
+        # continuation below reconstructs the commercial DMIG values of the
+        # independent skew cases 75 and 89; it is exactly one for a rectangle
+        # and leaves the term-by-term cases 65-73 unchanged.
+        midline_x = 0.5 * (
+            coordinates[1]
+            + coordinates[2]
+            - coordinates[0]
+            - coordinates[3]
+        )
+        midline_y = 0.5 * (
+            coordinates[2]
+            + coordinates[3]
+            - coordinates[0]
+            - coordinates[1]
+        )
+        midline_cosine = np.dot(midline_x, midline_y) / (
+            np.linalg.norm(midline_x) * np.linalg.norm(midline_y)
+        )
+        cosine_squared = midline_cosine**2
+        # A bounded rational continuation is used instead of a polynomial:
+        # it reproduces both independent DMIG controls (cases 75 and 89),
+        # remains positive for every valid convex element and tends smoothly
+        # to a finite correction for severe skew.  This matters for case 60,
+        # whose larger midline angle exposed the non-physical sign reversal
+        # of the previous fourth-order extrapolation.
+        torsion_metric = 1.0 + (
+            0.66204667784 * cosine_squared
+            / (1.0 + 7.29631879857 * cosine_squared)
+        )
+        alpha *= torsion_metric
+        beta *= torsion_metric
         flexibility_x = (
             delta_x**2 / (12.0 * area * bending_constitutive[0, 0])
         )
@@ -190,14 +265,36 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             shear_thickness = (
                 self.prop.t * self._get_shear_thickness_ratio()
             )
-            physical_flexibility = 1.0 / (
+            physical_flexibility_samples = 1.0 / (
                 2.0
                 * jacobian_determinants
                 * shear_thickness
                 * shear_modulus
             )
-            total_flexibility = residual_flexibility + np.diag(
-                physical_flexibility
+            # MID3 adds flexibility in series.  Its symmetric sample-pair
+            # mode receives the nominal selective-integration flexibility;
+            # the antisymmetric mode receives the same torsion metric as the
+            # residual bending term.  For an affine element both samples of
+            # a pair are equal.  The square-root congruence also preserves
+            # symmetry and positivity when det(J) varies between samples.
+            pair_metric = 0.5 * np.array(
+                [
+                    [1.0 + torsion_metric, 1.0 - torsion_metric],
+                    [1.0 - torsion_metric, 1.0 + torsion_metric],
+                ]
+            )
+            physical_flexibility = np.zeros((4, 4))
+            for pair_start in (0, 2):
+                pair_samples = physical_flexibility_samples[
+                    pair_start : pair_start + 2
+                ]
+                sample_scale = np.diag(np.sqrt(pair_samples))
+                physical_flexibility[
+                    pair_start : pair_start + 2,
+                    pair_start : pair_start + 2,
+                ] = sample_scale @ pair_metric @ sample_scale
+            total_flexibility = (
+                residual_flexibility + physical_flexibility
             )
 
         # Solve Z X = D instead of explicitly forming Z^-1.  This preserves
@@ -207,6 +304,83 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         )
         return shear_operator.T @ flexibility_solution
 
+    def _get_nastran_shear_matrix(
+        self, xi: float, eta: float
+    ) -> np.ndarray:
+        """Return MacNeal's edge-string transverse-shear operator.
+
+        QUAD4 does not obtain transverse shear by directly differentiating
+        the bilinear displacement interpolation on an irregular element.
+        Instead, it reconstructs the two local shear components from the
+        four edge strings.  At a corner, each edge-string direction is made
+        dual to the other incident edge through the internal-angle factor
+        ``a_i = -e_i.e_(i-1)``.  This is the flat-element specialization of
+        the ``UEV/ANGLEI/EDGSHR`` construction in NASA NASTRAN's Q4BMG.
+
+        The expression reduces exactly to the ordinary isoparametric shear
+        matrix for an orthogonal rectangle.  Keeping it explicit is crucial
+        for skew parallelograms and distorted planar CQUAD4s.
+        """
+        shape_functions, _, _ = self._get_shape_functions(xi, eta)
+        coordinates = self.local_coords_2d
+        edge_vectors = np.roll(coordinates, -1, axis=0) - coordinates
+        edge_lengths = np.linalg.norm(edge_vectors, axis=1)
+        edge_directions = edge_vectors / edge_lengths[:, np.newaxis]
+
+        internal_angle_cosines = np.empty(4)
+        for edge_index in range(4):
+            internal_angle_cosines[edge_index] = -np.dot(
+                edge_directions[edge_index],
+                edge_directions[(edge_index - 1) % 4],
+            )
+
+        edge_shear_vectors = np.zeros((4, 2))
+        for edge_index in range(4):
+            angle_at_start = internal_angle_cosines[edge_index]
+            angle_at_end = internal_angle_cosines[(edge_index + 1) % 4]
+            previous_edge = edge_directions[(edge_index - 1) % 4]
+            next_edge = edge_directions[(edge_index + 1) % 4]
+
+            edge_shear_vectors[edge_index] = (
+                (
+                    edge_directions[edge_index]
+                    + angle_at_start * previous_edge
+                )
+                * shape_functions[edge_index]
+                / (1.0 - angle_at_start**2)
+                + (
+                    edge_directions[edge_index]
+                    + angle_at_end * next_edge
+                )
+                * shape_functions[(edge_index + 1) % 4]
+                / (1.0 - angle_at_end**2)
+            )
+
+        shear_matrix = np.zeros((2, 12))
+        for node_index in range(4):
+            previous_edge = (node_index - 1) % 4
+            shear_matrix[:, 3 * node_index] = (
+                -edge_shear_vectors[node_index] / edge_lengths[node_index]
+                + edge_shear_vectors[previous_edge]
+                / edge_lengths[previous_edge]
+            )
+
+            rotation_operator = 0.5 * (
+                np.outer(
+                    edge_shear_vectors[node_index],
+                    edge_directions[node_index],
+                )
+                + np.outer(
+                    edge_shear_vectors[previous_edge],
+                    edge_directions[previous_edge],
+                )
+            )
+            # Local normal rotation vector is [theta_y, -theta_x].
+            shear_matrix[:, 3 * node_index + 1] = -rotation_operator[:, 1]
+            shear_matrix[:, 3 * node_index + 2] = rotation_operator[:, 0]
+
+        return shear_matrix
+
     def _recover_transverse_shear_forces(
         self, bending_displacements: np.ndarray
     ) -> np.ndarray:
@@ -214,6 +388,8 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         bending_inertia = (
             self.prop.t**3 / 12.0 * self._get_bending_inertia_ratio()
         )
+        if self.mat_bending is None:
+            return np.zeros(2)
         shear_stiffness = self._build_augmented_shear_stiffness(
             bending_inertia
         )
@@ -224,7 +400,8 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         for row, (xi, eta, component) in enumerate(
             self._selective_shear_sampling_points()
         ):
-            _, _, B_shear, determinant = self._get_B_matrices(xi, eta)
+            B_shear = self._get_nastran_shear_matrix(xi, eta)
+            _, _, _, determinant = self._get_B_matrices(xi, eta)
             shear_operator[row] = B_shear[component]
             jacobian_determinants[row] = determinant
 

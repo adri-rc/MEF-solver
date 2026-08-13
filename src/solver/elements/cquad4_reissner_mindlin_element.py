@@ -25,6 +25,7 @@ class CQUAD4ReissnerMindlinElementSolver(CQUAD4ElementBase):
 
         points, weights = GaussQuadrature.get_rule(2)
         membrane_constitutive = self._get_D_membrane()
+        has_bending = self.mat_bending is not None
         bending_constitutive = self._get_D_bending()
         shear_constitutive = self._get_D_shear()
 
@@ -41,7 +42,7 @@ class CQUAD4ReissnerMindlinElementSolver(CQUAD4ElementBase):
                 membrane += (
                     B_membrane.T @ membrane_constitutive @ B_membrane
                 ) * (differential_area * thickness)
-                if thickness > 0.0:
+                if thickness > 0.0 and has_bending:
                     plate += (
                         B_bending.T @ bending_constitutive @ B_bending
                     ) * (differential_area * bending_inertia)
@@ -52,7 +53,7 @@ class CQUAD4ReissnerMindlinElementSolver(CQUAD4ElementBase):
         membrane_dofs = [0, 1, 6, 7, 12, 13, 18, 19]
         plate_dofs = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
         self._scatter_block(stiffness, membrane, membrane_dofs)
-        if thickness > 0.0:
+        if thickness > 0.0 and has_bending:
             self._scatter_block(stiffness, plate, plate_dofs)
         self._add_drilling_stiffness(stiffness)
         return 0.5 * (stiffness + stiffness.T)

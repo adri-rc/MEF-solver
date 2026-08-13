@@ -2,7 +2,8 @@
 
 ## Estado de partida
 
-El flujo estático lineal y la suite de 321 pruebas están operativos. CROD,
+El flujo estático lineal y la suite de 337 pruebas están operativos: 333 pasan
+y cuatro discrepancias conocidas están marcadas `xfail(strict=True)`. CROD,
 CBAR, CTRIA3 y CQUAD4 se leen, ensamblan y recuperan resultados. CQUAD4 dispone
 de formulaciones Nastran y Reissner-Mindlin separadas; los casos DMIG 51-55
 cumplen sus tolerancias documentadas. Los casos 65-75 validan la flexibilidad
@@ -18,10 +19,16 @@ sustituto general de Nastran.
 - una ejecución resuelve un único subcaso seleccionado;
 - campos shell como `MID4`, `Z1/Z2`, `ZOFFS`, `TFLAG` y espesores nodales no
   tienen todavía tratamiento físico completo;
-- CQUAD4 alabeado coincide con la DMIG del caso 54 al `2.15 %`, no término a
+- CQUAD4 alabeado coincide con la DMIG del caso 54 al `2.08 %`, no término a
   término, y necesita más referencias independientes;
-- los CQUAD4 planos sesgados 74-75 conservan un error de matriz del `0.72 %` y
-  la geometría alabeada necesita más referencias independientes;
+- los CQUAD4 planos sesgados no afines 74-75 conservan un error de matriz del
+  `0.046 %`; los afines oblicuos 81/83/89 quedan por debajo de `3.2e-6` de
+  error relativo tras introducir el acoplamiento torsional de muestras;
+- la recuperación centroidal `QX/QY` conserva diferencias localizadas aun
+  cuando rigidez, desplazamientos, reacciones, `N/M` y tensiones coinciden;
+- el solver no reproduce el promediado de normales shell de `SNORM` en GRID
+  compartidos; con `SNORM=0`, el control 82 sí coincide con Nastran;
+- la geometría alabeada necesita más referencias independientes;
 - no hay sólidos 3D, dinámica, plasticidad ni no linealidad geométrica;
 - el informe de texto aún puede especializarse mejor por tipo de elemento;
 - `assemble()` no es idempotente y no existe CI publicada.
@@ -36,6 +43,10 @@ sustituto general de Nastran.
 3. Cerrar las discrepancias CTRIA3 conocidas con métricas absolutas y
    relativas separadas.
 4. Registrar versión, deck y procedencia de cada DMIG/F06.
+5. Ejecutar 90/91 para validar, sin recalibración previa, la continuación
+   angular acotada en una oblicuidad mayor que 75/89.
+6. Derivar la recuperación centroidal comercial de `QX/QY`; el caso 84 aísla
+   una diferencia absoluta máxima de `0.00977` sin error apreciable en `N/M`.
 
 ### P1 - Completar semántica shell
 

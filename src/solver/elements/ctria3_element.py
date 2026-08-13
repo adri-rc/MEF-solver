@@ -356,18 +356,9 @@ class CTRIA3ElementSolver:
         stresses = D_m @ strains 
         sig_x, sig_y, tau_xy = stresses
 
-        angle = np.radians(self.theta)
-        cosine, sine = np.cos(angle), np.sin(angle)
-
-        def rotate_symmetric(x_value, y_value, xy_value):
-            return (
-                cosine**2*x_value + sine**2*y_value + 2*cosine*sine*xy_value,
-                sine**2*x_value + cosine**2*y_value - 2*cosine*sine*xy_value,
-                -cosine*sine*x_value + cosine*sine*y_value
-                + (cosine**2-sine**2)*xy_value,
-            )
-
-        sig_x, sig_y, tau_xy = rotate_symmetric(sig_x, sig_y, tau_xy)
+        # Nastran reports CTRIA3 force/stress components in the element
+        # coordinate system. THETA defines material orientation and must not
+        # rotate isotropic MAT1 recovery output.
         
         '''        
         vm_stress = np.sqrt(sig_x**2 - sig_x*sig_y + sig_y**2 + 3*tau_xy**2)
@@ -387,12 +378,10 @@ class CTRIA3ElementSolver:
             moments = D_f @ kappa
             # INVERSIÓN DE SIGNOS PARA COINCIDIR CON NASTRAN
             m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
-            m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
             gamma_s = B_c @ u_bend_RM
             shear_forces = D_c @ gamma_s
             q_x, q_y = shear_forces[0], shear_forces[1]
-            q_x, q_y = cosine*q_x + sine*q_y, -sine*q_x + cosine*q_y
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             

@@ -246,7 +246,7 @@ class ShellProperty(Property):
     """
     mat_id: int          #: Material ID for Membrane
     t: float             #: Thickness
-    mat_id_bending: int = -1 #: Material ID for Bending (Default: same as membrane if -1)
+    mat_id_bending: Optional[int] = None #: Material ID for bending (blank MID2 disables bending)
     mat_id_shear: Optional[int] = None #: Material ID for transverse-shear flexibility (MID3)
     bending_inertia_ratio: float = 1.0 #: PSHELL 12I/T^3 factor
     shear_thickness_ratio: float = 5.0 / 6.0 #: PSHELL TS/T factor
@@ -255,7 +255,7 @@ class ShellProperty(Property):
         if not np.isfinite(self.t) or self.t <= 0.0:
             raise ValueError(f"ShellProperty {self.pid} requires a finite thickness t > 0.")
         if self.mat_id_bending == -1:
-            self.mat_id_bending = self.mat_id
+            self.mat_id_bending = None
         if self.mat_id_shear == -1:
             self.mat_id_shear = None
         if (

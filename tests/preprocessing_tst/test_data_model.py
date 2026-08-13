@@ -433,10 +433,10 @@ class TestShellProperty:
         assert prop.mat_id_shear == 12     # MID3
 
     def test_fallback_logic(self):
-        # MID2 hereda MID1; MID3 vacio desactiva flexibilidad de cortante.
+        # MID2 y MID3 vacíos desactivan flexión y flexibilidad de cortante.
         prop = ShellProperty(pid=2, mat_id=20, t=0.1)
         assert prop.mat_id == 20
-        assert prop.mat_id_bending == 20
+        assert prop.mat_id_bending is None
         assert prop.mat_id_shear is None
 
 

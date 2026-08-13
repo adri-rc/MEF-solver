@@ -134,8 +134,8 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
         elif isinstance(prop, PSHELL):
             
             mid2_val = prop.Mid2()
-            if mid2_val == 0:
-                mid2_val = -1
+            if mid2_val == 0 or mid2_val is None:
+                mid2_val = None
             
             mid3_val = prop.Mid3()
             if mid3_val == 0 or mid3_val is None:

@@ -120,7 +120,7 @@ def element_setup(request):
     # 2. Crear Materiales
     mat_mem = MockMat(*data["mat_mem"], name="Membrane")
     
-    mat_bend = None
+    mat_bend = mat_mem
     if data["mat_bend"]:
         mat_bend = MockMat(*data["mat_bend"], name="Bending")
         
@@ -136,7 +136,7 @@ def element_setup(request):
         "solver": solver,
         "data": data,
         "mat_mem": mat_mem,
-        "mat_bend": mat_bend if mat_bend else mat_mem
+        "mat_bend": mat_bend
     }
 
 # --- TESTS ---
@@ -245,9 +245,11 @@ def test_reissner_mindlin_is_an_independent_full_integration_formulation():
     ]
     prop = MockProp(0.2)
     material = MockMat(210000.0, 0.3)
-    nastran = CQUAD4NastranElementSolver(*nodes, prop, material, k6rot=100.0)
+    nastran = CQUAD4NastranElementSolver(
+        *nodes, prop, material, mat_bending=material, k6rot=100.0
+    )
     mindlin = CQUAD4ReissnerMindlinElementSolver(
-        *nodes, prop, material, k6rot=100.0
+        *nodes, prop, material, mat_bending=material, k6rot=100.0
     )
 
     assert nastran.formulation == "nastran"
@@ -367,7 +369,9 @@ def test_constant_strain_patch_x_tension():
     
     prop = MockProp(t=1.0)
     mat = MockMat(E=1000.0, nu=0.3)
-    elem = CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
+    elem = CQUAD4NastranElementSolver(
+        n1, n2, n3, n4, prop, mat, mat_bending=mat
+    )
     
     eps_x = 0.001
     eps_y = -mat.nu * eps_x
@@ -415,7 +419,9 @@ def test_negative_jacobian_error():
     
     # El eje Z y X se crearán bien (diagonales no paralelas), 
     # pero el _get_jacobian fallará en la cuadratura.
-    elem = CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
+    elem = CQUAD4NastranElementSolver(
+        n1, n2, n3, n4, prop, mat, mat_bending=mat
+    )
     
     with pytest.raises(ValueError, match="Negative or zero Jacobian"):
         elem.get_stiffness_matrix()

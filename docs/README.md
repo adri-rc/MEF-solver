@@ -12,6 +12,7 @@ Esta documentación describe el estado observado en el repositorio el **5 de ago
 - [Formulación matemática](formulacion.md): ecuaciones, convenciones y formulación de los elementos.
 - [Estado y validación](validacion.md): cobertura real, resultados de pruebas y casos Nastran.
 - [Desarrollo y validación de CQUAD4](cquad4.md): estado detallado del elemento cuadrilateral.
+- [CQUAD4 para la tesis](cquad4_tesis.md): formulación, parámetros, evidencia y limitaciones en formato autocontenido.
 - [Limitaciones y hoja de ruta](roadmap.md): deuda técnica y evolución propuesta hacia elementos 3D.
 
 ## Estado funcional resumido

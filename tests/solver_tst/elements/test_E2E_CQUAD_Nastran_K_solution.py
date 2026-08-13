@@ -11,7 +11,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from src.preprocessing.data_model import CQUAD4Element
 from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.solver.elements.cquad4_nastran_element import (
+    CQUAD4NastranElementSolver,
+)
 from src.solver.linear_static_solver import LinearStaticSolver
 
 
@@ -21,7 +25,16 @@ STIFFNESS_VALIDATION_DATA = [
         "folder": "case_51",
         "filename": "ej51_kmembrane_k6rot_0.dat",
         "k_csv_file": "ej51_kmembrane_k6rot_0_Nastran.csv",
-        "active_dofs": [0, 1, 6, 7, 12, 13, 18, 19],
+        # MID2 is blank: Nastran leaves the complete plate/shear subspace at
+        # zero.  Comparing all 24 DOFs prevents a fictitious MID1 -> MID2
+        # fallback from being hidden by a membrane-only slice.
+        "active_dofs": list(range(24)),
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+        },
         "max_relative_frobenius_error": 0.01,
         "debug_export": True,
         "output_k_file": "draft_Ej51_KGlobal_CQUAD4_python_test.csv",
@@ -203,6 +216,148 @@ STIFFNESS_VALIDATION_DATA = [
         "debug_export": True,
         "output_k_file": "draft_Ej75_KGlobal_CQUAD4_python_test.csv",
     },
+    {
+        "case_name": "Ej81_KGlobal_CQUAD4_SkewAffineFull_K6ROT_100.0",
+        "folder": "case_81",
+        "filename": "ej81_cquad4_skew_parallelogram_full_dmig_k6rot_100.dat",
+        "k_csv_file": (
+            "ej81_cquad4_skew_parallelogram_full_dmig_k6rot_100_Nastran.csv"
+        ),
+        "active_dofs": list(range(24)),
+        # This full-property affine parallelogram validates the oblique
+        # augmented-shear metric.  The complete matrix now differs by only
+        # 1.03e-7 and its isolated plate/shear block by 3.15e-6.
+        "max_relative_frobenius_error": 2.0e-7,
+        "term_rtol": 1.0e-5,
+        "term_atol": 2.0e-3,
+        "block_coordinate_system": "element",
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+            "drilling [R3]": [5, 11, 17, 23],
+        },
+        "comparison_couplings": {
+            "drilling-membrane [R3]x[T1,T2]": {
+                "rows": [5, 11, 17, 23],
+                "columns": [0, 1, 6, 7, 12, 13, 18, 19],
+            },
+        },
+        "comparison_coupling_limits": {
+            "drilling-membrane [R3]x[T1,T2]": {
+                "max_relative_frobenius_error": 1.0e-7,
+                "term_rtol": 1.0e-7,
+                "term_atol": 1.0e-8,
+            },
+        },
+        "comparison_block_limits": {
+            "membrane [T1,T2]": {
+                "max_relative_frobenius_error": 1.0e-8,
+                "term_rtol": 1.0e-8,
+                "term_atol": 1.0e-5,
+            },
+            "plate/shear [T3,R1,R2]": {
+                "max_relative_frobenius_error": 4.0e-6,
+                "term_rtol": 1.0e-5,
+                "term_atol": 2.0e-3,
+            },
+            "drilling [R3]": {
+                "max_relative_frobenius_error": 1.0e-7,
+                "term_rtol": 1.0e-7,
+                "term_atol": 1.0e-8,
+            },
+        },
+        "debug_export": True,
+        "output_k_file": "draft_Ej81_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej83_KGlobal_CQUAD4_SkewAffineMID3Isolated_K6ROT_100.0",
+        "folder": "case_83",
+        "filename": (
+            "ej83_cquad4_skew_affine_mid3_isolation_dmig_k6rot_100.dat"
+        ),
+        "k_csv_file": (
+            "ej83_cquad4_skew_affine_mid3_isolation_dmig_k6rot_100_Nastran.csv"
+        ),
+        "active_dofs": list(range(24)),
+        # MID1 is deliberately soft while MID2/MID3 stay stiff.  This makes
+        # the transverse-shear flexibility dominate the DMIG comparison.
+        "max_relative_frobenius_error": 4.0e-6,
+        "term_rtol": 1.0e-5,
+        "term_atol": 2.0e-3,
+        "block_coordinate_system": "element",
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+            "drilling [R3]": [5, 11, 17, 23],
+        },
+        "comparison_block_limits": {
+            "membrane [T1,T2]": {
+                "max_relative_frobenius_error": 5.0e-7,
+                "term_rtol": 1.0e-5,
+                "term_atol": 1.0e-6,
+            },
+            "plate/shear [T3,R1,R2]": {
+                "max_relative_frobenius_error": 4.0e-6,
+                "term_rtol": 1.0e-5,
+                "term_atol": 2.0e-3,
+            },
+            "drilling [R3]": {
+                # Its norm is intentionally tiny because it derives from
+                # soft MID1; the absolute term check is the useful metric.
+                "max_relative_frobenius_error": 1.0e-3,
+                "term_rtol": 1.0e-3,
+                "term_atol": 1.0e-8,
+            },
+        },
+        "debug_export": True,
+        "output_k_file": "draft_Ej83_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej89_KGlobal_CQUAD4_SkewAffineMID3Blank_K6ROT_100.0",
+        "folder": "case_89",
+        "filename": "ej89_cquad4_skew_affine_mid3_blank_dmig_k6rot_100.dat",
+        "k_csv_file": (
+            "ej89_cquad4_skew_affine_mid3_blank_dmig_k6rot_100_Nastran.csv"
+        ),
+        "active_dofs": list(range(24)),
+        # MID3 blank disables physical transverse-shear flexibility but not
+        # MacNeal's residual bending/shear correction.  It is therefore the
+        # control paired with case 83.
+        "max_relative_frobenius_error": 2.0e-6,
+        "term_rtol": 1.0e-5,
+        "term_atol": 2.0e-3,
+        "block_coordinate_system": "element",
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+            "drilling [R3]": [5, 11, 17, 23],
+        },
+        "comparison_block_limits": {
+            "membrane [T1,T2]": {
+                "max_relative_frobenius_error": 2.0e-6,
+                "term_rtol": 1.0e-5,
+                "term_atol": 1.0e-6,
+            },
+            "plate/shear [T3,R1,R2]": {
+                "max_relative_frobenius_error": 2.0e-6,
+                "term_rtol": 1.0e-5,
+                "term_atol": 2.0e-3,
+            },
+            "drilling [R3]": {
+                "max_relative_frobenius_error": 4.0e-3,
+                "term_rtol": 4.0e-3,
+                "term_atol": 3.0e-8,
+            },
+        },
+        "debug_export": True,
+        "output_k_file": "draft_Ej89_KGlobal_CQUAD4_python_test.csv",
+    },
 ]
 
 
@@ -287,12 +442,38 @@ class TestCQUAD4StiffnessMatrix:
         )
         tolerance = case_data["max_relative_frobenius_error"]
 
+        block_calculated = calculated
+        block_reference = reference
+        if case_data.get("block_coordinate_system") == "element":
+            cquad_elements = [
+                element
+                for element in model.elements.values()
+                if isinstance(element, CQUAD4Element)
+            ]
+            assert len(cquad_elements) == 1, (
+                "La comparación en ejes del elemento requiere un solo CQUAD4"
+            )
+            element = cquad_elements[0]
+            prop = model.properties[element.prop_id]
+            element_solver = CQUAD4NastranElementSolver(
+                *(model.get_node(node_id) for node_id in element.nodes),
+                prop,
+                mat_membrane=model.materials[prop.mat_id],
+                mat_bending=model.materials.get(prop.mat_id_bending),
+                mat_shear=model.materials.get(prop.mat_id_shear),
+                k6rot=solver.k6rot,
+                theta=element.theta,
+            )
+            transform = element_solver.T
+            block_calculated = transform @ calculated @ transform.T
+            block_reference = transform @ reference @ transform.T
+
         block_diagnostics = []
         for block_name, block_dofs in case_data.get(
             "comparison_blocks", {}
         ).items():
-            calculated_block = calculated[np.ix_(block_dofs, block_dofs)]
-            reference_block = reference[np.ix_(block_dofs, block_dofs)]
+            calculated_block = block_calculated[np.ix_(block_dofs, block_dofs)]
+            reference_block = block_reference[np.ix_(block_dofs, block_dofs)]
             block_reference_norm = np.linalg.norm(reference_block)
             if block_reference_norm == 0.0:
                 block_error = np.linalg.norm(calculated_block)
@@ -306,14 +487,37 @@ class TestCQUAD4StiffnessMatrix:
             block_diagnostics.append(
                 f"  - {block_name}: {error_label}={block_error:.6e}"
             )
+            block_limit = case_data.get(
+                "comparison_block_limits", {}
+            ).get(block_name)
+            if block_limit is not None:
+                assert block_error <= block_limit[
+                    "max_relative_frobenius_error"
+                ], (
+                    f"El bloque {block_name} excede su tolerancia en "
+                    f"{case_data['case_name']}: error={block_error:.6e}, "
+                    "límite="
+                    f"{block_limit['max_relative_frobenius_error']:.6e}"
+                )
+                if "term_rtol" in block_limit:
+                    np.testing.assert_allclose(
+                        calculated_block,
+                        reference_block,
+                        rtol=block_limit["term_rtol"],
+                        atol=block_limit["term_atol"],
+                        err_msg=(
+                            f"El bloque {block_name} no coincide término a "
+                            f"término en {case_data['case_name']}"
+                        ),
+                    )
 
         for coupling_name, coupling_dofs in case_data.get(
             "comparison_couplings", {}
         ).items():
             rows = coupling_dofs["rows"]
             columns = coupling_dofs["columns"]
-            calculated_coupling = calculated[np.ix_(rows, columns)]
-            reference_coupling = reference[np.ix_(rows, columns)]
+            calculated_coupling = block_calculated[np.ix_(rows, columns)]
+            reference_coupling = block_reference[np.ix_(rows, columns)]
             coupling_reference_norm = np.linalg.norm(reference_coupling)
             if coupling_reference_norm == 0.0:
                 coupling_error = np.linalg.norm(calculated_coupling)
@@ -327,6 +531,29 @@ class TestCQUAD4StiffnessMatrix:
             block_diagnostics.append(
                 f"  - {coupling_name}: {error_label}={coupling_error:.6e}"
             )
+            coupling_limit = case_data.get(
+                "comparison_coupling_limits", {}
+            ).get(coupling_name)
+            if coupling_limit is not None:
+                assert coupling_error <= coupling_limit[
+                    "max_relative_frobenius_error"
+                ], (
+                    f"El acoplamiento {coupling_name} excede su tolerancia "
+                    f"en {case_data['case_name']}: error={coupling_error:.6e}, "
+                    "límite="
+                    f"{coupling_limit['max_relative_frobenius_error']:.6e}"
+                )
+                if "term_rtol" in coupling_limit:
+                    np.testing.assert_allclose(
+                        calculated_coupling,
+                        reference_coupling,
+                        rtol=coupling_limit["term_rtol"],
+                        atol=coupling_limit["term_atol"],
+                        err_msg=(
+                            f"El acoplamiento {coupling_name} no coincide "
+                            f"término a término en {case_data['case_name']}"
+                        ),
+                    )
 
         absolute_differences = np.abs(calculated_active - reference_active)
         worst_flat_index = int(np.argmax(absolute_differences))

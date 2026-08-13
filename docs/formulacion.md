@@ -107,9 +107,19 @@ La membrana multiplica `D_m` por el espesor. La matriz de flexión incorpora `t�
 - MID2: flexión;
 - MID3: cortante transversal.
 
+En CQUAD4, un `MID2` vacío desactiva el bloque de flexión; no hereda `MID1`.
+Un `MID3` vacío no activa flexibilidad física de cortante. No obstante, cuando
+existe `MID2`, sus propiedades sí participan en la corrección residual de
+placa/torsión que queda aunque `MID3` esté vacío. Esto reproduce la distinción
+de NASTRAN-95 entre `SHRFLX` y el material interno usado por esa corrección.
+
 La implementación contiene una penalización *drilling* cuando `K6ROT > 0`, basada en la diferencia entre la rotación nodal y la macrorrotación de membrana. La compatibilidad numérica con Nastran se ha ajustado empíricamente y cuenta con casos específicos de comparación de `K_global`.
 
-Advertencia: los propios comentarios del código indican que el cortante transversal no reproduce directamente Nastran. Los casos de referencia suelen usar un MID3 de rigidez prácticamente nula para aislar membrana y flexión. Esta es una condición de validación, no una equivalencia general de PSHELL.
+El cortante transversal Nastran se ha validado término a término para
+rectángulos con `MID3`, `G3` y `TS/T` variables. Las DMIG 81/83/89 validan el
+acoplamiento torsional entre muestras emparejadas de cuadriláteros oblicuos: el
+error global queda entre `1.03e-7` y `3.14e-6`. Los casos predictivos 90/91
+quedan preparados para confirmar esa generalización a mayor oblicuidad.
 
 ## CQUAD4
 
@@ -134,19 +144,23 @@ K_shear = integral(B_sᵀ D_s B_s (5/6)t dA)
 - Cortante transversal: integración completa `2 x 2`.
 
 La reconstrucción Nastran utiliza deformación uniforme y dos modos bilineales
-estabilizados con una métrica de líneas medias. El bloque transversal emplea
-la flexibilidad aumentada de MacNeal:
+estabilizados con una métrica de líneas medias y normalización por distorsión.
+El bloque transversal emplea la interpolación *edge-string* y la flexibilidad
+aumentada de MacNeal:
 
 ```text
 K_s = D_s^T (Z_b + Z_s)^-1 D_s
-Z_s(i,i) = 1 / (2 detJ_i G3 t (TS/T))
+Z_s(i,i) = 1 / (2 detJ_i G3 t (TS/T))  # geometría rectangular
 ```
 
 `D_s` muestrea cuatro deformaciones de cortante selectivas y `Z_b` aporta la
 flexibilidad residual de flexión. `Z_s` solo existe cuando PSHELL define
-`MID3`; un `MID3` vacío no hereda `MID2`. Para un elemento alabeado se
-trasladan las fuerzas y momentos desde el plano medio a los nodos reales antes
-de aplicar la transformación global.
+`MID3`; un `MID3` vacío no crea `Z_s`, aunque `MID2` mantiene la corrección
+residual `Z_b`. En geometrías oblicuas las dos muestras de cada dirección se
+acoplan mediante una métrica de pareja positiva dependiente del ángulo entre
+líneas medias. Para un elemento alabeado se trasladan las fuerzas y momentos
+desde el plano medio a los nodos reales antes de aplicar la transformación
+global.
 
 Los bloques se dispersan en `[Tx, Ty]` y `[Tz, Rx, Ry]`. `PARAM,K6ROT` llega a
 CQUAD4 y activa una penalización *drilling* cuando es positivo. Las clases
@@ -156,13 +170,22 @@ separadas las dos formulaciones; la geometría y la recuperación se comparten e
 
 Los casos DMIG 51-53 verifican los bloques planos con error inferior al `1 %`.
 El caso 54 verifica la matriz global `24 x 24` de un elemento inclinado y
-alabeado con error `2.113059 %` y criterio del `3 %`.
+alabeado con error `2.079993 %` y criterio del `3 %`.
 
-El caso 55 verifica una geometría 3D con `K6ROT=100` al `1.077026 %`. Los casos
+El caso 55 verifica una geometría 3D con `K6ROT=100` al `0.028215 %`. Los casos
 65, 67 y 69-75 validan por separado `MID3`, `G3`, `TS/T`, `K6ROT` y la ausencia
 de `MID3`: los rectángulos regulares quedan entre `1e-10` y `3e-6` de error
-relativo y los cuadriláteros sesgados 74-75 en `0.72 %`. Los F06 66 y 68
-validan también la respuesta completa.
+relativo y los cuadriláteros sesgados 74-75 en `0.05436 %`. Los F06 66 y 68
+validan también la respuesta completa. Los controles oblicuos 81, 83 y 89
+quedan al `0.0000103 %`, `0.000314 %` y `0.0000889 %` global y se comparan
+también término a término.
+
+En mallas facetadas, el solver usa la normal propia de cada elemento y no
+promedia normales shell entre GRID compartidos. `SNORM` define en Nastran una
+normal común para las rotaciones de las facetas vecinas dentro de una
+tolerancia angular; no modifica `MAT1`. El caso 88 con `SNORM=0` coincide con
+Nastran prácticamente a precisión numérica; el comportamiento `SNORM`
+predeterminado queda fuera del alcance actual.
 
 El análisis detallado y el plan de cierre se encuentran en [cquad4.md](cquad4.md).
 
