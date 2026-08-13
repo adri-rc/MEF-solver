@@ -1,6 +1,6 @@
 """Validacion E2E de CQUAD4 con referencias copiadas de MSC Nastran.
 
-Los valores esperados de los casos 56-59 estan escritos explicitamente en
+Los valores esperados de los casos 56-68 estan escritos explicitamente en
 este archivo. El test no lee los F06 durante la ejecucion: los F06 quedan
 unicamente como trazabilidad de las referencias introducidas manualmente.
 """
@@ -552,6 +552,135 @@ VALIDATION_DATA = [
             reason="Multi-CQUAD4 assembly/recovery does not yet match Nastran",
         ),
     ),
+    # endregion
+    # region --- CASO 66: Cortante transversal aislado, K6ROT=0 ---
+    {
+            "case_name": "Ej66_CQUAD4_TransverseShearLoad_K6ROT0",
+            "folder": "case_66",
+            "filename": "ej66_cquad4_transverse_shear_load_k6rot_0.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-8,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-5,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-5,
+            # Las traslaciones T3 del orden de 6e4 son consecuencia de la
+            # flexibilidad residual de QUAD4 cuando MID3 esta vacio. Este
+            # caso evita que se vuelva a sustituir silenciosamente MID3 por
+            # MID2, lo que haria el elemento varios millones de veces mas
+            # rigido a cortante.
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {0: 0.0, 1: 0.0, 2: 6.042769e4, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 6.090567e4, 3: 0.0, 4: 0.0, 5: 0.0},
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_loads": {
+                2: {0: 0.0, 1: 0.0, 2: 40.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 60.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_reactions": {
+                1: {0: 0.0, 1: 0.0, 2: -41.24505, 3: 3.102864, 4: 45.38220, 5: 0.0},
+                2: {0: 0.0, 1: 0.0, 2: 0.0, 3: -4.036648, 4: 45.38220, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 0.0, 3: -4.036648, 4: 54.61780, 5: 0.0},
+                4: {0: 0.0, 1: 0.0, 2: -58.75495, 3: 3.102864, 4: 54.61780, 5: 0.0},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 0.0,
+                    "membrane_force_y": 0.0,
+                    "membrane_force_xy": 0.0,
+                    "bending_moment_x": 0.0,
+                    "bending_moment_y": 0.0,
+                    "bending_moment_xy": 0.0,
+                    "shear_force_x": 66.66667,
+                    "shear_force_y": 0.6225228,
+                    "stress_bot_fiber_x": 0.0,
+                    "stress_bot_fiber_y": 0.0,
+                    "tau_bot_fiber_xy": 0.0,
+                    "major_principal_bot": 0.0,
+                    "minor_principal_bot": 0.0,
+                    "von_mises_bot": 0.0,
+                    "stress_top_fiber_x": 0.0,
+                    "stress_top_fiber_y": 0.0,
+                    "tau_top_fiber_xy": 0.0,
+                    "major_principal_top": 0.0,
+                    "minor_principal_top": 0.0,
+                    "von_mises_top": 0.0,
+                }
+            },
+    },
+    # endregion
+    # region --- CASO 68: Respuesta combinada con MID1/MID2/MID3 y K6ROT=100 ---
+    {
+            "case_name": "Ej68_CQUAD4_FullResponseShear_K6ROT100",
+            "folder": "case_68",
+            "filename": "ej68_cquad4_full_response_shear_k6rot_100.dat",
+            "rel_tol_disp": 0.05,
+            "abs_tol_disp": 1.0e-6,
+            "rel_tol_load": 1.0e-10,
+            "abs_tol_load": 1.0e-10,
+            "rel_tol_reaction": 0.05,
+            "abs_tol_reaction": 1.0e-4,
+            "rel_tol_element": 0.05,
+            "abs_tol_element": 1.0e-4,
+            # Regresion combinada: ejercita simultaneamente membrana,
+            # flexion, cortadura fisica MID3 y la penalizacion K6ROT.
+            "expected_displacements": {
+                1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                2: {
+                    0: -1.733271e-4,
+                    1: -1.130955e-3,
+                    2: 9.397522e-2,
+                    3: -2.652626e-2,
+                    4: -6.748019e-2,
+                    5: -5.567554e-4,
+                },
+                3: {
+                    0: 6.487230e-4,
+                    1: -1.106111e-3,
+                    2: 4.334444e-2,
+                    3: -3.489536e-2,
+                    4: -2.411787e-2,
+                    5: -1.083884,
+                },
+                4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
+            },
+            "expected_loads": {
+                2: {0: 12.0, 1: -8.0, 2: 80.0, 3: 0.0, 4: 0.0, 5: 0.0},
+                3: {0: 0.0, 1: 0.0, 2: 0.0, 3: 10.0, 4: 20.0, 5: -7.5},
+            },
+            "expected_reactions": {
+                1: {0: 3.664085, 1: 2.206258, 2: -57.23640, 3: 3.971688, 4: 69.03774, 5: 1.957422e-3},
+                4: {0: -15.66409, 1: 5.793742, 2: -22.76360, 3: 20.17371, 4: 70.96226, 5: 1.914423e-3},
+            },
+            "expected_element_forces": {
+                1: {
+                    "membrane_force_x": 8.0,
+                    "membrane_force_y": 2.896871,
+                    "membrane_force_xy": -6.582688,
+                    "bending_moment_x": 40.0,
+                    "bending_moment_y": 6.550505,
+                    "bending_moment_xy": -19.40723,
+                    "shear_force_x": 53.33333,
+                    "shear_force_y": -11.38180,
+                    "stress_bot_fiber_x": 976.0,
+                    "stress_bot_fiber_y": 163.0058,
+                    "tau_bot_fiber_xy": -478.9390,
+                    "major_principal_bot": 1197.693,
+                    "minor_principal_bot": -58.68685,
+                    "von_mises_bot": 1228.088,
+                    "stress_top_fiber_x": -944.0,
+                    "stress_top_fiber_y": -151.4184,
+                    "tau_top_fiber_xy": 452.6082,
+                    "major_principal_top": 53.87257,
+                    "minor_principal_top": -1149.291,
+                    "von_mises_top": 1177.152,
+                }
+            },
+    },
     # endregion
 ]
 

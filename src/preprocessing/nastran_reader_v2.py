@@ -146,7 +146,9 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
                 mat_id=prop.Mid1(),
                 t=prop.t,
                 mat_id_bending=mid2_val,
-                mat_id_shear=mid3_val
+                mat_id_shear=None if mid3_val == -1 else mid3_val,
+                bending_inertia_ratio=prop.twelveIt3,
+                shear_thickness_ratio=prop.tst,
             )
 
 

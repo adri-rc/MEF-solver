@@ -242,6 +242,27 @@ CQUAD4, 200, 10, 1, 2, 3, 4, 45.0
         assert elem.theta == 45.0
         assert elem.__class__.__name__ == "CQUAD4Element"
 
+    def test_pshell_blank_mid3_does_not_inherit_mid2(self, tmp_path):
+        """A blank MID3 means no physical transverse-shear material."""
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01, 1, 0.75, , 0.5
+CQUAD4, 200, 10, 1, 2, 3, 4
+        """
+        path = tmp_path / "pshell_blank_mid3.bdf"
+        path.write_text(bdf_content)
+
+        prop = parse_nastran_input(str(path)).properties[10]
+
+        assert prop.mat_id_bending == 1
+        assert prop.mat_id_shear is None
+        assert prop.bending_inertia_ratio == pytest.approx(0.75)
+        assert prop.shear_thickness_ratio == pytest.approx(0.5)
+
 # endregion --- Dummy Nastran texts Tests --
 
 
@@ -420,7 +441,3 @@ RBE2, 99, 1, 123456, 2, 3
         error_str = str(excinfo.value)
         # Verify message mentions MPC or Rigid
         assert "MPC" in error_str or "RBE" in error_str or "Rigid" in error_str
-
-
-
-        

@@ -54,7 +54,10 @@ class CQUAD4ElementBase(ABC):
         # Asignación explícita de materiales
         self.mat_membrane = mat_membrane
         self.mat_bending = mat_bending if mat_bending is not None else self.mat_membrane
-        self.mat_shear = mat_shear if mat_shear is not None else self.mat_bending
+        # A blank PSHELL MID3 disables physical transverse-shear flexibility.
+        # It must not silently inherit MID2; the Nastran QUAD4 retains only its
+        # residual bending flexibility in that case.
+        self.mat_shear = mat_shear
         
         self.coords = np.array([n.get_coords() for n in self.nodes])
         
@@ -240,9 +243,19 @@ class CQUAD4ElementBase(ABC):
         """
         @brief Pure Constitutive Matrix for Transverse Shear (MID3)
         """
+        if self.mat_shear is None:
+            return np.zeros((2, 2))
         E, nu = self.mat_shear.E, self.mat_shear.nu
         G = getattr(self.mat_shear, 'G', E / (2.0 * (1.0 + nu)))
         return G * np.eye(2)
+
+    def _get_bending_inertia_ratio(self) -> float:
+        """Return PSHELL 12I/T^3, including the documented default."""
+        return float(getattr(self.prop, "bending_inertia_ratio", 1.0))
+
+    def _get_shear_thickness_ratio(self) -> float:
+        """Return PSHELL TS/T, including the documented default."""
+        return float(getattr(self.prop, "shear_thickness_ratio", 5.0 / 6.0))
 
     def _add_drilling_stiffness(self, stiffness: np.ndarray) -> None:
         """Add K6ROT with the same nodal penalty used by CTRIA3.
@@ -399,7 +412,9 @@ class CQUAD4ElementBase(ABC):
             # Momentos Flectores: M = D_b * (t^3 / 12) * Curvatura
             kappa = B_b @ u_bend_RM
             D_b = self._get_D_bending()
-            I_bend = (t**3) / 12.0
+            I_bend = (
+                (t**3) / 12.0 * self._get_bending_inertia_ratio()
+            )
             moments = (D_b * I_bend) @ kappa
 
             # Nastran's positive shell moment convention is opposite to the
@@ -407,12 +422,16 @@ class CQUAD4ElementBase(ABC):
             m_x, m_y, m_xy = -moments[0], -moments[1], -moments[2]
             m_x, m_y, m_xy = rotate_symmetric(m_x, m_y, m_xy)
             
-            # Fuerzas Cortantes Transversales: Q = D_s * (k * t) * Deformacion_Angular
-            gamma_s = B_s @ u_bend_RM
-            D_s = self._get_D_shear()
-            k_shear = 5.0 / 6.0
-            A_shear = k_shear * t
-            shear_forces = (D_s * A_shear) @ gamma_s
+            if hasattr(self, "_recover_transverse_shear_forces"):
+                shear_forces = self._recover_transverse_shear_forces(
+                    u_bend_RM
+                )
+            else:
+                # Classical Reissner-Mindlin recovery.
+                gamma_s = B_s @ u_bend_RM
+                D_s = self._get_D_shear()
+                A_shear = self._get_shear_thickness_ratio() * t
+                shear_forces = (D_s * A_shear) @ gamma_s
             
             q_x, q_y = shear_forces[0], shear_forces[1]
             q_x, q_y = cosine*q_x + sine*q_y, -sine*q_x + cosine*q_y

@@ -72,6 +72,137 @@ STIFFNESS_VALIDATION_DATA = [
         "debug_export": True,
         "output_k_file": "draft_Ej55_KGlobal_CQUAD4_python_test.csv",
     },
+    {
+            "case_name": "Ej65_KGlobal_CQUAD4_TransverseShear_K6ROT_0.0",
+            "folder": "case_65",
+            "filename": "ej65_cquad4_transverse_shear_stiffness_k6rot_0.dat",
+            "k_csv_file": (
+                "ej65_cquad4_transverse_shear_stiffness_k6rot_0_Nastran.csv"
+            ),
+            "active_dofs": list(range(24)),
+            "max_relative_frobenius_error": 1.0e-8,
+            "term_rtol": 1.0e-8,
+            "term_atol": 1.0e-10,
+            "comparison_blocks": {
+                "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+                "plate/shear [T3,R1,R2]": [
+                    2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+                ],
+            },
+            "debug_export": True,
+            "output_k_file": "draft_Ej65_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+            "case_name": "Ej67_KGlobal_CQUAD4_FullShear_K6ROT_100.0",
+            "folder": "case_67",
+            "filename": "ej67_cquad4_full_stiffness_shear_k6rot_100.dat",
+            "k_csv_file": (
+                "ej67_cquad4_full_stiffness_shear_k6rot_100_Nastran.csv"
+            ),
+            "active_dofs": list(range(24)),
+            "max_relative_frobenius_error": 1.0e-5,
+            "term_rtol": 1.0e-5,
+            "term_atol": 1.0e-1,
+            "comparison_blocks": {
+                "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+                "plate/shear [T3,R1,R2]": [
+                    2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+                ],
+                "drilling [R3]": [5, 11, 17, 23],
+            },
+            "comparison_couplings": {
+                "drilling-membrane [R3]x[T1,T2]": {
+                    "rows": [5, 11, 17, 23],
+                    "columns": [0, 1, 6, 7, 12, 13, 18, 19],
+                }
+            },
+            "debug_export": True,
+            "output_k_file": "draft_Ej67_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej69_KGlobal_CQUAD4_MID3Blank_K6ROT_0.0",
+        "folder": "case_69",
+        "filename": "ej69_cquad4_transverse_shear_baseline_mid3_0_k6rot_0.dat",
+        "k_csv_file": "ej69_cquad4_transverse_shear_baseline_mid3_0_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-8,
+        "term_rtol": 1.0e-8,
+        "term_atol": 1.0e-10,
+        "debug_export": True,
+        "output_k_file": "draft_Ej69_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej70_KGlobal_CQUAD4_G3Half_K6ROT_0.0",
+        "folder": "case_70",
+        "filename": "ej70_cquad4_transverse_shear_g3_half_k6rot_0.dat",
+        "k_csv_file": "ej70_cquad4_transverse_shear_g3_half_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-8,
+        "term_rtol": 1.0e-8,
+        "term_atol": 1.0e-10,
+        "debug_export": True,
+        "output_k_file": "draft_Ej70_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej71_KGlobal_CQUAD4_G3Double_K6ROT_0.0",
+        "folder": "case_71",
+        "filename": "ej71_cquad4_transverse_shear_g3_double_k6rot_0.dat",
+        "k_csv_file": "ej71_cquad4_transverse_shear_g3_double_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-8,
+        "term_rtol": 1.0e-8,
+        "term_atol": 1.0e-10,
+        "debug_export": True,
+        "output_k_file": "draft_Ej71_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej72_KGlobal_CQUAD4_MID3Blank_K6ROT_100.0",
+        "folder": "case_72",
+        "filename": "ej72_cquad4_full_stiffness_mid3_0_k6rot_100.dat",
+        "k_csv_file": "ej72_cquad4_full_stiffness_mid3_0_k6rot_100_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-5,
+        "term_rtol": 1.0e-5,
+        "term_atol": 1.0e-1,
+        "debug_export": True,
+        "output_k_file": "draft_Ej72_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej73_KGlobal_CQUAD4_TSTHalf_K6ROT_0.0",
+        "folder": "case_73",
+        "filename": "ej73_cquad4_transverse_shear_tst_half_k6rot_0.dat",
+        "k_csv_file": "ej73_cquad4_transverse_shear_tst_half_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-8,
+        "term_rtol": 1.0e-8,
+        "term_atol": 1.0e-10,
+        "debug_export": True,
+        "output_k_file": "draft_Ej73_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej74_KGlobal_CQUAD4_SkewMID3_K6ROT_0.0",
+        "folder": "case_74",
+        "filename": "ej74_cquad4_skew_transverse_shear_mid3_active_k6rot_0.dat",
+        "k_csv_file": "ej74_cquad4_skew_transverse_shear_mid3_active_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 0.01,
+        "term_rtol": 0.01,
+        "term_atol": 1.0e-3,
+        "debug_export": True,
+        "output_k_file": "draft_Ej74_KGlobal_CQUAD4_python_test.csv",
+    },
+    {
+        "case_name": "Ej75_KGlobal_CQUAD4_SkewMID3Blank_K6ROT_0.0",
+        "folder": "case_75",
+        "filename": "ej75_cquad4_skew_transverse_shear_mid3_0_k6rot_0.dat",
+        "k_csv_file": "ej75_cquad4_skew_transverse_shear_mid3_0_k6rot_0_Nastran.csv",
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 0.01,
+        "term_rtol": 0.01,
+        "term_atol": 1.0e-3,
+        "debug_export": True,
+        "output_k_file": "draft_Ej75_KGlobal_CQUAD4_python_test.csv",
+    },
 ]
 
 
@@ -155,11 +286,84 @@ class TestCQUAD4StiffnessMatrix:
             np.linalg.norm(calculated_active - reference_active) / reference_norm
         )
         tolerance = case_data["max_relative_frobenius_error"]
+
+        block_diagnostics = []
+        for block_name, block_dofs in case_data.get(
+            "comparison_blocks", {}
+        ).items():
+            calculated_block = calculated[np.ix_(block_dofs, block_dofs)]
+            reference_block = reference[np.ix_(block_dofs, block_dofs)]
+            block_reference_norm = np.linalg.norm(reference_block)
+            if block_reference_norm == 0.0:
+                block_error = np.linalg.norm(calculated_block)
+                error_label = "error absoluto"
+            else:
+                block_error = (
+                    np.linalg.norm(calculated_block - reference_block)
+                    / block_reference_norm
+                )
+                error_label = "error relativo de Frobenius"
+            block_diagnostics.append(
+                f"  - {block_name}: {error_label}={block_error:.6e}"
+            )
+
+        for coupling_name, coupling_dofs in case_data.get(
+            "comparison_couplings", {}
+        ).items():
+            rows = coupling_dofs["rows"]
+            columns = coupling_dofs["columns"]
+            calculated_coupling = calculated[np.ix_(rows, columns)]
+            reference_coupling = reference[np.ix_(rows, columns)]
+            coupling_reference_norm = np.linalg.norm(reference_coupling)
+            if coupling_reference_norm == 0.0:
+                coupling_error = np.linalg.norm(calculated_coupling)
+                error_label = "error absoluto"
+            else:
+                coupling_error = (
+                    np.linalg.norm(calculated_coupling - reference_coupling)
+                    / coupling_reference_norm
+                )
+                error_label = "error relativo de Frobenius"
+            block_diagnostics.append(
+                f"  - {coupling_name}: {error_label}={coupling_error:.6e}"
+            )
+
+        absolute_differences = np.abs(calculated_active - reference_active)
+        worst_flat_index = int(np.argmax(absolute_differences))
+        worst_local_row, worst_local_column = np.unravel_index(
+            worst_flat_index, absolute_differences.shape
+        )
+        worst_row = active_dofs[worst_local_row]
+        worst_column = active_dofs[worst_local_column]
+        diagnostics = ""
+        if block_diagnostics:
+            diagnostics += "\nDiagnostico por bloques:\n" + "\n".join(
+                block_diagnostics
+            )
+        diagnostics += (
+            "\nMayor diferencia termino a termino: "
+            f"K[{worst_row},{worst_column}] solver="
+            f"{calculated[worst_row, worst_column]:.9e}, Nastran="
+            f"{reference[worst_row, worst_column]:.9e}, diferencia="
+            f"{absolute_differences[worst_local_row, worst_local_column]:.9e}"
+        )
         assert relative_error < tolerance, (
             f"K_global no coincide para {case_data['case_name']}: "
             f"error relativo de Frobenius={relative_error:.6e}, "
-            f"tolerancia={tolerance:.6e}"
+            f"tolerancia={tolerance:.6e}{diagnostics}"
         )
+
+        if "term_rtol" in case_data:
+            np.testing.assert_allclose(
+                calculated_active,
+                reference_active,
+                rtol=case_data["term_rtol"],
+                atol=case_data["term_atol"],
+                err_msg=(
+                    "La matriz activa no coincide termino a termino en "
+                    f"{case_data['case_name']}"
+                ),
+            )
 
         if case_data.get("validate_drilling_subspace", False):
             element = next(iter(model.elements.values()))

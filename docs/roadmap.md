@@ -2,10 +2,11 @@
 
 ## Estado de partida
 
-El flujo estático lineal y la suite de 298 pruebas están operativos. CROD,
+El flujo estático lineal y la suite de 321 pruebas están operativos. CROD,
 CBAR, CTRIA3 y CQUAD4 se leen, ensamblan y recuperan resultados. CQUAD4 dispone
-de formulaciones Nastran y Reissner-Mindlin separadas; los casos DMIG 51-54
-cumplen sus tolerancias documentadas.
+de formulaciones Nastran y Reissner-Mindlin separadas; los casos DMIG 51-55
+cumplen sus tolerancias documentadas. Los casos 65-75 validan la flexibilidad
+transversal `[T3,R1,R2]`, incluida la semántica de `MID3`, `G3` y `TS/T`.
 
 El proyecto sigue siendo un solver académico de alcance controlado, no un
 sustituto general de Nastran.
@@ -19,6 +20,8 @@ sustituto general de Nastran.
   tienen todavía tratamiento físico completo;
 - CQUAD4 alabeado coincide con la DMIG del caso 54 al `2.15 %`, no término a
   término, y necesita más referencias independientes;
+- los CQUAD4 planos sesgados 74-75 conservan un error de matriz del `0.72 %` y
+  la geometría alabeada necesita más referencias independientes;
 - no hay sólidos 3D, dinámica, plasticidad ni no linealidad geométrica;
 - el informe de texto aún puede especializarse mejor por tipo de elemento;
 - `assemble()` no es idempotente y no existe CI publicada.
@@ -27,8 +30,8 @@ sustituto general de Nastran.
 
 ### P0 - Consolidar la validación 2D
 
-1. Añadir casos CQUAD4 alabeados, de cortante y con diferentes métricas de
-   calidad geométrica.
+1. Refinar la cinemática geométrica de cuadriláteros sesgados/alabeados sin
+   degradar las DMIG rectangulares 65-73 ya cerradas término a término.
 2. Ejecutar *patch tests* multielemento y convergencia de placas.
 3. Cerrar las discrepancias CTRIA3 conocidas con métricas absolutas y
    relativas separadas.
@@ -36,7 +39,8 @@ sustituto general de Nastran.
 
 ### P1 - Completar semántica shell
 
-1. Implementar `MID4`, `12I/T^3`, `TS/T`, `Z1/Z2`, `ZOFFS`, `TFLAG` y `Ti`.
+1. Implementar `MID4`, `Z1/Z2`, `ZOFFS`, `TFLAG` y `Ti`; `12I/T^3` y `TS/T`
+   ya se leen y participan en la rigidez/recuperación CQUAD4.
 2. Validar materiales ortótropos y laminados antes de generalizar la
    estabilización isotrópica actual.
 3. Separar recuperación y escritores en `src/postprocessing/`.

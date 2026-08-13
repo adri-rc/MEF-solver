@@ -9,7 +9,6 @@ force and moment correction after the mean-plane stiffness is formed.
 
 import numpy as np
 
-from ..quadrature import GaussQuadrature
 from .cquad4_element import CQUAD4ElementBase
 
 
@@ -23,6 +22,16 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
     """
 
     formulation = "nastran"
+
+    @staticmethod
+    def _selective_shear_sampling_points():
+        gauss = 1.0 / np.sqrt(3.0)
+        return (
+            (0.0, -gauss, 0),
+            (0.0, gauss, 0),
+            (-gauss, 0.0, 1),
+            (gauss, 0.0, 1),
+        )
 
     def _build_nastran_plane_stiffness(
         self, constitutive: np.ndarray, young_modulus: float, section_scale: float
@@ -76,11 +85,12 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         return 0.5 * (stiffness + stiffness.T)
 
     def _build_local_stiffness(self) -> np.ndarray:
-        """Assemble membrane, bending, shear and drilling mean-plane blocks."""
+        """Assemble membrane, bending-flexibility and drilling blocks."""
         stiffness = np.zeros((24, 24))
         thickness = self.prop.t
-        bending_inertia = thickness**3 / 12.0
-        shear_area = (5.0 / 6.0) * thickness
+        bending_inertia = (
+            thickness**3 / 12.0 * self._get_bending_inertia_ratio()
+        )
 
         membrane = self._build_nastran_plane_stiffness(
             self._get_D_membrane(), self.mat_membrane.E, thickness
@@ -93,23 +103,7 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             rotation_to_plane[2 * node_index, 3 * node_index + 2] = 1.0
             rotation_to_plane[2 * node_index + 1, 3 * node_index + 1] = -1.0
         bending = rotation_to_plane.T @ bending_plane @ rotation_to_plane
-
-        points, weights = GaussQuadrature.get_rule(2)
-        shear_full = np.zeros((12, 12))
-        for i, xi in enumerate(points):
-            for j, eta in enumerate(points):
-                _, _, B_shear, det_jacobian = self._get_B_matrices(xi, eta)
-                differential_area = det_jacobian * weights[i] * weights[j]
-                shear_full += (
-                    B_shear.T @ self._get_D_shear() @ B_shear
-                ) * (differential_area * shear_area)
-
-        _, center_weights = GaussQuadrature.get_rule(1)
-        _, _, B_shear_center, det_jacobian = self._get_B_matrices(0.0, 0.0)
-        shear_reduced = (
-            B_shear_center.T @ self._get_D_shear() @ B_shear_center
-        ) * (det_jacobian * center_weights[0] ** 2 * shear_area)
-        shear = shear_reduced + 1.0e-3 * (shear_full - shear_reduced)
+        shear = self._build_augmented_shear_stiffness(bending_inertia)
 
         membrane_dofs = [0, 1, 6, 7, 12, 13, 18, 19]
         plate_dofs = [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22]
@@ -118,6 +112,137 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             self._scatter_block(stiffness, bending + shear, plate_dofs)
         self._add_drilling_stiffness(stiffness)
         return 0.5 * (stiffness + stiffness.T)
+
+    def _build_augmented_shear_stiffness(
+        self, bending_inertia: float
+    ) -> np.ndarray:
+        """Build MacNeal QUAD4 shear stiffness from augmented flexibility.
+
+        Four transverse strains are sampled at the selective-integration
+        points: gamma_x at (0,+/-1/sqrt(3)) and gamma_y at
+        (+/-1/sqrt(3),0).  Their flexibility is the sum of MacNeal's
+        residual bending flexibility and, when MID3 is present, the physical
+        transverse-shear flexibility.  This is intentionally a flexibility
+        formulation: adding MID3 makes the element softer rather than adding
+        a Reissner-Mindlin stiffness in parallel.
+        """
+        sampling_points = self._selective_shear_sampling_points()
+        shear_operator = np.zeros((4, 12))
+        jacobian_determinants = np.zeros(4)
+        for row, (xi, eta, component) in enumerate(sampling_points):
+            _, _, B_shear, determinant = self._get_B_matrices(xi, eta)
+            shear_operator[row] = B_shear[component]
+            jacobian_determinants[row] = determinant
+
+        coordinates = self.local_coords_2d
+        delta_x = 0.5 * abs(
+            coordinates[1, 0]
+            + coordinates[2, 0]
+            - coordinates[0, 0]
+            - coordinates[3, 0]
+        )
+        delta_y = 0.5 * abs(
+            coordinates[3, 1]
+            + coordinates[2, 1]
+            - coordinates[0, 1]
+            - coordinates[1, 1]
+        )
+        area = 0.5 * abs(
+            np.dot(coordinates[:, 0], np.roll(coordinates[:, 1], -1))
+            - np.dot(coordinates[:, 1], np.roll(coordinates[:, 0], -1))
+        )
+
+        bending_constitutive = self._get_D_bending() * bending_inertia
+        if bending_constitutive[0, 0] <= 0.0:
+            return np.zeros((12, 12))
+        # Released MSC QUAD4 uses epsilon=0.025 in MacNeal's aspect-ratio
+        # correction.  Cases 65/69 and 67/72 recover this value directly.
+        epsilon = 0.025
+        alpha = epsilon / (
+            epsilon + (1.0 - epsilon) * (delta_x / delta_y) ** 2
+        )
+        beta = epsilon / (
+            epsilon + (1.0 - epsilon) * (delta_y / delta_x) ** 2
+        )
+        flexibility_x = (
+            delta_x**2 / (12.0 * area * bending_constitutive[0, 0])
+        )
+        flexibility_y = (
+            delta_y**2 / (12.0 * area * bending_constitutive[1, 1])
+        )
+        residual_flexibility = np.zeros((4, 4))
+        residual_flexibility[:2, :2] = flexibility_x * np.array(
+            [[1.0 + alpha, 1.0 - alpha],
+             [1.0 - alpha, 1.0 + alpha]]
+        )
+        residual_flexibility[2:, 2:] = flexibility_y * np.array(
+            [[1.0 + beta, 1.0 - beta],
+             [1.0 - beta, 1.0 + beta]]
+        )
+
+        total_flexibility = residual_flexibility
+        if self.mat_shear is not None:
+            shear_modulus = getattr(
+                self.mat_shear,
+                "G",
+                self.mat_shear.E / (2.0 * (1.0 + self.mat_shear.nu)),
+            )
+            shear_thickness = (
+                self.prop.t * self._get_shear_thickness_ratio()
+            )
+            physical_flexibility = 1.0 / (
+                2.0
+                * jacobian_determinants
+                * shear_thickness
+                * shear_modulus
+            )
+            total_flexibility = residual_flexibility + np.diag(
+                physical_flexibility
+            )
+
+        # Solve Z X = D instead of explicitly forming Z^-1.  This preserves
+        # the MacNeal expression D.T @ Z^-1 @ D with better conditioning.
+        flexibility_solution = np.linalg.solve(
+            total_flexibility, shear_operator
+        )
+        return shear_operator.T @ flexibility_solution
+
+    def _recover_transverse_shear_forces(
+        self, bending_displacements: np.ndarray
+    ) -> np.ndarray:
+        """Recover centroidal Qx/Qy from the augmented-flexibility modes."""
+        bending_inertia = (
+            self.prop.t**3 / 12.0 * self._get_bending_inertia_ratio()
+        )
+        shear_stiffness = self._build_augmented_shear_stiffness(
+            bending_inertia
+        )
+        nodal_shear_forces = shear_stiffness @ bending_displacements
+
+        shear_operator = np.zeros((4, 12))
+        jacobian_determinants = np.zeros(4)
+        for row, (xi, eta, component) in enumerate(
+            self._selective_shear_sampling_points()
+        ):
+            _, _, B_shear, determinant = self._get_B_matrices(xi, eta)
+            shear_operator[row] = B_shear[component]
+            jacobian_determinants[row] = determinant
+
+        generalized_forces = np.linalg.lstsq(
+            shear_operator.T, nodal_shear_forces, rcond=None
+        )[0]
+        # Each modal force contains the integration measure 2*det(J) of its
+        # selective sampling line. Remove that measure before averaging the
+        # two samples of each centroidal force resultant.
+        sampled_resultants = generalized_forces / (
+            2.0 * jacobian_determinants
+        )
+        return np.array(
+            [
+                0.5 * (sampled_resultants[0] + sampled_resultants[1]),
+                0.5 * (sampled_resultants[2] + sampled_resultants[3]),
+            ]
+        )
 
     def _build_warping_force_transformation(self) -> np.ndarray:
         """Map mean-plane resultants to the actual warped corner nodes.

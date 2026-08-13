@@ -433,11 +433,11 @@ class TestShellProperty:
         assert prop.mat_id_shear == 12     # MID3
 
     def test_fallback_logic(self):
-        # Prueba que MID3 hereda de MID2, y MID2 de MID1 si se omiten (-1)
+        # MID2 hereda MID1; MID3 vacio desactiva flexibilidad de cortante.
         prop = ShellProperty(pid=2, mat_id=20, t=0.1)
         assert prop.mat_id == 20
         assert prop.mat_id_bending == 20
-        assert prop.mat_id_shear == 20
+        assert prop.mat_id_shear is None
 
 
 class TestCTRIA3Element:

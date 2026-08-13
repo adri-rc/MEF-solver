@@ -134,8 +134,17 @@ K_shear = integral(B_sᵀ D_s B_s (5/6)t dA)
 - Cortante transversal: integración completa `2 x 2`.
 
 La reconstrucción Nastran utiliza deformación uniforme y dos modos bilineales
-estabilizados con una métrica de líneas medias. El cortante transversal usa
-integración reducida y una estabilización suave. Para un elemento alabeado se
+estabilizados con una métrica de líneas medias. El bloque transversal emplea
+la flexibilidad aumentada de MacNeal:
+
+```text
+K_s = D_s^T (Z_b + Z_s)^-1 D_s
+Z_s(i,i) = 1 / (2 detJ_i G3 t (TS/T))
+```
+
+`D_s` muestrea cuatro deformaciones de cortante selectivas y `Z_b` aporta la
+flexibilidad residual de flexión. `Z_s` solo existe cuando PSHELL define
+`MID3`; un `MID3` vacío no hereda `MID2`. Para un elemento alabeado se
 trasladan las fuerzas y momentos desde el plano medio a los nodos reales antes
 de aplicar la transformación global.
 
@@ -147,7 +156,13 @@ separadas las dos formulaciones; la geometría y la recuperación se comparten e
 
 Los casos DMIG 51-53 verifican los bloques planos con error inferior al `1 %`.
 El caso 54 verifica la matriz global `24 x 24` de un elemento inclinado y
-alabeado con error `2.150270 %` y criterio del `3 %`.
+alabeado con error `2.113059 %` y criterio del `3 %`.
+
+El caso 55 verifica una geometría 3D con `K6ROT=100` al `1.077026 %`. Los casos
+65, 67 y 69-75 validan por separado `MID3`, `G3`, `TS/T`, `K6ROT` y la ausencia
+de `MID3`: los rectángulos regulares quedan entre `1e-10` y `3e-6` de error
+relativo y los cuadriláteros sesgados 74-75 en `0.72 %`. Los F06 66 y 68
+validan también la respuesta completa.
 
 El análisis detallado y el plan de cierre se encuentran en [cquad4.md](cquad4.md).
 
