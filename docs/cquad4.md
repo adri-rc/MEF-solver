@@ -130,6 +130,13 @@ En el centro se calculan fuerzas de membrana `N`, momentos `M`, tensiones en
 fibras superior/inferior, principales y von Mises. Estas magnitudes, junto con
 rigidez, desplazamientos y reacciones, coinciden estrechamente con Nastran.
 
+La interfaz de resultados de los elementos shell usa una sola nomenclatura
+para cada componente de fibra: `stress_top_fiber_x`,
+`stress_top_fiber_y`, `tau_top_fiber_xy`, `stress_bot_fiber_x`,
+`stress_bot_fiber_y` y `tau_bot_fiber_xy`. `top` representa `z=+t/2` y
+`bot`, `z=-t/2` en los ejes locales. No se exponen alias basados en `Z1/Z2`,
+porque esa etiqueta depende de la convención de salida del solver externo.
+
 `Qx/Qy` se recuperan desde las cuatro fuerzas generalizadas de cortante. La
 convención centroidal propietaria de MSC no está reproducida exactamente: en
 el caso 91 la mayor diferencia es 47.1 % en una componente pequeña, 0.0216 en

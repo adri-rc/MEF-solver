@@ -457,7 +457,10 @@ class CQUAD4ElementBase(ABC):
         sb_y = 6.0 * m_y / t**2 if t > 0 else 0.0
         sb_xy = 6.0 * m_xy / t**2 if t > 0 else 0.0
         
-        # Z1 is the negative fibre (first F06 row), Z2 the positive fibre.
+        # Public convention: bottom is local z=-t/2 (Nastran Z1) and top is
+        # local z=+t/2 (Nastran Z2).  The result keys deliberately use the
+        # geometric top/bottom convention instead of the solver-specific Z1/Z2
+        # labels.
         sig_x_bot = sig_x + sb_x
         sig_y_bot = sig_y + sb_y
         tau_xy_bot = tau_xy + sb_xy
@@ -490,24 +493,12 @@ class CQUAD4ElementBase(ABC):
             'bending_moment_x': m_x,
             'bending_moment_y': m_y,
             'bending_moment_xy': m_xy,
-            'stress_fiber_top_x': sig_x_top,
-            'stress_fiber_bot_x': sig_x_bot,
-            'stress_fiber_top_y': sig_y_top,
-            'stress_fiber_bot_y': sig_y_bot,
-            'tau_fiber_top_y': tau_xy_top,
-            'tau_fiber_bot_y': tau_xy_bot,
             'stress_top_fiber_x': sig_x_top,
             'stress_top_fiber_y': sig_y_top,
             'tau_top_fiber_xy': tau_xy_top,
-            'stress_z1_fiber_x': sig_x_bot,
-            'stress_z1_fiber_y': sig_y_bot,
-            'tau_z1_fiber_xy': tau_xy_bot,
             'stress_bot_fiber_x': sig_x_bot,
             'stress_bot_fiber_y': sig_y_bot,
             'tau_bot_fiber_xy': tau_xy_bot,
-            'stress_z2_fiber_x': sig_x_top,
-            'stress_z2_fiber_y': sig_y_top,
-            'tau_z2_fiber_xy': tau_xy_top,
             'major_principal_top': major_top,
             'minor_principal_top': minor_top,
             'von_mises_top': vm_top,

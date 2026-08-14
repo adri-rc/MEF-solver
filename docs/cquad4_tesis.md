@@ -647,6 +647,15 @@ $$
 \boldsymbol{\sigma}_m-\frac{6\mathbf{M}}{t^2}.
 $$
 
+La API de resultados adopta una convención geométrica única: `top` es la
+fibra situada en `z=+t/2` y `bot` la situada en `z=-t/2`, siempre en los ejes
+locales del elemento. Las seis componentes se publican como
+`stress_top_fiber_x`, `stress_top_fiber_y`, `tau_top_fiber_xy`,
+`stress_bot_fiber_x`, `stress_bot_fiber_y` y `tau_bot_fiber_xy`. No se
+mantienen alias `Z1/Z2` ni permutaciones del nombre, ya que duplicaban el mismo
+valor y la correspondencia de `Z1/Z2` no es una convención geométrica
+portable entre formulaciones y programas.
+
 Para cada fibra se calculan tensiones principales:
 
 $$

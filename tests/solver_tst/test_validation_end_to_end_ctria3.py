@@ -44,14 +44,14 @@ from src.solver.linear_static_solver import LinearStaticSolver
 #                    # Tensiones Fibra Superior (Z = +t/2)
 #                    'stress_top_fiber_x': sig_x_top, 
 #                    'stress_top_fiber_y': sig_y_top,
-#                    'tau_fiber_top_y': tau_xy_top,
+#                    'tau_top_fiber_xy': tau_xy_top,
 #                    'von_mises': vm_stress, 
 #                    'major_principal': s_major_principal, 
 #                    'minor_principal': s_minor_principal,
 #
 #                    # Tensiones Fibra Inferior (Z = -t/2)
 #                    'stress_bot_fiber_x': sig_x_bot,
-#                    'stress_bot_fiber_xy': sig_y_bot,
+#                    'stress_bot_fiber_y': sig_y_bot,
 #                    'tau_bot_fiber_xy': tau_xy_bot,
 #
 #                    

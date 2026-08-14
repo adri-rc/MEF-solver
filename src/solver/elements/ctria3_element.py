@@ -385,7 +385,9 @@ class CTRIA3ElementSolver:
         else:
             m_x, m_y, m_xy, q_x, q_y = 0.0, 0.0, 0.0, 0.0, 0.0
             
-        # --- Cálculo de tensiones en las fibras Top (Z1) y Bottom (Z2) ---
+        # Public convention: top is local z=+t/2 and bottom is local z=-t/2.
+        # Avoid Z1/Z2 aliases because their meaning depends on the external
+        # solver's shell-result convention.
         sb_x, sb_y, sb_xy = 6.0 * m_x / t**2, 6.0 * m_y / t**2, 6.0 * m_xy / t**2
         sig_x_top, sig_x_bot = sig_x - sb_x, sig_x + sb_x
         sig_y_top, sig_y_bot = sig_y - sb_y, sig_y + sb_y
@@ -413,15 +415,11 @@ class CTRIA3ElementSolver:
             'shear_force_x': q_x, 'shear_force_y': q_y,
             'bending_moment_x': m_x, 'bending_moment_y': m_y, 'bending_moment_xy': m_xy,
 
-            # Top Fiber (Z1)
+            # Top Fiber (local z=+t/2)
             'stress_top_fiber_x': sig_x_top, 'stress_top_fiber_y': sig_y_top, 'tau_top_fiber_xy': tau_xy_top,
-            'stress_fiber_top_x': sig_x_top, 'stress_fiber_top_y': sig_y_top,
-            'stress_z1_fiber_x': sig_x_top, 'stress_z1_fiber_y': sig_y_top, 'tau_z1_fiber_xy': tau_xy_top,
             'von_mises_top': vm_top, 'major_principal_top': s_maj_top, 'minor_principal_top': s_min_top,
 
-            # Bottom Fiber (Z2)
+            # Bottom Fiber (local z=-t/2)
             'stress_bot_fiber_x': sig_x_bot, 'stress_bot_fiber_y': sig_y_bot, 'tau_bot_fiber_xy': tau_xy_bot,
-            'stress_fiber_bot_x': sig_x_bot, 'stress_fiber_bot_y': sig_y_bot,
-            'stress_z2_fiber_x': sig_x_bot, 'stress_z2_fiber_y': sig_y_bot, 'tau_z2_fiber_xy': tau_xy_bot,
             'von_mises_bot': vm_bot, 'major_principal_bot': s_maj_bot, 'minor_principal_bot': s_min_bot
         }

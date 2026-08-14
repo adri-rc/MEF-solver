@@ -363,12 +363,24 @@ def test_stress_recovery_robustness(element_setup):
     except Exception as e:
         pytest.fail(f"Stress Recovery falló con excepción: {e}")
     
-    required_keys = ['sigma_x', 'sigma_y', 'tau_xy', 'von_mises', 
-                     'bending_moment_x', 'shear_force_x']
+    required_keys = [
+        'sigma_x', 'sigma_y', 'tau_xy', 'von_mises',
+        'bending_moment_x', 'shear_force_x',
+        'stress_top_fiber_x', 'stress_top_fiber_y', 'tau_top_fiber_xy',
+        'stress_bot_fiber_x', 'stress_bot_fiber_y', 'tau_bot_fiber_xy'
+    ]
     
     for key in required_keys:
         assert key in results, f"Falta la clave {key}."
         assert not np.isnan(results[key]), f"El resultado {key} es NaN."
+
+    deprecated_keys = {
+        'stress_fiber_top_x', 'stress_fiber_top_y', 'tau_fiber_top_y',
+        'stress_fiber_bot_x', 'stress_fiber_bot_y', 'tau_fiber_bot_y',
+        'stress_z1_fiber_x', 'stress_z1_fiber_y', 'tau_z1_fiber_xy',
+        'stress_z2_fiber_x', 'stress_z2_fiber_y', 'tau_z2_fiber_xy'
+    }
+    assert deprecated_keys.isdisjoint(results)
 
 # --- STANDALONE SPECIFIC TESTS ---
 

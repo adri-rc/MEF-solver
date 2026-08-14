@@ -410,12 +410,24 @@ def test_stress_recovery_robustness(element_setup):
         pytest.fail(f"Stress Recovery falló con excepción: {e}")
     
     # Validaciones
-    required_keys = ['sigma_x', 'sigma_y', 'tau_xy', 'von_mises', 
-                     'bending_moment_x', 'stress_fiber_top_x']
+    required_keys = [
+        'sigma_x', 'sigma_y', 'tau_xy', 'von_mises',
+        'bending_moment_x',
+        'stress_top_fiber_x', 'stress_top_fiber_y', 'tau_top_fiber_xy',
+        'stress_bot_fiber_x', 'stress_bot_fiber_y', 'tau_bot_fiber_xy'
+    ]
     
     for key in required_keys:
         assert key in results, f"Falta la clave {key} en los resultados de tensión."
         assert not np.isnan(results[key]), f"El resultado {key} es NaN."
+
+    deprecated_keys = {
+        'stress_fiber_top_x', 'stress_fiber_top_y', 'tau_fiber_top_y',
+        'stress_fiber_bot_x', 'stress_fiber_bot_y', 'tau_fiber_bot_y',
+        'stress_z1_fiber_x', 'stress_z1_fiber_y', 'tau_z1_fiber_xy',
+        'stress_z2_fiber_x', 'stress_z2_fiber_y', 'tau_z2_fiber_xy'
+    }
+    assert deprecated_keys.isdisjoint(results)
 
 def test_bending_rigid_body_z(element_setup):
     """
@@ -459,7 +471,7 @@ def test_bending_rigid_body_z(element_setup):
     # Should have zero bending moments and stresses
     # Usamos la tolerancia calculada
     assert res['bending_moment_x'] == pytest.approx(0.0, abs=tol)
-    assert res['stress_fiber_top_x'] == pytest.approx(0.0, abs=tol)
+    assert res['stress_top_fiber_x'] == pytest.approx(0.0, abs=tol)
 
 # --- STANDALONE SPECIFIC TESTS (Not using Fixture Cases) ---
 
