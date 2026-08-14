@@ -1,8 +1,8 @@
 # Documentación de MEF-solver
 
-MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático lineal y a la comparación con modelos de MSC Nastran. El proyecto ya dispone de un flujo `BDF/DAT -> modelo interno -> ensamblaje -> solución -> resultados`, pero no debe considerarse todavía un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas y varias capacidades, especialmente CQUAD4, siguen en validación.
+MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático lineal y a la comparación con modelos de MSC Nastran. El proyecto dispone de un flujo `BDF/DAT -> modelo interno -> ensamblaje -> solución -> resultados`, pero no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
 
-Esta documentación describe el estado observado en el repositorio el **5 de agosto de 2026**. Distingue entre una tarjeta que puede leerse, un elemento cuya rigidez puede ensamblarse y una capacidad validada de extremo a extremo.
+Esta documentación describe el estado observado en el repositorio el **14 de agosto de 2026**. La colección completa termina con `335 passed, 6 xfailed`.
 
 ## Índice
 
@@ -12,7 +12,7 @@ Esta documentación describe el estado observado en el repositorio el **5 de ago
 - [Formulación matemática](formulacion.md): ecuaciones, convenciones y formulación de los elementos.
 - [Estado y validación](validacion.md): cobertura real, resultados de pruebas y casos Nastran.
 - [Desarrollo y validación de CQUAD4](cquad4.md): estado detallado del elemento cuadrilateral.
-- [CQUAD4 para la tesis](cquad4_tesis.md): formulación, parámetros, evidencia y limitaciones en formato autocontenido.
+- [Formulación completa de CQUAD4](cquad4_tesis.md): desarrollo matemático, parámetros, correspondencia con el código, evidencia y limitaciones.
 - [Limitaciones y hoja de ruta](roadmap.md): deuda técnica y evolución propuesta hacia elementos 3D.
 
 ## Estado funcional resumido
@@ -22,12 +22,12 @@ Esta documentación describe el estado observado en el repositorio el **5 de ago
 | CROD + PROD + MAT1 | Sí | Sí | Sí | Axil y torsión | Unitaria y casos Nastran de extremo a extremo |
 | CBAR + PBAR + MAT1 | Sí | Sí | Sí | Fuerzas de extremo y tensiones simplificadas | Unitaria y casos Nastran de extremo a extremo |
 | CTRIA3 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Amplia comparación de extremo a extremo y de `K_global` |
-| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Casos DMIG 51-53 por debajo del 1 % y caso 54 alabeado por debajo del 3 % |
-| FORCE / MOMENT | Sí | Sí | Sí | En coordenadas globales | Cubierto por pruebas |
-| SPC / SPC1 | Sí | Sí | Sí | Reacciones | Cubierto por pruebas |
+| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión, cortante y fibras | DMIG hasta alta oblicuidad y E2E; sólo coplanar |
+| FORCE / MOMENT / LOAD | Sí | Sí | Sí | Sistemas de entrada transformados | Cubierto por pruebas |
+| SPC / SPC1 / SPCADD | Sí | Sí | Sí | Reacciones y valores impuestos | Cubierto por pruebas |
 | Sólidos 3D | No | No | No | No | Trabajo futuro |
 
-CQUAD4 dispone ahora de una reconstrucción Nastran y una formulación clásica Reissner-Mindlin en módulos separados. La primera incorpora estabilización *hourglass*, `K6ROT` y corrección de alabeo; ambas participan en el postproceso compartido. Véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
+CQUAD4 dispone de una reconstrucción Nastran y una formulación clásica Reissner-Mindlin en módulos separados. La primera incorpora estabilización *hourglass*, cortante de MacNeal y `K6ROT`; rechaza explícitamente el alabeo. Véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
 
 ## Alcance físico actual
 
@@ -40,4 +40,8 @@ CQUAD4 dispone ahora de una reconstrucción Nastran y una formulación clásica 
 
 ## Lectura recomendada
 
-Para ejecutar el programa, comenzar por [uso.md](uso.md). Para continuar el TFM desde el punto actual, leer primero [cquad4.md](cquad4.md) y después [validacion.md](validacion.md). La [hoja de ruta](roadmap.md) propone un orden de trabajo que prioriza la corrección y la trazabilidad numérica antes de incorporar elementos 3D.
+Para ejecutar el programa, comenzar por [uso.md](uso.md). Para continuar el
+proyecto desde el punto actual, leer [cquad4.md](cquad4.md), la formulación
+autocontenida [cquad4_tesis.md](cquad4_tesis.md) y después
+[validacion.md](validacion.md). La [hoja de ruta](roadmap.md) propone un orden
+de trabajo que prioriza la corrección y la trazabilidad numérica.

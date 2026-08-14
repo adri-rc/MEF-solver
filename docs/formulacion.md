@@ -2,201 +2,154 @@
 
 ## Hipótesis generales
 
-El solver resuelve equilibrio estático lineal:
+El solver resuelve estática lineal con pequeñas deformaciones y materiales
+isótropos:
 
 ```text
 K u = F
 ```
 
-Se suponen pequeñas deformaciones y rotaciones, geometría sin actualización, elasticidad lineal isótropa y ausencia de efectos dependientes del tiempo. No se consideran rigidez geométrica, plasticidad, contacto ni grandes desplazamientos.
-
-La ley isótropa completa las constantes mediante:
-
-```text
-E = 2 G (1 + nu)
-```
-
-Si se proporcionan las tres, el modelo rechaza diferencias superiores al 5 % respecto a esa relación.
-
-## Integración y transformación
-
-Las reglas de Gauss-Legendre disponibles son de 1, 2 y 3 puntos en `[-1, 1]`. Para los elementos 1D se integra:
-
-```text
-K_e = integral(Bᵀ D B detJ dxi)
-```
-
-Para elementos isoparamétricos 2D, la integración es tensorial en `(xi, eta)`. Las matrices locales se transforman con:
+Cada nodo reserva seis grados de libertad `[Tx, Ty, Tz, Rx, Ry, Rz]`. Cada
+elemento calcula primero su rigidez local y la transforma mediante:
 
 ```text
 u_local  = T u_global
-K_global = Tᵀ K_local T
+K_global = T.T K_local T
+```
+
+La matriz global se ensambla de forma dispersa. No se aplica AUTOSPC general:
+un mecanismo real o un GDL libre sin rigidez produce un error de singularidad.
+
+## Material isótropo
+
+`MAT1` admite dos de las constantes `E`, `G`, `nu` y completa la tercera con:
+
+```text
+G = E / (2*(1+nu))
+```
+
+Para membrana y flexión de láminas se usa tensión plana:
+
+```text
+D = E/(1-nu²) * [[1, nu, 0],
+                  [nu, 1, 0],
+                  [0, 0, (1-nu)/2]]
 ```
 
 ## CROD
 
-Elemento recto de dos nodos, 12 GDL globales y cuatro GDL locales activos:
-
-- desplazamiento axial `u` en ambos extremos;
-- giro torsional `theta_x` en ambos extremos.
-
-Las rigideces exactas resultantes son:
+CROD es una barra recta de dos nodos. En su eje local:
 
 ```text
-k_axial   = (E A / L) [[ 1, -1], [-1, 1]]
-k_torsion = (G J / L) [[ 1, -1], [-1, 1]]
+K_axial   = E*A/L * [[1,-1],[-1,1]]
+K_torsion = G*J/L * [[1,-1],[-1,1]]
 ```
 
-Se integran numéricamente con un punto de Gauss y se dispersan en una matriz local `12 x 12`. La recuperación usa:
-
-```text
-epsilon_x = (u2 - u1) / L
-sigma_x   = E epsilon_x
-N         = A sigma_x
-phi'      = (theta2 - theta1) / L
-T         = G J phi'
-tau       = T C / J
-```
-
-Los GDL transversales no reciben rigidez; deben quedar restringidos o estabilizados por otros elementos.
+Se recuperan deformación y tensión axial, fuerza normal, giro por unidad de
+longitud, torsor y tensión torsional.
 
 ## CBAR
 
-Viga recta de Euler-Bernoulli con dos nodos y 12 GDL. Incluye:
-
-- axial `EA`;
-- torsión de Saint-Venant `GJ`;
-- flexión en los dos planos principales mediante funciones cúbicas de Hermite e inercias `I1`, `I2`.
-
-La integración usa al menos dos puntos de Gauss. La orientación construye el triedro local a partir del eje de la barra y del vector auxiliar de CBAR.
-
-La formulación **no** incluye todavía deformación por cortante de Timoshenko: los factores `K1` y `K2` se leen, pero no se usan. Tampoco se aplican en el solver global:
-
-- orientación mediante `G0`;
-- *offsets* `WA/WB` y semántica `OFFT`;
-- liberaciones `PA/PB`;
-- producto de inercia `I12` en la matriz constitutiva.
-
-La recuperación calcula fuerzas nodales locales mediante `f_local = K_local u_local` y tensiones normales simplificadas en los puntos C/D/E/F de PBAR:
-
-```text
-sigma = sigma_axial - Mz y / I1 + My z / I2
-```
-
-La tensión torsional en esos puntos se aproxima con `T r / J`; no es una recuperación general para secciones arbitrarias.
+CBAR usa una formulación de viga espacial con extensión axial, torsión y
+flexión en los dos planos principales. El triedro local se define con el eje
+entre nodos y el vector de orientación resuelto por pyNastran. La propiedad
+PBAR aporta `A`, `I1`, `I2`, `I12` y `J`. Se incluyen los campos de
+excentricidad y liberación implementados en el solver.
 
 ## CTRIA3
 
-Elemento triangular de lámina con tres nodos y 18 GDL:
-
-- membrana CST: `[u, v]` por nodo;
-- placa Reissner-Mindlin: `[w, theta_x, theta_y]` por nodo;
-- rotación *drilling* `theta_z` estabilizada opcionalmente.
-
-Para tensión plana:
+CTRIA3 combina una membrana de deformación constante con una placa
+Reissner–Mindlin. Los grados de libertad físicos locales son `[u,v]` para
+membrana y `[w,theta_x,theta_y]` para placa. La rotación normal se estabiliza,
+si `K6ROT>0`, penalizando la diferencia entre `theta_z` y la macrorrotación de
+membrana:
 
 ```text
-D_m = E/(1-nu²) [[1, nu, 0], [nu, 1, 0], [0, 0, (1-nu)/2]]
+omega = 0.5*(dv/dx - du/dy)
 ```
 
-La membrana multiplica `D_m` por el espesor. La matriz de flexión incorpora `t³/12`; el cortante transversal usa el factor de corrección `5/6` y `G t`. Las matrices B son constantes para el triángulo y se evalúan en el baricentro.
-
-`PSHELL` permite materiales separados:
-
-- MID1: membrana;
-- MID2: flexión;
-- MID3: cortante transversal.
-
-En CQUAD4, un `MID2` vacío desactiva el bloque de flexión; no hereda `MID1`.
-Un `MID3` vacío no activa flexibilidad física de cortante. No obstante, cuando
-existe `MID2`, sus propiedades sí participan en la corrección residual de
-placa/torsión que queda aunque `MID3` esté vacío. Esto reproduce la distinción
-de NASTRAN-95 entre `SHRFLX` y el material interno usado por esa corrección.
-
-La implementación contiene una penalización *drilling* cuando `K6ROT > 0`, basada en la diferencia entre la rotación nodal y la macrorrotación de membrana. La compatibilidad numérica con Nastran se ha ajustado empíricamente y cuenta con casos específicos de comparación de `K_global`.
-
-El cortante transversal Nastran se ha validado término a término para
-rectángulos con `MID3`, `G3` y `TS/T` variables. Las DMIG 81/83/89 validan el
-acoplamiento torsional entre muestras emparejadas de cuadriláteros oblicuos: el
-error global queda entre `1.03e-7` y `3.14e-6`. Los casos predictivos 90/91
-quedan preparados para confirmar esa generalización a mayor oblicuidad.
+El espesor multiplica la constitutiva de membrana; `t³/12` multiplica la de
+flexión; y `TS/T` interviene en el cortante transversal. PSHELL permite separar
+MID1, MID2 y MID3.
 
 ## CQUAD4
 
-Elemento cuadrilateral bilineal de cuatro nodos y 24 GDL. Su sistema local se define con:
+CQUAD4 tiene cuatro nodos y 24 GDL. La clase activa reconstruye el QUAD4 de
+Nastran para geometría **coplanar**. Su sistema local usa:
 
 - origen en el promedio de los cuatro nodos;
-- `z` normal obtenida del producto vectorial de las diagonales;
-- `x` entre los puntos medios de los lados 1-4 y 2-3;
-- `y = z x x`.
+- normal por producto de diagonales G1-G3 y G2-G4;
+- eje x como bisectriz de las diagonales unitarias G1-G3 y G4-G2;
+- eje y que completa el triedro.
 
-La formulación Reissner-Mindlin suma tres bloques integrados con una regla
-completa `2 x 2`:
-
-```text
-K_mem   = integral(B_mᵀ D_m B_m t dA)
-K_bend  = integral(B_bᵀ D_b B_b t³/12 dA)
-K_shear = integral(B_sᵀ D_s B_s (5/6)t dA)
-```
-
-- Membrana: integración completa `2 x 2`.
-- Flexión: integración completa `2 x 2`.
-- Cortante transversal: integración completa `2 x 2`.
-
-La reconstrucción Nastran utiliza deformación uniforme y dos modos bilineales
-estabilizados con una métrica de líneas medias y normalización por distorsión.
-El bloque transversal emplea la interpolación *edge-string* y la flexibilidad
-aumentada de MacNeal:
+Las funciones de forma son bilineales en `[-1,1]²`. La formulación de membrana
+y flexión combina deformación uniforme central y dos modos bilineales
+estabilizados:
 
 ```text
-K_s = D_s^T (Z_b + Z_s)^-1 D_s
-Z_s(i,i) = 1 / (2 detJ_i G3 t (TS/T))  # geometría rectangular
+K0  = A*s*B0.T*D*B0
+h   = h0 - G0.T*X.T*h0
+chi = 1/(1 - ||h-h0||²/12)
+M   = A*(a⊗a/||a||⁴ + b⊗b/||b||⁴)
+Khg = s*L*(E*chi*M/12)*L.T
 ```
 
-`D_s` muestrea cuatro deformaciones de cortante selectivas y `Z_b` aporta la
-flexibilidad residual de flexión. `Z_s` solo existe cuando PSHELL define
-`MID3`; un `MID3` vacío no crea `Z_s`, aunque `MID2` mantiene la corrección
-residual `Z_b`. En geometrías oblicuas las dos muestras de cada dirección se
-acoplan mediante una métrica de pareja positiva dependiente del ángulo entre
-líneas medias. Para un elemento alabeado se trasladan las fuerzas y momentos
-desde el plano medio a los nodos reales antes de aplicar la transformación
-global.
+`s=t` en membrana y `s=(t³/12)*(12I/T³)` en flexión.
 
-Los bloques se dispersan en `[Tx, Ty]` y `[Tz, Rx, Ry]`. `PARAM,K6ROT` llega a
-CQUAD4 y activa una penalización *drilling* cuando es positivo. Las clases
-`CQUAD4NastranElementSolver` y `CQUAD4ReissnerMindlinElementSolver` mantienen
-separadas las dos formulaciones; la geometría y la recuperación se comparten en
-`CQUAD4ElementBase`.
+El cortante usa las aristas de MacNeal y cuatro muestras sobre las líneas
+naturales centrales. Se expresa mediante una flexibilidad aumentada:
 
-Los casos DMIG 51-53 verifican los bloques planos con error inferior al `1 %`.
-El caso 54 verifica la matriz global `24 x 24` de un elemento inclinado y
-alabeado con error `2.079993 %` y criterio del `3 %`.
+```text
+Z = Z_residual_bending + Z_MID3
+K_shear = S.T * solve(Z, S)
+```
 
-El caso 55 verifica una geometría 3D con `K6ROT=100` al `0.028215 %`. Los casos
-65, 67 y 69-75 validan por separado `MID3`, `G3`, `TS/T`, `K6ROT` y la ausencia
-de `MID3`: los rectángulos regulares quedan entre `1e-10` y `3e-6` de error
-relativo y los cuadriláteros sesgados 74-75 en `0.05436 %`. Los F06 66 y 68
-validan también la respuesta completa. Los controles oblicuos 81, 83 y 89
-quedan al `0.0000103 %`, `0.000314 %` y `0.0000889 %` global y se comparan
-también término a término.
+MID3 se añade en serie como flexibilidad. MID3 vacío no hereda MID2 y MID2
+vacío no hereda MID1. La corrección de aspecto usa `epsilon=0.025`.
 
-En mallas facetadas, el solver usa la normal propia de cada elemento y no
-promedia normales shell entre GRID compartidos. `SNORM` define en Nastran una
-normal común para las rotaciones de las facetas vecinas dentro de una
-tolerancia angular; no modifica `MAT1`. El caso 88 con `SNORM=0` coincide con
-Nastran prácticamente a precisión numérica; el comportamiento `SNORM`
-predeterminado queda fuera del alcance actual.
+En elementos afines oblicuos, el modo torsional se escala con:
 
-El análisis detallado y el plan de cierre se encuentran en [cquad4.md](cquad4.md).
+```text
+m(c²) = 1 + 0.4100259495463487*c² /
+             (1 - 0.9156556465380681*c²)
+```
+
+La función se identificó con DMIG de los casos 81/89/90 y se confirmó con el
+modelo cargado 60. El caso 91 verifica la respuesta de dos paneles de alta
+oblicuidad.
+
+K6ROT extiende la misma penalización de CTRIA3 a los cuatro vértices:
+
+```text
+r_i = theta_z_i - omega_i
+K6  = sum_i K6ROT*1e-6*G*t*(4*detJ_i)*(r_i outer r_i)
+```
+
+Los cuatro nodos deben cumplir una tolerancia de coplanaridad
+`max(1e-10,1e-8*L)`. El alabeo se rechaza y no se corrige mediante proyección.
+El suavizado SNORM tampoco está implementado; una estructura facetada debe
+compararse usando normales independientes, equivalentes a `SNORM,0`.
+
+En el centro se recuperan N, M, Q, tensiones de fibras, principales y von
+Mises. La recuperación centroidal Qx/Qy puede diferir de la convención de
+impresión de MSC Nastran; rigidez, desplazamientos, reacciones, N, M y fibras
+están validados de forma independiente.
+
+La derivación completa y autocontenida está en
+[cquad4_tesis.md](cquad4_tesis.md).
 
 ## Condiciones de contorno y reacciones
 
-Cada componente de SPC se convierte en un índice restringido. Se admiten valores prescritos no nulos, aplicando el término `K_fs u_s` al lado derecho. Si dos SPC asignan valores diferentes al mismo GDL, el código actual conserva silenciosamente el último valor no nulo procesado; conviene añadir una validación de conflicto.
+Los GDL se dividen en libres `f` y prescritos `s`:
 
-Las reacciones se evalúan con la matriz sin modificar:
+```text
+K_ff u_f = F_f - K_fs u_s
+```
+
+Esto permite valores SPC distintos de cero. Dos valores incompatibles sobre el
+mismo GDL generan un error explícito. Las reacciones se calculan con la matriz
+original:
 
 ```text
 R = K u - F
 ```
-
-Esto permite recuperar correctamente fuerzas y momentos en los GDL restringidos.

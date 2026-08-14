@@ -8,3 +8,10 @@ draft_*
 output/
 *.f04
 *.op2
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.toc

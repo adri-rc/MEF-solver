@@ -69,8 +69,7 @@ class CQUAD4ElementBase(ABC):
         self._compute_transformation()
         
         # 2. Compute Geometric Properties in Local System
-        # Express nodes in local 2D plane (z~0 for slightly warped elements, exact 0 for flat)
-        # 2. Compute Geometric Properties in Local System
+        # Express the four coplanar nodes in the local two-dimensional plane.
         self.local_coords_2d = np.zeros((4, 2))
         for i in range(4):
             v = self.coords[i] - self.origin
@@ -78,6 +77,19 @@ class CQUAD4ElementBase(ABC):
             self.local_coords_2d[i, 1] = np.dot(v, self.local_y_axis)
         self.x_loc = self.local_coords_2d[:, 0]
         self.y_loc = self.local_coords_2d[:, 1]
+
+        # Validate the complete bilinear map independently of the active
+        # property blocks.  Otherwise a membrane-only element with K6ROT=0
+        # might evaluate only the centre and fail to expose an inverted
+        # corner until a different property activates bending or drilling.
+        for xi, eta in (
+            (-1.0, -1.0),
+            (1.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+        ):
+            _, dN_dxi, dN_deta = self._get_shape_functions(xi, eta)
+            self._get_jacobian(dN_dxi, dN_deta)
             
     def _compute_transformation(self):
         """
@@ -117,8 +129,12 @@ class CQUAD4ElementBase(ABC):
         characteristic_length = max(
             np.linalg.norm(self.coords[(i + 1) % 4] - self.coords[i]) for i in range(4)
         )
-        if np.ptp(projected_z) > 0.2 * characteristic_length:
-            raise ValueError("CQUAD4 element is excessively warped.")
+        coplanarity_tolerance = max(1.0e-10, 1.0e-8 * characteristic_length)
+        if np.ptp(projected_z) > coplanarity_tolerance:
+            raise ValueError(
+                "Non-coplanar CQUAD4 element: the current formulation only "
+                "supports planar quadrilaterals."
+            )
         
         R = CoordinateTransformation.get_rotation_matrix_3x3(vx, vy, vz)
         self.T = CoordinateTransformation.build_full_transformation_matrix(

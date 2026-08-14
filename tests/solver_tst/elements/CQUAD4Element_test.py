@@ -93,12 +93,13 @@ CASES = [
         "desc": "Test de precisión flotante con coordenadas grandes"
     },
     {
-        "id": "6_SLIGHTLY_WARPED",
-        "nodes": [[0.,0.,0.], [2.,0.,0.], [2.,2.,0.1], [0.,2.,0.]], # Un nodo fuera del plano
+        "id": "6_INCLINED_PLANAR",
+        # Plano z=0.2*x-0.1*y: orientacion 3D sin alabeo.
+        "nodes": [[0.,0.,0.], [2.,0.,0.4], [2.,2.,0.2], [0.,2.,-0.2]],
         "mat_mem": (210e9, 0.3), 
         "mat_bend": None, 
         "thick": 0.15,
-        "desc": "Elemento ligeramente alabeado (warped)"
+        "desc": "Elemento coplanar inclinado en 3D"
     }
 ]
 
@@ -179,6 +180,20 @@ def test_nastran_hourglass_eigenvalues_on_square():
     np.testing.assert_allclose(
         eigenvalues[3:5], [young_modulus / 3.0] * 2, rtol=1e-12
     )
+
+
+def test_oblique_torsion_metric_matches_dmig_control_points():
+    """Lock the planar skew continuation identified from independent DMIGs."""
+    metric = CQUAD4NastranElementSolver._oblique_torsion_metric
+
+    assert metric(0.0) == pytest.approx(1.0)
+    assert metric(0.0700468506) == pytest.approx(1.03068940806, rel=1e-9)
+    assert metric(0.4028759652) == pytest.approx(1.26174688986, rel=1e-9)
+
+    values = np.array([metric(value) for value in np.linspace(0.0, 1.0, 101)])
+    assert np.all(np.isfinite(values))
+    assert np.all(values > 0.0)
+    assert np.all(np.diff(values) > 0.0)
 
 
 def test_k6rot_uses_ctria_nodal_macro_rotation_penalty():
@@ -407,6 +422,21 @@ def test_degenerate_element_error():
     with pytest.raises(ValueError, match="Degenerate CQUAD4"):
         CQUAD4NastranElementSolver(n1, n2, n3, n4, prop, mat)
 
+
+def test_non_coplanar_element_error():
+    """@test Rechaza CQUAD4 alabeados fuera del alcance del solver."""
+    nodes = [
+        MockNode(1, [0.0, 0.0, 0.0]),
+        MockNode(2, [2.0, 0.0, 0.0]),
+        MockNode(3, [2.0, 2.0, 0.1]),
+        MockNode(4, [0.0, 2.0, 0.0]),
+    ]
+    prop = MockProp(t=0.1)
+    mat = MockMat(E=2.1e5, nu=0.3)
+
+    with pytest.raises(ValueError, match="Non-coplanar CQUAD4"):
+        CQUAD4NastranElementSolver(*nodes, prop, mat, mat_bending=mat)
+
 def test_negative_jacobian_error():
     """@test Detecta un cuadrilátero tipo 'pajarita' (bow-tie) mal numerado."""
     n1 = MockNode(1, [0, 0, 0])
@@ -417,11 +447,9 @@ def test_negative_jacobian_error():
     prop = MockProp(t=1.0)
     mat = MockMat(E=1e5, nu=0.3)
     
-    # El eje Z y X se crearán bien (diagonales no paralelas), 
-    # pero el _get_jacobian fallará en la cuadratura.
-    elem = CQUAD4NastranElementSolver(
-        n1, n2, n3, n4, prop, mat, mat_bending=mat
-    )
-    
+    # La validación se ejecuta al construir el elemento, incluso si K6ROT=0
+    # o una PSHELL deja inactivos los bloques de placa.
     with pytest.raises(ValueError, match="Negative or zero Jacobian"):
-        elem.get_stiffness_matrix()
+        CQUAD4NastranElementSolver(
+            n1, n2, n3, n4, prop, mat, mat_bending=mat
+        )

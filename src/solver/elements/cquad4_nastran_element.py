@@ -3,9 +3,8 @@
 The in-plane and curvature blocks use a uniform-strain field plus the two
 orthogonal bilinear modes used by QUAD4.  The geometric hourglass metric is
 built from the two element mid-lines and normalized for bilinear distortion.
-Transverse shear uses MacNeal's edge-string interpolation.  Non-coplanar
-nodes receive an equilibrium-based force and moment correction after the
-mean-plane stiffness is formed.
+Transverse shear uses MacNeal's edge-string interpolation.  The supported
+geometric domain is a coplanar, non-degenerate four-node quadrilateral.
 """
 
 import numpy as np
@@ -16,10 +15,10 @@ from .cquad4_element import CQUAD4ElementBase
 class CQUAD4NastranElementSolver(CQUAD4ElementBase):
     """Four-node shell reconstructing the Nastran QUAD4 stiffness.
 
-    Flat elements use uniform membrane/curvature strains plus the two
-    bilinear stabilization modes.  Warped elements additionally move the
-    mean-plane forces and moments to the four physical nodes before the
-    usual element-to-global coordinate transformation.
+    Planar elements use uniform membrane/curvature strains plus the two
+    bilinear stabilization modes and the usual element-to-global coordinate
+    transformation.  Non-coplanar quadrilaterals are rejected by the base
+    geometry validation.
     """
 
     formulation = "nastran"
@@ -32,6 +31,19 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             (0.0, gauss, 0),
             (-gauss, 0.0, 1),
             (gauss, 0.0, 1),
+        )
+
+    @staticmethod
+    def _oblique_torsion_metric(cosine_squared: float) -> float:
+        """Return the DMIG-identified torsion metric for affine skew shells.
+
+        The two coefficients reproduce the moderate-skew case 81/89 pair
+        and the independent high-skew case 90.  The denominator remains
+        positive over the complete geometric domain ``0 <= cos^2 <= 1``.
+        """
+        return 1.0 + (
+            0.4100259495463487 * cosine_squared
+            / (1.0 - 0.9156556465380681 * cosine_squared)
         )
 
     def _build_nastran_plane_stiffness(
@@ -208,9 +220,10 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         # kinematic projection; the flexibility metric therefore needs a
         # complementary torsion correction.  NASTRAN-95 exposes this structure
         # as the paired SFCTX1/SFCTX2 and SFCTY1/SFCTY2 terms.  The bounded
-        # continuation below reconstructs the commercial DMIG values of the
-        # independent skew cases 75 and 89; it is exactly one for a rectangle
-        # and leaves the term-by-term cases 65-73 unchanged.
+        # continuation below reconstructs the commercial DMIG values at the
+        # moderate-skew controls 81/89 and the high-skew control 90; it is
+        # exactly one for a rectangle and leaves the term-by-term cases 65-73
+        # unchanged.  Loaded case 60 checks an intermediate obliquity.
         midline_x = 0.5 * (
             coordinates[1]
             + coordinates[2]
@@ -228,15 +241,11 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
         )
         cosine_squared = midline_cosine**2
         # A bounded rational continuation is used instead of a polynomial:
-        # it reproduces both independent DMIG controls (cases 75 and 89),
-        # remains positive for every valid convex element and tends smoothly
-        # to a finite correction for severe skew.  This matters for case 60,
-        # whose larger midline angle exposed the non-physical sign reversal
-        # of the previous fourth-order extrapolation.
-        torsion_metric = 1.0 + (
-            0.66204667784 * cosine_squared
-            / (1.0 + 7.29631879857 * cosine_squared)
-        )
+        # it reproduces the moderate- and high-skew DMIG controls (cases
+        # 81/89 and 90), remains positive over 0 <= cos^2 <= 1 and tends to a
+        # finite correction for severe skew.  The intermediate-skew case 60
+        # is an independent loaded confirmation of this continuation.
+        torsion_metric = self._oblique_torsion_metric(cosine_squared)
         alpha *= torsion_metric
         beta *= torsion_metric
         flexibility_x = (
@@ -421,130 +430,14 @@ class CQUAD4NastranElementSolver(CQUAD4ElementBase):
             ]
         )
 
-    def _build_warping_force_transformation(self) -> np.ndarray:
-        """Map mean-plane resultants to the actual warped corner nodes.
-
-        Nastran treats a non-coplanar quadrilateral as a flat element on the
-        plane through the four edge midpoints.  Moving its resultants to the
-        real nodes requires two equilibrium corrections:
-
-        * in-plane forces are resolved along both incident edges and produce
-          self-equilibrated transverse ``kick-off`` forces;
-        * bending moments are made tangent to each nodal surface and their
-          added normal components are balanced by an in-plane force system.
-
-        The returned matrix acts on nodal *forces*.  Consequently the warped
-        stiffness is obtained by the congruence ``W @ K_mean @ W.T``.
-        """
-        warping = np.eye(24)
-        heights = (self.coords - self.origin) @ self.local_z_axis
-        characteristic_length = max(
-            np.linalg.norm(
-                self.local_coords_2d[(node + 1) % 4]
-                - self.local_coords_2d[node]
-            )
-            for node in range(4)
-        )
-        if np.max(np.abs(heights)) <= 1.0e-12 * characteristic_length:
-            return warping
-
-        # At each corner resolve (Fx, Fy) into the directions of its outgoing
-        # and incoming edges.  Each edge component is then transferred from
-        # the mean-plane endpoints to their true elevations while preserving
-        # the edge's force and moment equilibrium.
-        edge_resolution = []
-        for node in range(4):
-            outgoing = (
-                self.local_coords_2d[(node + 1) % 4]
-                - self.local_coords_2d[node]
-            )
-            incoming = (
-                self.local_coords_2d[(node - 1) % 4]
-                - self.local_coords_2d[node]
-            )
-            outgoing /= np.linalg.norm(outgoing)
-            incoming /= np.linalg.norm(incoming)
-            edge_resolution.append(
-                np.linalg.inv(np.column_stack((outgoing, incoming)))
-            )
-
-        for node in range(4):
-            next_node = (node + 1) % 4
-            edge_length = np.linalg.norm(
-                self.local_coords_2d[next_node]
-                - self.local_coords_2d[node]
-            )
-            force_at_node = edge_resolution[node][0]
-            force_at_next = edge_resolution[next_node][1]
-            for component in range(2):
-                from_node = (
-                    -heights[node] * force_at_node[component] / edge_length
-                )
-                from_next = (
-                    heights[next_node]
-                    * force_at_next[component]
-                    / edge_length
-                )
-                row_node = 6 * node + 2
-                row_next = 6 * next_node + 2
-                column_node = 6 * node + component
-                column_next = 6 * next_node + component
-                warping[row_node, column_node] += from_node
-                warping[row_node, column_next] += from_next
-                warping[row_next, column_node] -= from_node
-                warping[row_next, column_next] -= from_next
-
-        # A moment initially tangent to the mean plane receives a local Mz
-        # component so that it remains tangent to the two physical edges at
-        # its node.  Store the coefficients because their total Mz must be
-        # balanced by the self-equilibrating in-plane pattern below.
-        rotation = self.T[:3, :3]
-        normal_moment_coefficients = []
-        for node in range(4):
-            outgoing = self.coords[(node + 1) % 4] - self.coords[node]
-            incoming = self.coords[(node - 1) % 4] - self.coords[node]
-            nodal_normal = np.cross(outgoing, incoming)
-            nodal_normal /= np.linalg.norm(nodal_normal)
-            if np.dot(nodal_normal, self.local_z_axis) < 0.0:
-                nodal_normal *= -1.0
-            local_normal = rotation @ nodal_normal
-            coefficients = -local_normal[:2] / local_normal[2]
-            normal_moment_coefficients.append(coefficients)
-            warping[
-                6 * node + 5, 6 * node + 3 : 6 * node + 5
-            ] += coefficients
-
-        # Equal x/y forces arranged tangentially around the four corners have
-        # zero resultant and supply only a moment about the mean-plane normal.
-        force_pattern = np.array(
-            [[-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0], [1.0, 1.0]]
-        )
-        pattern_moment = sum(
-            x * force[1] - y * force[0]
-            for (x, y), force in zip(self.local_coords_2d, force_pattern)
-        )
-        for force_node in range(4):
-            for moment_node in range(4):
-                warping[
-                    6 * force_node : 6 * force_node + 2,
-                    6 * moment_node + 3 : 6 * moment_node + 5,
-                ] += np.outer(
-                    force_pattern[force_node],
-                    -normal_moment_coefficients[moment_node] / pattern_moment,
-                )
-        return warping
-
     def get_stiffness_matrix(self) -> np.ndarray:
-        """Return the warped and globally oriented 24x24 stiffness matrix."""
-        mean_plane_stiffness = self._build_local_stiffness()
-        warping = self._build_warping_force_transformation()
-        warped_stiffness = warping @ mean_plane_stiffness @ warping.T
-        stiffness = self.T.T @ warped_stiffness @ self.T
+        """Return the globally oriented 24x24 planar-shell stiffness."""
+        local_stiffness = self._build_local_stiffness()
+        stiffness = self.T.T @ local_stiffness @ self.T
         return 0.5 * (stiffness + stiffness.T)
 
     def _get_recovery_displacements(
         self, element_displacements_global: np.ndarray
     ) -> np.ndarray:
-        """Return work-conjugate displacements on the CQUAD mean plane."""
-        warping = self._build_warping_force_transformation()
-        return warping.T @ self.T @ element_displacements_global
+        """Return element displacements in the planar local system."""
+        return self.T @ element_displacements_global

@@ -322,7 +322,8 @@ class BarElement(Element):
 class CQUAD4Element(Element):
     """
     @brief 4-node Quadrilateral Plate Element (CQUAD4).
-    @details Supports membrane and bending stiffness using Reissner-Mindlin and isoparametric formulation.
+    @details Stores connectivity and material angle. The active solver uses
+    the validated planar Nastran reconstruction.
     """
     theta: float = 0.0 # Material coordinate system orientation
 

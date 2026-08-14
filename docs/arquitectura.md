@@ -75,7 +75,10 @@ Orden de mapeo:
 5. cargas;
 6. restricciones.
 
-Las coordenadas de los nodos sí se transforman a global mediante `node.get_position()`. Sin embargo, vectores `FORCE` y `MOMENT` definidos en sistemas distintos del global son rechazados en el ensamblaje.
+Las coordenadas de los nodos se transforman a global mediante `node.get_position()`.
+Los vectores `FORCE` y `MOMENT` definidos en otro sistema se transforman
+también a coordenadas básicas antes de almacenarse. El lector selecciona un
+`SUBCASE` y reduce sus combinaciones `LOAD`, `SPCADD`, `SPC` y `SPC1`.
 
 El lector aplica una política *fail fast*: no ignora silenciosamente entidades estructurales desconocidas. Esta política protege frente a modelos aparentemente resueltos a los que les falte física.
 

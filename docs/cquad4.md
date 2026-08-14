@@ -1,233 +1,183 @@
-# Desarrollo y validación de CQUAD4
+# CQUAD4 plano: formulación y validación final
 
-## Estado actual
+## Estado
 
-El elemento se mantiene en dos implementaciones independientes:
+La implementación activa es `CQUAD4NastranElementSolver`. Reconstruye la
+rigidez del QUAD4 de Nastran para cuadriláteros **coplanares**, no degenerados
+y con jacobiano positivo. El plano puede tener cualquier orientación 3D y los
+elementos de una estructura pueden pertenecer a planos distintos.
 
-- `CQUAD4NastranElementSolver`: reconstrucción de la rigidez de Nastran y
-  formulación activa en `LinearStaticSolver`;
-- `CQUAD4ReissnerMindlinElementSolver`: formulación isoparamétrica clásica de
-  Reissner-Mindlin con integración completa `2 x 2`.
+Los CQUAD4 alabeados quedan deliberadamente fuera del proyecto. La clase base
+comprueba la distancia de los cuatro nodos al plano local y genera
+`ValueError` si su rango supera `max(1e-10, 1e-8*L)`, con `L` igual a la mayor
+longitud de lado. No se proyecta la geometría ni se aplica una corrección de
+alabeo.
 
-`CQUAD4ElementBase` contiene únicamente la geometría, el sistema local, las
-matrices constitutivas, `K6ROT` y la recuperación de tensiones comunes. Las dos
-clases producen matrices `24 x 24`, pero no comparten el cálculo de rigidez.
+La colección final arroja `335 passed, 6 xfailed`. Los seis `xfail` son límites
+conocidos: casos 54, 59 y 62–64 alabeados, y caso 78 con suavizado `SNORM`
+predeterminado. Los casos facetados equivalentes con `SNORM,0` sí pasan.
 
-## Formulación Reissner-Mindlin
+## Clases
 
-La implementación clásica integra con una regla `2 x 2` los bloques de
-membrana, flexión y cortante transversal. Es una referencia teórica útil y no
-pretende reproducir las decisiones internas de Nastran. Como es habitual en un
-elemento de bajo orden, puede presentar bloqueo de cortante en placas delgadas.
+- `CQUAD4ElementBase`: geometría plana, funciones de forma, constitutivas,
+  transformación, `K6ROT` y recuperación común.
+- `CQUAD4NastranElementSolver`: formulación usada por el solver global.
+- `CQUAD4ReissnerMindlinElementSolver`: formulación clásica independiente,
+  conservada para comparación académica; no es el elemento activo.
 
-## Reconstrucción Nastran
+## Geometría y sistema local
 
-Para elementos planos, la ruta Nastran combina:
+El origen es el promedio de los cuatro nodos. La normal es el producto de las
+diagonales `G1-G3` y `G2-G4`; el eje local x es la bisectriz de las diagonales
+unitarias `G1-G3` y `G4-G2`; y el eje y completa el triedro.
 
-1. deformación uniforme evaluada en el centro;
-2. dos modos bilineales ortogonales a traslaciones y campos lineales;
-3. estabilización *hourglass* basada en las dos líneas medias del
-   cuadrilátero, con coeficiente isotrópico `E/12` y normalización del modo
-   bilineal cuando las diagonales no se bisecan;
-4. el mismo operador para membrana y curvaturas, con el mapeo
-   `p = [theta_y, -theta_x]`;
-5. el bloque transversal de MacNeal construido en flexibilidad aumentada:
-   cuatro deformaciones de cortante selectivas se reconstruyen con las
-   direcciones duales de las aristas (*edge-string shear*) y se combinan con la
-   flexibilidad residual de flexión y, si existe `MID3`, con su flexibilidad
-   física de cortante;
-6. penalización *drilling* opcional cuando `K6ROT > 0`.
-
-En elementos alabeados se forma primero la rigidez sobre el plano que pasa por
-los puntos medios de las aristas. Después se aplica una transformación de
-equilibrio que traslada los resultantes a los nodos reales:
-
-- las fuerzas de membrana se resuelven sobre las dos aristas incidentes y
-  generan fuerzas transversales autoequilibradas (*kick-off forces*);
-- los momentos se hacen tangentes al plano nodal y su componente normal se
-  equilibra mediante fuerzas en el plano.
-
-Si `W` transforma los resultantes del plano medio, la operación implementada es:
+Las funciones bilineales en `[-1,1]²` son:
 
 ```text
-K_warped = W K_mean W^T
-K_global = T^T K_warped T
+N1 = 1/4 (1-xi)(1-eta)       N2 = 1/4 (1+xi)(1-eta)
+N3 = 1/4 (1+xi)(1+eta)       N4 = 1/4 (1-xi)(1+eta)
 ```
 
-## Validación frente a DMIG
+El jacobiano se evalúa en todos los puntos y vértices requeridos. Un
+determinante no positivo se rechaza.
 
-La prueba `test_E2E_CQUAD_NAstran_K_solution.py` lee cada deck, ensambla la
-matriz y la compara con la DMIG `KAAX` exportada a CSV. Los casos planos comparan sus GDL
-físicamente activos con tolerancia del `1 %`; el caso 54 compara los 24 GDL con
-tolerancia del `3 %`, porque incluye la reconstrucción pública de alabeo y no
-el código propietario de la versión comercial usada para generar la DMIG.
+## PSHELL
 
-Error relativo de Frobenius observado:
+- `MID1`: material de membrana.
+- `MID2`: material de flexión; vacío desactiva la flexión y **no** hereda
+  `MID1`.
+- `MID3`: material de flexibilidad física de cortante; vacío no hereda `MID2`.
+  Permanece la flexibilidad residual de flexión propia de QUAD4.
+- `12I/T^3`: multiplica `t^3/12`, con valor por defecto 1.
+- `TS/T`: multiplica el espesor de cortante, con valor por defecto `5/6`.
+- `THETA`: orienta el material; con `MAT1` isótropo no cambia la constitutiva y
+  la salida se recupera en ejes del elemento.
 
-| Caso | Geometría y bloque | Nastran | Reissner-Mindlin |
-|---|---|---:|---:|
-| 51 | distorsionada, membrana | `0.039670 %` | `12.557935 %` |
-| 52 | distorsionada, flexión | `0.039670 %` | `12.557935 %` |
-| 53 | plana sesgada, membrana + flexión | `0.023385 %` | `25.279406 %` |
-| 54 | inclinada y alabeada, matriz `24 x 24` | `2.079993 %` | `45.074180 %` |
-| 55 | inclinada 3D, `K6ROT=100`, matriz `24 x 24` | `0.028215 %` | -- |
-| 65 | cortante aislado con `MID3`, `K6ROT=0` | `5.74e-9 %` | -- |
-| 67 | MID1/MID2/MID3, `K6ROT=100` | `0.000298 %` | -- |
-| 69-71, 73 | pares MID3/G3/TST rectangulares | `< 7.3e-9 %` | -- |
-| 72 | MID3 vacío, `K6ROT=100` | `0.000121 %` | -- |
-| 74-75 | cuadrilátero plano sesgado, con/sin MID3 | `0.05436 %` | -- |
-| 81 | paralelogramo oblicuo 3D plano, propiedades completas | `0.0000103 %` | -- |
-| 83 | mismo paralelogramo, MID3 aislado | `0.000314 %` | -- |
-| 89 | mismo paralelogramo, MID3 vacío | `0.0000889 %` | -- |
+## Membrana y flexión
 
-Sin la corrección de alabeo, el error Nastran del caso 54 era `38.551436 %`.
-La corrección lo reduce a `2.079993 %`; por tanto, el caso queda cubierto por el
-criterio de aceptación del `3 %`, aunque no existe igualdad término a término.
+La formulación Nastran no usa una cuadratura completa 2x2. Cada bloque combina:
 
-### Flexibilidad transversal validada por los casos 65-75
+1. una deformación uniforme calculada en el centro;
+2. dos modos bilineales `hourglass` ortogonalizados frente a los campos
+   lineales;
+3. una normalización por distorsión;
+4. una métrica construida con las líneas que unen puntos medios de lados
+   opuestos.
 
-La expresión implementada para el subespacio `[T3,R1,R2]` es:
+En forma abreviada:
 
 ```text
-K_s = D_s^T (Z_b + Z_s)^-1 D_s
+K0  = A*s*B0.T*D*B0
+h   = h0 - G0.T*X.T*h0,  h0 = [1,-1,1,-1]
+chi = 1 / (1 - ||h-h0||²/12)
+M   = A*(a⊗a/||a||⁴ + b⊗b/||b||⁴)
+Khg = s*L*(E*chi*M/12)*L.T
+K   = K0 + Khg
 ```
 
-`D_s` contiene cuatro deformaciones selectivas: `gamma_xz` en
-`(0,+/-1/sqrt(3))` y `gamma_yz` en `(+/-1/sqrt(3),0)`. `Z_b` es la
-flexibilidad residual de flexión QUAD4 con corrección de aspecto
-`epsilon=0.025`, identificada con las DMIG de MSC. Para geometría rectangular,
-cuando `MID3` existe la flexibilidad física se añade diagonalmente:
+`s=t` en membrana y `s=(t³/12)*(12I/T³)` en flexión.
+
+## Cortante transversal
+
+El operador cinemático procede de las cuatro aristas, siguiendo la
+construcción pública `UEV/ANGLEI/EDGSHR` de NASTRAN-95. Se toman dos muestras
+en cada línea natural central:
 
 ```text
-Z_s(i,i) = 1 / (2 detJ_i G3 t (TS/T))
+(0, -1/sqrt(3)), (0, +1/sqrt(3)),
+(-1/sqrt(3), 0), (+1/sqrt(3), 0)
 ```
 
-Por tanto, `MID3` aporta **flexibilidad en serie**, no una rigidez
-Reissner-Mindlin en paralelo: reducir `G3` a la mitad duplica esa corrección y
-reducir `TS/T` de `5/6` a `1/2` la multiplica por `5/3`. Los casos 70, 71 y 73
-verifican independientemente estas escalas.
-
-Un `MID3` vacío no activa flexibilidad física de cortante: `SHRFLX` solo es
-cierto si `MID3 > 0`, de modo que `Z_s=0`. Sin embargo, esto no significa que
-`MID2` sea irrelevante. El `QUAD4D` público usa internamente `MID2` al recorrer
-la tercera matriz material cuando `MID3` está vacío y existe flexión; sus
-propiedades alimentan la corrección residual/torsional, no una flexibilidad
-física `MID3`. Esta es la interpretación implementada: el bloque conserva
-`Z_b` y no inventa `Z_s`.
-
-Un `MID2` vacío tiene una consecuencia distinta: la propiedad es solo de
-membrana y el bloque completo `[T3,R1,R2]` debe ser nulo. El caso 51 compara
-ahora los 24 GDL, y una prueba unitaria protege expresamente esta semántica
-para impedir que `MID1` se reutilice de forma implícita como material de
-flexión.
-
-Los casos rectangulares 65, 69-71 y 73 coinciden término a término al orden de
-`1e-10`; los casos completos 67 y 72 quedan por debajo de `3e-6` de error
-relativo. Los F06 66 y 68 validan además desplazamientos, cargas, reacciones,
-fuerzas, momentos y tensiones. En 74-75 queda un error global del `0.054 %`,
-prácticamente igual con y sin MID3. Esto muestra que el residual de esos dos
-casos pertenece a la geometría irregular y no a la flexibilidad física de
-`MID3`.
-
-Los casos 81, 83 y 89 cierran el paralelogramo oblicuo 3D plano. Proyectar sus
-DMIG sobre las cuatro deformaciones selectivas reveló términos fuera de la
-diagonal entre las dos muestras de cada dirección, presentes tanto en la
-flexibilidad residual como en la física. Se introdujo una métrica simétrica de
-pareja: conserva el modo promedio y escala el modo antisimétrico relacionado
-con torsión según el coseno entre las dos líneas medias. La continuación usada
-es positiva y acotada:
+La rigidez se obtiene desde una flexibilidad aumentada:
 
 ```text
-c = (a · b) / (|a| |b|)
-mu(c) = 1 + 0.66204667784 c^2 / (1 + 7.29631879857 c^2)
-P(mu) = 1/2 [[1+mu, 1-mu], [1-mu, 1+mu]]
+Z = Z_residual_bending + Z_MID3
+Kshear = S.T * solve(Z, S)
 ```
 
-`P(mu)` se aplica por congruencia a la flexibilidad física y `mu` multiplica
-los parámetros residuales `alpha/beta`. Es identidad para un rectángulo y
-mantiene positiva la flexibilidad para cualquier ángulo. Los errores completos
-de 81/83/89 son ahora `1.03e-7`, `3.14e-6` y `8.89e-7`; sus bloques
-`[T3,R1,R2]` quedan en el mismo orden. Los tests verifican además cada término
-con tolerancia absoluta, no solo la norma de Frobenius. La estructura coincide
-con los pares `SFCTX1/SFCTX2` y `SFCTY1/SFCTY2` del `QUAD4D` público, pero las
-constantes son una identificación contra DMIG comercial, no una constante
-documentada por MSC. Los casos 90/91 son una validación predictiva de
-oblicuidad alta y no deben considerarse cerrados hasta incorporar sus PCH/F06.
+`MID3` se suma en serie como flexibilidad, por lo que activarlo hace más blando
+el elemento. La corrección de aspecto usa `epsilon=0.025`.
 
-La interpolación de cortadura no usa directamente las derivadas bilineales
-cartesianas. Para cada arista se forma una dirección dual a las dos aristas
-incidentes mediante los cosenos de sus ángulos internos, igual que las
-variables `UEV/ANGLEI/EDGSHR` de `Q4BMGD` en NASTRAN-95. Este cambio reduce el
-error de desplazamientos del panel plano sesgado 76 de `39.66 %` a `0.0116 %`
-en norma de Frobenius.
+En cuadriláteros afines oblicuos, el modo antisimétrico de cada pareja se
+escala con:
 
-La recuperación impresa de `QX/QY` es una operación distinta de la rigidez.
-En los casos planos 60, 61 y 76, los desplazamientos tienen errores globales
-de `0.055 %`, `0.031 %` y `0.0116 %`, mientras componentes pequeñas de cortante
-centroidal alcanzan diferencias relativas de `48 %`, `8.4 %` y `34 %`. Por
-ello los tests aplican tolerancias específicas solamente a `QX/QY`; membrana,
-momentos y tensiones conservan criterios mucho más estrictos. El caso 84
-refuerza esta conclusión: desplazamientos y reacciones difieren `0.00122 %` y
-`0.00288 %`, y `N/M` y tensiones menos de `0.003 %`, mientras un `QX` pequeño
-del elemento 4 difiere `0.00977` en valor absoluto (`72 %` relativo). No se ha
-modificado la rigidez para forzar esa salida de postproceso.
-
-## Parámetros relacionados
-
-- `K6ROT`: multiplica la penalización de la rotación *drilling* `R3`. No es
-  rigidez física de membrana/flexión ni corrige mecanismos estructurales.
-- `SNORM=beta`: Nastran construye en cada GRID una normal común a las facetas
-  adyacentes cuyo ángulo con ella sea inferior a `beta`; el valor comercial
-  predeterminado es `20` grados. Cambia el sistema usado para las rotaciones y
-  por ello el acoplamiento membrana-flexión de superficies facetadas. No cambia
-  la constitutiva `MAT1`. Este solver aún usa una normal independiente por
-  elemento; para comparación equivalente debe usarse `PARAM,SNORM,0.0`.
-- `MID1/T`: material y espesor de membrana.
-- `MID2` y `12I/T^3`: material y escala de inercia de flexión.
-- `MID3` y `TS/T`: material y espesor efectivo de cortante físico. Vacío no
-  activa `Z_s`; el valor vacío de `TS/T` se interpreta como `5/6`.
-- `THETA/MCID`: orientación de la constitutiva. Con `MAT1` isótropo no debe
-  rotar los resultantes impresos fuera de los ejes del elemento.
-
-La comparación puede reproducirse con:
-
-```powershell
-.\.venv\Scripts\python.exe tests/solver_tst/elements/run_cquad4_nastran_comparison.py
+```text
+m(c²) = 1 + 0.4100259495463487*c² / (1 - 0.9156556465380681*c²)
 ```
 
-La opción `--export-dir ruta` guarda las matrices calculadas sin modificar las
-referencias de validación.
+`c` es el coseno entre las líneas medias. La ley vale 1 para un rectángulo,
+permanece positiva en todo el dominio y se identificó con DMIG de oblicuidad
+moderada (casos 81/89) y alta (caso 90). El caso cargado 60 verifica un ángulo
+intermedio. Es una identificación del proyecto, no una constante publicada
+por MSC.
 
-## Fuentes y trazabilidad
+## K6ROT
 
-- R. H. MacNeal, [A simple quadrilateral shell element](https://www.sciencedirect.com/science/article/pii/0045794978900202), *Computers & Structures*, 8(2), 175-183, 1978, DOI `10.1016/0045-7949(78)90020-2`.
-- R. H. MacNeal, [Derivation of element stiffness matrices by assumed strain distributions](https://www.sciencedirect.com/science/article/pii/002954938290262X), *Nuclear Engineering and Design*, 70(1), 3-12, 1982, DOI `10.1016/0029-5493(82)90262-X`.
-- NASA, [nasa/NASTRAN-95](https://github.com/nasa/NASTRAN-95): código histórico público; para CQUAD4 son relevantes `mis/quad4s.f`, `mis/quad4d.f`, `mis/q4bmgs.f`, `mis/q4bmgd.f`, `mis/trplms.f` y `mis/trplmd.f`.
-- Hexagon, [MSC Nastran 2021.4 Reference Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2021.4_Reference_Guide/raw/resource/enus/MSC_Nastran_2021.4_Reference_Guide.pdf): documenta que `SNORM` genera una normal única promediada en cada GRID compartido y que su valor predeterminado es `20.0`.
-- NASA NTRS, [Benchmarking the QUAD4/TRIA3 element](https://ntrs.nasa.gov/citations/19940013364): documenta diferencias entre variantes Nastran en endurecimiento de cortante e integración numérica.
-- NASA NTRS, [informe 19900011106](https://ntrs.nasa.gov/citations/19900011106): describe el cortante transversal del MSC/NASTRAN QUAD4 mediante aproximación *string-net* y flexibilidad aumentada.
-- B. P. Naganarayana y G. Prathap, [Force and moment corrections for the warped four-node quadrilateral plane shell element](https://repository.ias.ac.in/39268/1/138_PUB.pdf), *Computers & Structures*, 33(4), 1107-1115, 1989.
+La implementación es la extensión a cuatro nodos de la ya validada en CTRIA3.
+En cada vértice penaliza:
 
-Las dos publicaciones de MacNeal describen la base conceptual de QUAD4 y las
-deformaciones asumidas. NASTRAN-95 permite rastrear una implementación pública
-histórica, pero no es el código de MSC Nastran actual. La ruta `nastran` de este
-proyecto es, por ello, una reconstrucción contrastada contra DMIG, no una copia
-literal de una formulación comercial propietaria.
+```text
+r_i = theta_z_i - 0.5*(dv/dx - du/dy)_i
+K6 = sum_i K6ROT*1e-6*G*t*(4*detJ_i)*(r_i outer r_i)
+```
 
-## Validación pendiente
+No es una rigidez diagonal aislada. La forma conserva los movimientos rígidos
+y acopla el drilling nodal con la macrorrotación de membrana.
 
-- ejecutar los casos 90/91 para comprobar la extrapolación angular acotada en
-  una geometría de oblicuidad alta no usada para identificar sus constantes;
-- reproducir exactamente la recuperación centroidal comercial de `QX/QY` sin
-  degradar la rigidez ya validada;
-- casos alabeados adicionales para separar error de forma y error de alabeo;
-- reproducir con mayor fidelidad la geometría irregular de QUAD4 para reducir
-  el `0.054 %` residual de los casos 74-75;
-- materiales ortótropos, laminados, `MID4`, `ZOFFS` y espesores nodales;
-- *patch tests* multielemento y estudios de convergencia de placa;
-- estudio de sensibilidad a aspecto, *skew*, *taper* y espesor.
+## Recuperación
 
-El caso 82 ya cierra la hipótesis de normales del 78: con `SNORM=0` el solver
-coincide con Nastran al `0.0227 %` en desplazamientos y `0.00695 %` en
-reacciones. El comportamiento por defecto de `SNORM` no está implementado y
-se mantiene documentado mediante el `xfail` del caso 78.
+En el centro se calculan fuerzas de membrana `N`, momentos `M`, tensiones en
+fibras superior/inferior, principales y von Mises. Estas magnitudes, junto con
+rigidez, desplazamientos y reacciones, coinciden estrechamente con Nastran.
+
+`Qx/Qy` se recuperan desde las cuatro fuerzas generalizadas de cortante. La
+convención centroidal propietaria de MSC no está reproducida exactamente: en
+el caso 91 la mayor diferencia es 47.1 % en una componente pequeña, 0.0216 en
+valor absoluto, mientras `N`, `M` y fibras quedan por debajo del 0.1 %. Es una
+limitación de postproceso, no de rigidez ni equilibrio.
+
+## Validación
+
+`tests/solver_tst/elements/test_E2E_CQUAD_Nastran_K_solution.py` compara DMIG:
+
+- error relativo de Frobenius global;
+- comparación término a término con tolerancia relativa y absoluta;
+- bloques en ejes de elemento: membrana, placa/cortante y drilling;
+- acoplamiento drilling–membrana cuando procede;
+- exportación opcional mediante `debug_export` y `output_k_file`.
+
+`tests/solver_tst/test_validation_end_to_end_cquad4.py` contiene directamente
+las referencias de desplazamientos, cargas, reacciones y resultados; no lee el
+F06 durante el test.
+
+El caso 90 obligó a ajustar sólo la continuación geométrica del modo torsional.
+Con la ley final su DMIG completa queda por debajo de `1e-6` de Frobenius, el
+bloque placa/cortante por debajo de `4e-6` y sus términos cumplen
+`rtol=1e-5`, `atol=2e-3`. El caso 91 obtiene errores vectoriales de
+`2.07e-5` en desplazamientos y `6.30e-5` en reacciones.
+
+Los casos 57 y 58 no son controles limpios de formulación: contienen un MID3
+con módulo del orden de `1e-20` y números de condición `2.90e25` y `8.52e26`.
+Sus comentarios y tolerancias documentan ahora qué componentes pequeñas son
+sensibles. El caso 59 es alabeado y se conserva sólo como `xfail` de alcance.
+
+## Limitaciones
+
+- Sólo cuadriláteros coplanares y no degenerados.
+- `MAT1` isótropo; sin laminados, `MAT8` ni acoplamiento de composite.
+- Sin `ZOFFS`, espesores nodales, `TFLAG`, `MID4` o cargas de cara.
+- Sin suavizado `SNORM`; usar normales independientes, equivalentes a
+  `SNORM,0`, en ensamblajes facetados.
+- Recuperación de `Qx/Qy` aproximada respecto a la impresión de MSC Nastran.
+
+La derivación matemática y la correspondencia detallada con el código se
+encuentran en [`cquad4_tesis.md`](cquad4_tesis.md).
+
+## Referencias
+
+- R. H. MacNeal, *A Simple Quadrilateral Shell Element*, Computers &
+  Structures 8, 175–183, 1978.
+- R. H. MacNeal, [*Derivation of element stiffness matrices by assumed strain
+  distributions*](https://doi.org/10.1016/0029-5493(82)90262-X), 1982.
+- NASA, [NASTRAN-95 `quad4d.f`](https://github.com/nasa/NASTRAN-95/blob/master/mis/quad4d.f).
+- Hexagon, *MSC Nastran Reference Guide*.

@@ -59,17 +59,20 @@ Actualmente `run_analysis_job()` captura las excepciones y muestra un mensaje, p
 | Materiales | `MAT1` | Se necesitan al menos dos valores de `E`, `G` y `NU`; el tercero se calcula. |
 | Propiedades | `PROD`, `PBAR`, `PSHELL` | Solo se mapea un subconjunto de los campos Nastran. |
 | Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 usa por defecto la reconstrucción Nastran y completa el postproceso. |
-| Cargas | `FORCE`, `MOMENT` | Solo se aplican si `CID=0`. |
-| Restricciones | `SPC`, `SPC1` | Se admiten desplazamientos impuestos no nulos. |
+| Cargas | `FORCE`, `MOMENT`, `LOAD` | Los vectores se transforman desde su `CID`; se reducen combinaciones. |
+| Restricciones | `SPC`, `SPC1`, `SPCADD`, `GRID.PS` | Se admiten desplazamientos impuestos no nulos. |
 | Parámetros | `PARAM,K6ROT` | Se utiliza en CTRIA3 y CQUAD4. |
 
 El lector falla de forma explícita si encuentra elementos, cargas o restricciones no soportados. En particular, rechaza MPC, RBE y elementos rígidos.
 
-### Limitaciones de selección de casos
+### Selección de casos
 
-Los identificadores `SID` se almacenan, pero el solver no interpreta `SUBCASE`, `LOAD`, `SPC`, combinaciones `LOAD` ni conjuntos `SPCADD`. Ensambla **todas** las cargas y restricciones mapeadas del deck en un único caso. Para obtener un resultado inequívoco, el fichero de entrada debe contener un solo conjunto efectivo de cargas y condiciones de contorno.
+Si el deck contiene un solo `SUBCASE`, se selecciona automáticamente. Si
+contiene varios, debe indicarse `--subcase ID`; omitirlo genera un error para
+evitar mezclar casos. El lector reduce los `LOAD` y `SPCADD` asociados. En un
+fichero Bulk Data sin Case Control se mapean las tarjetas base disponibles.
 
-Tampoco se aplican las restricciones permanentes del campo `PS` de `GRID`.
+Las restricciones permanentes del campo `PS` de `GRID` también se aplican.
 
 ### Convención de unidades
 
