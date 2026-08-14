@@ -9,7 +9,7 @@ o hipótesis CQUAD4 anterior.
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado actual: `335 passed, 6 xfailed`.
+Resultado actual: `337 passed, 6 xfailed`.
 
 Los seis xfail son estrictos y deliberados:
 

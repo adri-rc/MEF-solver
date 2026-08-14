@@ -23,7 +23,7 @@ flowchart LR
 
 ```text
 MEF-solver/
-├── main.py                         entrada de línea de comandos e informe
+├── main.py                         entrada de línea de comandos y orquestación
 ├── input/                          modelos de usuario
 ├── output/                         informes generados (ignorado por Git)
 ├── src/
@@ -37,13 +37,14 @@ MEF-solver/
 │   │   ├── quadrature.py           reglas de Gauss-Legendre 1D
 │   │   ├── utilities.py            mapeo nodo/GDL
 │   │   └── elements/               CROD, CBAR, CTRIA3 y CQUAD4
-│   └── postprocessing/             reservado; todavía vacío
+│   └── postprocessing/
+│       └── report_writer.py        escritor del informe de resultados
 └── tests/
     ├── preprocessing_tst/
     ├── solver_tst/
     │   ├── elements/
     │   └── validation_cases/        decks, F06, PCH y matrices CSV Nastran
-    └── postprocessing_tst/          reservado
+    └── postprocessing_tst/          validación del formato de salida
 ```
 
 Los ficheros `draft_*` están ignorados por Git y no forman parte del camino de ejecución. `rod_element.py` es una implementación anterior; el solver global usa `RodElementSolverV2` de `rod_element_v2.py`.
@@ -129,11 +130,16 @@ K_global = Tᵀ K_local T
 
 ## Postproceso
 
-El postproceso está todavía integrado dentro del solver:
+La recuperación numérica sigue delegada en cada solver de elemento:
 
 - CROD: deformación/tensión axial, fuerza, giro por unidad de longitud, torsor y tensión torsional.
 - CBAR: fuerzas de extremo, tensión axial, torsión y tensiones normales en puntos PBAR.
 - CTRIA3: tensiones y resultantes de membrana, momentos, cortantes y fibras superior/inferior.
 - CQUAD4: membrana, momentos, cortantes, fibras superior/inferior e invariantes; compartido por las formulaciones Nastran y Reissner-Mindlin.
 
-`src/postprocessing/` está reservado, pero vacío. Una evolución natural es mover allí la recuperación, los invariantes, la selección de puntos y los escritores de resultados.
+La presentación se desacopla del solver mediante
+`src/postprocessing/report_writer.py`. El escritor genera el resumen del
+modelo, desplazamientos, reacciones y tablas específicas para cada familia de
+elemento. En placas separa las resultantes internas `N/M/Q` de las tensiones
+en las fibras `TOP/BOTTOM`, siguiendo una organización análoga a F06. De este
+modo `main.py` se limita a coordinar lectura, ensamblaje, solución y escritura.

@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `335 passed, 6 xfailed`; los xfail documentan geometría CQUAD4 alabeada y
+con `337 passed, 6 xfailed`; los xfail documentan geometría CQUAD4 alabeada y
 suavizado `SNORM`, ambos fuera de alcance.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se

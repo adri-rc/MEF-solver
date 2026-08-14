@@ -11,7 +11,7 @@ Comando:
 Resultado del 14 de agosto de 2026:
 
 ```text
-335 passed, 6 xfailed
+337 passed, 6 xfailed
 ```
 
 Las advertencias visibles proceden de que pytest no puede escribir su caché en

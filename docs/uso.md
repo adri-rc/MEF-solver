@@ -110,14 +110,19 @@ Es importante restringir los grados de libertad inactivos. El solver reserva sei
 - `reactions` contiene vectores de seis componentes para nodos restringidos.
 - `stresses` contiene magnitudes diferentes según el tipo de elemento.
 
-El informe de texto de `main.py` es todavía provisional:
+El informe `output/<nombre>.rpt` se genera desde
+`src/postprocessing/report_writer.py` y organiza los resultados por familia:
 
-- su tabla de tensiones tiene formato CROD, aunque pueda haber CBAR o CTRIA3;
-- el contador `CROD` usa por error el número de fuerzas nodales;
-- los resultados detallados de CBAR y CTRIA3 no se imprimen;
-- el informe puede resumir mejor las magnitudes específicas de CQUAD4.
+- CROD: fuerzas y torsor; tensiones, deformación y giro unitario;
+- CBAR: fuerzas y momentos en los extremos A/B; tensiones en los puntos PBAR;
+- CTRIA3 y CQUAD4: una tabla de resultantes `Nx`, `Ny`, `Nxy`, `Mx`, `My`,
+  `Mxy`, `Qx`, `Qy` y otra de tensiones en las fibras `TOP` y `BOTTOM`;
+- desplazamientos y reacciones conservan tablas nodales independientes.
 
-Para validación y desarrollo resulta más fiable inspeccionar el diccionario devuelto por `solve()`.
+Todas las componentes se identifican por su nombre físico; ya no se utilizan
+cabeceras genéricas `PRIMARY 1`, `PRIMARY 2`, etc. Las magnitudes se expresan
+en el sistema coherente de unidades elegido en el deck de entrada. Para placas,
+`TOP` corresponde a `z=+t/2` y `BOTTOM` a `z=-t/2` en los ejes locales.
 
 ## Ejecución de pruebas
 

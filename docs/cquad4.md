@@ -13,7 +13,7 @@ comprueba la distancia de los cuatro nodos al plano local y genera
 longitud de lado. No se proyecta la geometría ni se aplica una corrección de
 alabeo.
 
-La colección final arroja `335 passed, 6 xfailed`. Los seis `xfail` son límites
+La colección final arroja `337 passed, 6 xfailed`. Los seis `xfail` son límites
 conocidos: casos 54, 59 y 62–64 alabeados, y caso 78 con suavizado `SNORM`
 predeterminado. Los casos facetados equivalentes con `SNORM,0` sí pasan.
 

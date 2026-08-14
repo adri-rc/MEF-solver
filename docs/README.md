@@ -2,7 +2,7 @@
 
 MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático lineal y a la comparación con modelos de MSC Nastran. El proyecto dispone de un flujo `BDF/DAT -> modelo interno -> ensamblaje -> solución -> resultados`, pero no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
 
-Esta documentación describe el estado observado en el repositorio el **14 de agosto de 2026**. La colección completa termina con `335 passed, 6 xfailed`.
+Esta documentación describe el estado observado en el repositorio el **14 de agosto de 2026**. La colección completa termina con `337 passed, 6 xfailed`.
 
 ## Índice
 
