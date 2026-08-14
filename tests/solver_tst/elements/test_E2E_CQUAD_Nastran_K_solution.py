@@ -86,51 +86,51 @@ STIFFNESS_VALIDATION_DATA = [
         "output_k_file": "draft_Ej55_KGlobal_CQUAD4_python_test.csv",
     },
     {
-            "case_name": "Ej65_KGlobal_CQUAD4_TransverseShear_K6ROT_0.0",
-            "folder": "case_65",
-            "filename": "ej65_cquad4_transverse_shear_stiffness_k6rot_0.dat",
-            "k_csv_file": (
-                "ej65_cquad4_transverse_shear_stiffness_k6rot_0_Nastran.csv"
-            ),
-            "active_dofs": list(range(24)),
-            "max_relative_frobenius_error": 1.0e-8,
-            "term_rtol": 1.0e-8,
-            "term_atol": 1.0e-10,
-            "comparison_blocks": {
-                "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
-                "plate/shear [T3,R1,R2]": [
-                    2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
-                ],
-            },
-            "debug_export": True,
-            "output_k_file": "draft_Ej65_KGlobal_CQUAD4_python_test.csv",
+        "case_name": "Ej65_KGlobal_CQUAD4_TransverseShear_K6ROT_0.0",
+        "folder": "case_65",
+        "filename": "ej65_cquad4_transverse_shear_stiffness_k6rot_0.dat",
+        "k_csv_file": (
+            "ej65_cquad4_transverse_shear_stiffness_k6rot_0_Nastran.csv"
+        ),
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-8,
+        "term_rtol": 1.0e-8,
+        "term_atol": 1.0e-10,
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+        },
+        "debug_export": True,
+        "output_k_file": "draft_Ej65_KGlobal_CQUAD4_python_test.csv",
     },
     {
-            "case_name": "Ej67_KGlobal_CQUAD4_FullShear_K6ROT_100.0",
-            "folder": "case_67",
-            "filename": "ej67_cquad4_full_stiffness_shear_k6rot_100.dat",
-            "k_csv_file": (
-                "ej67_cquad4_full_stiffness_shear_k6rot_100_Nastran.csv"
-            ),
-            "active_dofs": list(range(24)),
-            "max_relative_frobenius_error": 1.0e-5,
-            "term_rtol": 1.0e-5,
-            "term_atol": 1.0e-1,
-            "comparison_blocks": {
-                "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
-                "plate/shear [T3,R1,R2]": [
-                    2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
-                ],
-                "drilling [R3]": [5, 11, 17, 23],
-            },
-            "comparison_couplings": {
-                "drilling-membrane [R3]x[T1,T2]": {
-                    "rows": [5, 11, 17, 23],
-                    "columns": [0, 1, 6, 7, 12, 13, 18, 19],
-                }
-            },
-            "debug_export": True,
-            "output_k_file": "draft_Ej67_KGlobal_CQUAD4_python_test.csv",
+        "case_name": "Ej67_KGlobal_CQUAD4_FullShear_K6ROT_100.0",
+        "folder": "case_67",
+        "filename": "ej67_cquad4_full_stiffness_shear_k6rot_100.dat",
+        "k_csv_file": (
+            "ej67_cquad4_full_stiffness_shear_k6rot_100_Nastran.csv"
+        ),
+        "active_dofs": list(range(24)),
+        "max_relative_frobenius_error": 1.0e-5,
+        "term_rtol": 1.0e-5,
+        "term_atol": 1.0e-1,
+        "comparison_blocks": {
+            "membrane [T1,T2]": [0, 1, 6, 7, 12, 13, 18, 19],
+            "plate/shear [T3,R1,R2]": [
+                2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
+            ],
+            "drilling [R3]": [5, 11, 17, 23],
+        },
+        "comparison_couplings": {
+            "drilling-membrane [R3]x[T1,T2]": {
+                "rows": [5, 11, 17, 23],
+                "columns": [0, 1, 6, 7, 12, 13, 18, 19],
+            }
+        },
+        "debug_export": True,
+        "output_k_file": "draft_Ej67_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej69_KGlobal_CQUAD4_MID3Blank_K6ROT_0.0",
