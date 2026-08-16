@@ -321,9 +321,9 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # Nastran Internal at End A: 
-            #   Mz=1837, My=13478, Fy=492, Fz=4082, Torque=452, Axial=3618
-            # Solver 'forces_n1' (Reaction at Node 1 on Element) -> Signs Flipped vs Internal.
+            # F06 End A: Mz=1837, My=13478, Fy=492, Fz=4082, torque=452,
+            # axial=3618.  With the local convention, F06 plane 1 maps to
+            # -forces_n1.Mz and plane 2 maps to forces_n1.My.
             101: {
                 "axial_force": 3.618136E+03,
                 "axial_stress": 3.618136E+01, 
@@ -385,15 +385,14 @@ VALIDATION_DATA = [
             101: {
                 # Internal Forces at End A (Node 1) from Nastran:
                 # Axial=2.0, Torque=-3.0, M_Plane1(Mz)=7.0, M_Plane2(My)=-19.0
-                # Solver 'forces_n1' are Nodal Reactions -> Opposite signs to Internal
+                # F06 plane 1 maps to -forces_n1.Mz; plane 2 maps to
+                # forces_n1.My in the local CBAR convention.
                 "axial_force": 2.000000E+00,
                 "axial_stress": 2.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -7.000000E+00, 
-                "forces_n1.My": -1.900000E+01, #DEBO CAMBIAR EL SIGNO !?!?!?!?!?
+                "forces_n1.My": -1.900000E+01,
         
-############## NO SE CALCULAN BIEN LOS PUNTOS QUE SE PIDEN EN LAS BARRAS, REVISAR, PARECE QEU ES POR EL LECTOR, mi nastran_reader.py
-############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # Nastran Output Page 14 (STRESSES IN BAR ELEMENTS)
                 # PBAR 401 define puntos C(10,0) y D(0,10)
@@ -417,7 +416,13 @@ VALIDATION_DATA = [
                 
                 # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
                 "max_total_stress":  2.100000E-01, # Matches SA-MAX
-                "min_total_stress": -5.000000E-02  # Matches SA-MIN
+                "min_total_stress": -5.000000E-02, # Matches SA-MIN
+
+                # SB1/SB2 son las tensiones de flexión del extremo B en el F06.
+                "stress_points_end_b.P0.sigma_bending": -5.000000E-02,
+                "stress_points_end_b.P0.sigma_total":   -3.000000E-02,
+                "stress_points_end_b.P1.sigma_bending":  1.100000E-01,
+                "stress_points_end_b.P1.sigma_total":    1.300000E-01,
             },
 
             # --- ELEMENT 102 ---
@@ -429,8 +434,6 @@ VALIDATION_DATA = [
                 "forces_n1.Mz": -5.000000E+00,
                 "forces_n1.My": -1.100000E+01,
  
- ############## NO SE CALCULAN BIEN LOS PUNTOS QUE SE PIDEN EN LAS BARRAS, REVISAR, PARECE QEU ES POR EL LECTOR, mi nastran_reader.py
- ############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # PBAR 402 define puntos C(5,5) y D(-5,-5)
                 # SA1 (Point C, End A):  1.50E-01 (Pure bending?)
@@ -446,7 +449,12 @@ VALIDATION_DATA = [
                 "stress_points.P1.sigma_total":   -1.100000E-01, # Point D
 
                 "max_total_stress":  1.900000E-01, # Matches SA-MAX
-                "min_total_stress": -1.100000E-01  # Matches SA-MIN
+                "min_total_stress": -1.100000E-01, # Matches SA-MIN
+
+                "stress_points_end_b.P0.sigma_bending": -7.500000E-02,
+                "stress_points_end_b.P0.sigma_total":   -3.500000E-02,
+                "stress_points_end_b.P1.sigma_bending":  7.500000E-02,
+                "stress_points_end_b.P1.sigma_total":    1.150000E-01,
             }
         },
         "description": "Two CBARs in series (Y-axis). Validates Stress Recovery at specific points (C, D) defined in PBAR."
@@ -639,7 +647,8 @@ VALIDATION_DATA = [
             },
             # Node 5 (Top CROD)
             5: {
-                1:  0.0,           # T1
+                0:  0.0,           # T1
+                1:  0.0,           # T2
                 2:  2.023731E-03,  # T3 (Elongacion axial dominante)
                 5:  1.264375E-04   # R3 
             }

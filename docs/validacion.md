@@ -32,6 +32,15 @@ mismo modelo. Contrasta desplazamientos, cargas, reacciones, resultados de las
 dos familias de lámina y esfuerzos de CBAR. Es la referencia más directa para
 detectar regresiones de ensamblaje o recuperación entre tipos de elemento.
 
+Las validaciones E2E de CBAR transcriben las tablas F06, sin leerlas durante la
+prueba. Los casos 13--17 cubren voladizo, orientación 3D, vigas en serie,
+marco espacial y trípode híbrido; el caso 15 comprueba las tensiones PBAR C/D
+en ambos extremos A/B. El caso 18 amplía la recuperación a C--F y el 19 a una
+geometría espacial con varias propiedades. Los signos de `forces_n1` y
+`forces_n2` son acciones nodales del elemento, mientras que las tablas
+`FORCES IN BAR ELEMENTS` del F06 son acciones internas de sección; cada
+assertion conserva explícitamente esa conversión de convención.
+
 ## Matrices CQUAD4
 
 El test `test_E2E_CQUAD_Nastran_K_solution.py` aplica dos criterios
