@@ -8,7 +8,7 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado del 14 de agosto de 2026:
+Resultado verificado el 16 de agosto de 2026 sobre `0cc154c`:
 
 ```text
 337 passed, 6 xfailed
@@ -26,6 +26,11 @@ el entorno de ejecución; no afectan a los resultados.
 4. Matrices DMIG frente a Nastran.
 5. Validación E2E de desplazamientos, cargas, reacciones y resultados de
    elemento con referencias transcritas en los tests.
+
+El caso 80 añade una comprobación integrada con CBAR, CTRIA3 y CQUAD4 en el
+mismo modelo. Contrasta desplazamientos, cargas, reacciones, resultados de las
+dos familias de lámina y esfuerzos de CBAR. Es la referencia más directa para
+detectar regresiones de ensamblaje o recuperación entre tipos de elemento.
 
 ## Matrices CQUAD4
 

@@ -10,13 +10,20 @@ suavizado `SNORM`, ambos fuera de alcance.
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
 
+Desde ese cierre se separó la escritura del informe en
+`src/postprocessing/report_writer.py`, se añadieron sus pruebas y se verificó
+el caso mixto 80 con CBAR, CTRIA3 y CQUAD4. `requirements.txt` declara
+dependencias mínimas, aunque todavía falta un bloqueo reproducible.
+
 ## Prioridad 1: consolidación
 
 1. Añadir integración continua para ejecutar pytest en cada cambio.
-2. Mantener un entorno reproducible y fijar versiones compatibles.
-3. Separar el postproceso de `LinearStaticSolver`.
-4. Completar el informe RPT con todas las magnitudes ya calculadas.
-5. Añadir pruebas de convergencia sobre mallas refinadas, además de DMIG/E2E.
+2. Añadir `pyproject.toml` o un fichero de bloqueo con versiones reproducibles.
+3. Añadir pruebas de convergencia sobre mallas refinadas, además de DMIG/E2E.
+4. Definir una política de ejecución por lotes: detenerse o continuar y
+   acumular errores por modelo.
+5. Revisar y aislar los módulos y scripts antiguos o exploratorios antes de
+   ampliar el alcance físico.
 
 ## Prioridad 2: rendimiento
 

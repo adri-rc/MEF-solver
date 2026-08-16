@@ -2,7 +2,7 @@
 
 MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático lineal y a la comparación con modelos de MSC Nastran. El proyecto dispone de un flujo `BDF/DAT -> modelo interno -> ensamblaje -> solución -> resultados`, pero no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
 
-Esta documentación describe el estado observado en el repositorio el **14 de agosto de 2026**. La colección completa termina con `337 passed, 6 xfailed`.
+Esta documentación describe el estado verificado en el repositorio el **16 de agosto de 2026**, en el commit `0cc154c`. La colección completa termina con `337 passed, 6 xfailed`.
 
 ## Índice
 
@@ -41,7 +41,7 @@ CQUAD4 dispone de una reconstrucción Nastran y una formulación clásica Reissn
 ## Lectura recomendada
 
 Para ejecutar el programa, comenzar por [uso.md](uso.md). Para continuar el
-proyecto desde el punto actual, leer [cquad4.md](cquad4.md), la formulación
-autocontenida [cquad4_tesis.md](cquad4_tesis.md) y después
-[validacion.md](validacion.md). La [hoja de ruta](roadmap.md) propone un orden
-de trabajo que prioriza la corrección y la trazabilidad numérica.
+proyecto desde el punto actual, empezar por [TRASPASO.md](TRASPASO.md), seguir
+el contexto técnico que allí se recomienda y respetar las reglas generales de
+[`AGENTS.md`](../AGENTS.md). La [hoja de ruta](roadmap.md) recoge el trabajo
+pendiente sin reabrir la rigidez CQUAD4 coplanar ya cerrada.

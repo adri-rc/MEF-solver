@@ -12,7 +12,18 @@ El repositorio contiene un entorno virtual local con las siguientes versiones ve
 | pyNastran | 1.4.1 |
 | pytest | 9.0.1 |
 
-No existe todavía un `requirements.txt` ni un `pyproject.toml`. Por tanto, el entorno `.venv` permite reproducir el estado local, pero las dependencias no están declaradas de una forma portable. La creación de esa especificación es una tarea prioritaria de la [hoja de ruta](roadmap.md).
+El repositorio declara dependencias mínimas en `requirements.txt`, pero todavía
+no dispone de un fichero de bloqueo con versiones exactas ni de
+`pyproject.toml`. En un clon nuevo de Windows puede prepararse el entorno así:
+
+```powershell
+py -3.10 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Los decks y referencias Nastran se almacenan con Git LFS. Después de clonar,
+conviene ejecutar `git lfs pull` y comprobar que un `.dat` contiene el deck
+real en lugar del texto `version https://git-lfs.github.com/spec/v1`.
 
 En PowerShell, desde la raíz del repositorio:
 
@@ -49,7 +60,10 @@ El flujo de `main.py` es:
 4. resolver desplazamientos;
 5. escribir `output/<nombre>.rpt`.
 
-Actualmente `run_analysis_job()` captura las excepciones y muestra un mensaje, pero no devuelve un código de error distinto de cero. En automatización conviene ejecutar pytest o invocar las clases directamente hasta que se corrija este comportamiento.
+`run_analysis_job()` muestra el contexto del fallo y vuelve a lanzar la
+excepción. Por tanto, la ejecución desde `main.py` termina con código distinto
+de cero ante un error; en modo `--all`, el primer trabajo fallido detiene el
+lote.
 
 ## Subconjunto de entrada admitido
 

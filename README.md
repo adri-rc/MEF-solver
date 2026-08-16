@@ -3,6 +3,10 @@
 Solver de elementos finitos lineal estático para análisis estructural,
 desarrollado como Trabajo de Fin de Máster.
 
+Para retomar el proyecto con otra cuenta o asistente de IA, comenzar por
+[docs/TRASPASO.md](docs/TRASPASO.md). Las reglas de trabajo del repositorio
+están en [AGENTS.md](AGENTS.md).
+
 Actualmente implementa CROD, CBAR, CTRIA3 y una formulación CQUAD4 validada
 frente a matrices DMIG y resultados F06 de Nastran para geometrías coplanares.
 Lee modelos Nastran mediante `pyNastran` y resuelve `K u = F`. El detalle y
@@ -11,6 +15,7 @@ revisión final obtiene `337 passed, 6 xfailed`; los `xfail` documentan sólo
 geometrías alabeadas y el suavizado `SNORM`, ambos fuera de alcance.
 
 ```powershell
+python -m pip install -r requirements.txt
 python main.py --file input/modelo.dat
 python main.py --file input/modelo.dat --subcase 2
 python -m pytest -q
