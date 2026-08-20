@@ -16,7 +16,9 @@ PROJECT_ROOT = FILE_PATH.parent
 
 try:
     from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+    from src.preprocessing.data_model import AnalysisType
     from src.solver.linear_static_solver import LinearStaticSolver
+    from src.solver.nonlinear_analysis import NonlinearStaticSolver
     from src.postprocessing.report_writer import write_report
 except ImportError as e:
     print("\n[CRITICAL ERROR] The project modules could not be imported.")
@@ -31,7 +33,7 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 def main():
     # 1. Setup Arguments
-    parser = argparse.ArgumentParser(description="PyFEM Solver - Linear Static Analysis")
+    parser = argparse.ArgumentParser(description="PyFEM Solver - Static Structural Analysis")
     parser.add_argument('--file', type=str, help="Path to a specific .dat file")
     parser.add_argument('--all', action='store_true', help="Run all .dat files in the input folder")
     parser.add_argument('--subcase', type=int, help="SUBCASE ID to solve when a deck contains several")
@@ -83,17 +85,22 @@ def run_analysis_job(file_path: Path, subcase_id: int | None = None):
         # --- STEP 1: PRE-PROCESSING ---
         print(f"[{time()-t0:.4f}s] Parsing input file...")
         model = parse_nastran_input(str(file_path), subcase_id=subcase_id)
-        
+
         # --- STEP 2: SOLVER INITIALIZATION ---
         print(f"[{time()-t0:.4f}s] Initializing Solver...")
-        solver = LinearStaticSolver(model)
+        if model.analysis.analysis_type is AnalysisType.NONLINEAR_STATIC:
+            solver = NonlinearStaticSolver(model)
+            analysis_label = "Nonlinear Static"
+        else:
+            solver = LinearStaticSolver(model)
+            analysis_label = "Linear Static"
         
         # --- STEP 3: ASSEMBLY ---
         print(f"[{time()-t0:.4f}s] Assembling System Matrices...")
         solver.assemble()
         
         # --- STEP 4: SOLUTION ---
-        print(f"[{time()-t0:.4f}s] Solving Linear System...")
+        print(f"[{time()-t0:.4f}s] Solving {analysis_label} System...")
         results = solver.solve()
         
         # --- STEP 5: POST-PROCESSING / REPORTING ---
@@ -103,6 +110,7 @@ def run_analysis_job(file_path: Path, subcase_id: int | None = None):
         
         print(f"[{time()-t0:.4f}s] JOB COMPLETED SUCCESSFULLY.")
         print(f"Result file: {report_path}")
+        return results
 
     except Exception as e:
         print(f"\n[ERROR] Job Failed: {e}")

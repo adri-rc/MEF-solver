@@ -52,13 +52,19 @@ python main.py
 
 Aunque `parse_nastran_input()` puede leer `.bdf`, la búsqueda automática solo considera la extensión `.dat`. Los `INCLUDE` son resueltos por pyNastran respecto al deck de entrada.
 
-El flujo de `main.py` es:
+Para modelos lineales, el flujo de `main.py` es:
 
 1. leer y mapear el deck;
 2. construir el solver;
 3. ensamblar `K` y `F`;
 4. resolver desplazamientos;
 5. escribir `output/<nombre>.rpt`.
+
+Un deck `SOL 400` con `ANALYSIS=NLSTAT` se dirige a
+`NonlinearStaticSolver`. Esta ruta está separada de `LinearStaticSolver` y se
+limita a MAT1/PROD/CROD, cargas nodales conservativas y Newton-Raphson completo.
+El diccionario de resultados añade historial de incrementos/iteraciones,
+factor de carga, energía elástica y número de recortes.
 
 `run_analysis_job()` muestra el contexto del fallo y vuelve a lanzar la
 excepción. Por tanto, la ejecución desde `main.py` termina con código distinto
@@ -75,7 +81,8 @@ lote.
 | Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 usa por defecto la reconstrucción Nastran y completa el postproceso. |
 | Cargas | `FORCE`, `MOMENT`, `LOAD` | Los vectores se transforman desde su `CID`; se reducen combinaciones. |
 | Restricciones | `SPC`, `SPC1`, `SPCADD`, `GRID.PS` | Se admiten desplazamientos impuestos no nulos. |
-| Parámetros | `PARAM,K6ROT` | Se utiliza en CTRIA3 y CQUAD4. |
+| Parámetros | `PARAM,K6ROT`, `PARAM,LGDISP`, `PARAM,FOLLOWK` | `K6ROT` se utiliza en láminas; `LGDISP=-1/1/2` controla CROD y `FOLLOWK` debe ser `NO` en la ruta no lineal actual. |
+| Control de análisis | `SOL 101`; `SOL 400`, `ANALYSIS=NLSTAT`, `NLSTEP` y `NLPARM` | SOL 400 se resuelve para el subconjunto MAT1/PROD/CROD. |
 
 El lector falla de forma explícita si encuentra elementos, cargas o restricciones no soportados. En particular, rechaza MPC, RBE y elementos rígidos.
 
@@ -87,6 +94,24 @@ evitar mezclar casos. El lector reduce los `LOAD` y `SPCADD` asociados. En un
 fichero Bulk Data sin Case Control se mapean las tarjetas base disponibles.
 
 Las restricciones permanentes del campo `PS` de `GRID` también se aplican.
+
+### Entrada no lineal CROD
+
+El lector normaliza `NLSTEP` con continuaciones `GENERAL`, `FIXED` o `ADAPT`
+y `MECH`. Admite también `NLPARM` heredado. Guarda el resultado en
+`model.analysis`, junto con `LGDISP` y `FOLLOWK`. El solver ejecuta `FIXED` o
+`ADAPT`, realiza recortes por bisección y actualiza la tangente en cada
+iteración. No admite `ARCLN`, controles térmicos/acoplados, cargas seguidoras,
+actualizaciones parciales de rigidez ni más de una estrategia incremental por
+entrada.
+
+Los ejemplos ejecutables por MSC Nastran están en `case_92` a `case_122` y
+todos conservan las salidas auditadas de MSC Nastran 2026.1. Los 30 casos que
+alcanzan carga completa se comparan con valores explícitos; el 120 documenta
+la terminación esperada cerca del punto límite. La guía está en
+[`NONLINEAR_CROD_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).
+El significado de las tarjetas está desarrollado en
+[`nonlinear_crod.md`](nonlinear_crod.md).
 
 ### Convención de unidades
 
@@ -117,6 +142,19 @@ Es importante restringir los grados de libertad inactivos. El solver reserva sei
     "displacements": numpy.ndarray,
     "reactions": {node_id: numpy.ndarray},
     "stresses": {element_id: dict}
+}
+```
+
+`NonlinearStaticSolver.solve()` conserva esas tres claves para el informe y
+añade:
+
+```python
+{
+    "increments": list[NonlinearIncrementResult],
+    "iterations": list[NonlinearIterationResult],
+    "load_factor": float,
+    "strain_energy": float,
+    "cutbacks": int,
 }
 ```
 

@@ -1,9 +1,12 @@
 # Traspaso técnico del proyecto
 
-Actualizado y verificado el **16 de agosto de 2026**. Este documento es el
+Actualizado y verificado el **20 de agosto de 2026**. Este documento es el
 punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
-El estado de referencia es la rama `feat/ctria3`, commit `0cc154c`, sincronizada
-entonces con `origin/feat/ctria3`.
+El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
+Al iniciar esta fase la rama estaba un commit por delante de
+`origin/feat/ctria3`; los cambios de preproceso, solver no lineal, decks y
+validación descritos aquí siguen sin commit mientras el usuario revisa la
+implementación.
 
 ## 1. Incorporación rápida para una IA
 
@@ -38,10 +41,10 @@ Comando de referencia:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado observado el 16 de agosto de 2026:
+Resultado observado el 20 de agosto de 2026:
 
 ```text
-337 passed, 6 xfailed, 2 warnings
+418 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`
@@ -85,18 +88,32 @@ independientes (`SNORM,0`) y pasan.
 - No hay `AUTOSPC` general: los mecanismos reales deben fallar.
 - El informe `.rpt` contiene resumen del modelo, desplazamientos, reacciones y
   tablas físicas específicas para CROD, CBAR, CTRIA3 y CQUAD4.
+- El preproceso distingue `SOL 101` y estática no lineal `SOL 400`; para esta
+  última lee `ANALYSIS=NLSTAT`, `NLSTEP`/`NLPARM`, `LGDISP` y `FOLLOWK`.
+- La campaña CROD comprende 31 referencias, casos 92--122, ejecutadas con MSC
+  Nastran 2026.1/NLPERF. Treinta alcanzan carga completa y el 120 documenta un
+  punto límite bajo control de fuerza.
+- `NonlinearStaticSolver` resuelve SOL 400 para MAT1/PROD/CROD, cargas nodales
+  conservativas, `FIXED`/`ADAPT`, Newton completo y recortes.
 
-No se admiten dinámica, no linealidad, contacto, plasticidad, cargas
-distribuidas, MPC/RBE, sólidos, CQUAD4 alabeado ni suavizado `SNORM`.
+No existe todavía solución dinámica, no linealidad material, contacto, cargas
+seguidoras, CBAR no lineal, cargas distribuidas, MPC/RBE, sólidos, CQUAD4
+alabeado ni suavizado `SNORM`.
 
 ## 4. Arquitectura y flujo activo
 
 - `main.py`: CLI y orquestación del trabajo.
 - `src/preprocessing/data_model.py`: entidades independientes del formato.
 - `src/preprocessing/nastran_reader_v2.py`: pyNastran → `FEMModel`, selección
-  de subcaso y reducción de cargas/restricciones.
+  de subcaso, configuración lineal/no lineal y reducción de cargas/restricciones.
+- `src/preprocessing/data_model.py`: añade `AnalysisConfiguration` y
+  `NonlinearStepControl`, independientes de pyNastran.
 - `src/solver/linear_static_solver.py`: ensamblaje LIL, partición, `spsolve`,
   reacciones y recuperación numérica.
+- `src/solver/nonlinear_analysis.py`: incrementos, Newton-Raphson, residuo,
+  tangente global, recortes e historial CROD.
+- `src/solver/elements/crod_non_linear.py`: fuerza interna, energía y tangente
+  material/geométrica consistente del CROD.
 - `src/solver/elements/`: formulaciones de CROD, CBAR, CTRIA3 y CQUAD4.
 - `src/postprocessing/report_writer.py`: presentación del informe; ya no vive
   dentro de `main.py`.
@@ -108,6 +125,13 @@ El flujo es:
 DAT/BDF -> pyNastran -> FEMModel -> K/F -> contorno -> spsolve
         -> recuperación por elemento -> report_writer -> RPT
 ```
+
+Ese diagrama describe la ruta lineal. Para `SOL 400`, `main.py` selecciona el
+módulo hermano `nonlinear_analysis.py`, propietario de incrementos, residuo,
+tangente, recortes y recuperación incremental.
+pyNastran 1.4.1 rechaza sintácticamente la tarjeta `NLSTEP`, pero conserva sus
+líneas; el lector interpreta de forma estricta `GENERAL`, `FIXED`/`ADAPT` y
+`MECH`.
 
 La matriz elemental se expresa primero en coordenadas básicas. En el
 ensamblaje se transforma después al sistema `CD` de cada GRID. La recuperación
@@ -192,6 +216,17 @@ controles extremadamente mal condicionados.
 - El caso 80 de ese último módulo mezcla CBAR, CTRIA3 y CQUAD4 y comprueba
   desplazamientos, cargas, reacciones y resultados de las tres familias.
 - `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT.
+- `tests/preprocessing_tst/test_nonlinear_analysis_control.py`: normalización
+  SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 31
+  casos CROD.
+- `tests/solver_tst/elements/test_crod_non_linear.py`: cinemática, fuerzas,
+  torsión, objetividad y derivada numérica de la tangente.
+- `tests/solver_tst/test_nonlinear_intermediate_validation.py`: estados de 112
+  y flexibilidad tangente de 114/115.
+- `tests/solver_tst/test_nonlinear_validation_end_to_end.py`: diccionarios
+  explícitos de los 30 casos convergidos.
+- `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
+  ejecución y resultados de MSC que deben conservarse.
 
 Los parámetros `debug_export` y `output_k_file` controlan la escritura de la
 matriz calculada en CSV. Los ficheros `draft_*` están ignorados por Git.
@@ -217,12 +252,12 @@ postproceso.
 
 Prioridad recomendada:
 
-1. integración continua;
-2. entorno bloqueado/reproducible;
-3. estudio de convergencia de malla;
-4. ensamblaje COO y benchmark de escalabilidad;
-5. política de errores del modo por lotes;
-6. investigar la impresión centroidal Qx/Qy sólo si existe necesidad real.
+1. preparar la campaña y formulación no lineal de CBAR sin ampliar el alcance
+   CROD de forma implícita;
+2. integración continua y entorno bloqueado/reproducible;
+3. estudio de convergencia, ensamblaje COO y benchmark de escalabilidad;
+4. política de errores del modo por lotes;
+5. investigar la impresión centroidal Qx/Qy sólo si existe necesidad real.
 
 No es necesario crear más casos CQUAD4 de rigidez plana para cerrar la
 implementación actual. Cualquier ampliación debe comenzar con un deck mínimo,

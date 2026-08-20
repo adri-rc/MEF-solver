@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import List, Dict, Optional
 import numpy as np
 
@@ -424,6 +425,137 @@ class SPCConstraint(Constraint):
 
 # endregion Constraints
 
+
+# region Analysis configuration
+class AnalysisType(str, Enum):
+    """Analysis families understood by the project orchestration layer."""
+
+    LINEAR_STATIC = "linear_static"
+    NONLINEAR_STATIC = "nonlinear_static"
+
+
+@dataclass
+class NonlinearStepControl:
+    """Format-independent subset of Nastran NLSTEP/NLPARM controls.
+
+    Values that Nastran derives from ``CTRLDEF`` are left as ``None`` unless
+    they were explicitly supplied.  This prevents the future nonlinear solver
+    from silently baking one MSC-version-dependent default into the model.
+    """
+
+    sid: int
+    source: str = "NLSTEP"
+    total_time: float = 1.0
+    control_definition: Optional[str] = None
+    increment_method: str = "FIXED"
+    number_of_increments: Optional[int] = 50
+    initial_step_fraction: Optional[float] = None
+    minimum_step_fraction: Optional[float] = None
+    maximum_step_fraction: Optional[float] = None
+    desired_iterations: Optional[int] = None
+    step_scale_factor: Optional[float] = None
+    output_intervals: int = 0
+    maximum_increments: Optional[int] = None
+    maximum_iterations: int = 10
+    minimum_iterations: int = 1
+    maximum_bisections: int = 10
+    convergence: str = "PV"
+    displacement_tolerance: Optional[float] = None
+    residual_tolerance: Optional[float] = None
+    work_tolerance: Optional[float] = None
+    stiffness_update_method: str = "PFNT"
+    stiffness_update_interval: Optional[int] = None
+
+    def __post_init__(self):
+        self.source = self.source.upper()
+        self.increment_method = self.increment_method.upper()
+        self.convergence = self.convergence.upper()
+        self.stiffness_update_method = self.stiffness_update_method.upper()
+        if self.control_definition is not None:
+            self.control_definition = self.control_definition.upper()
+
+        if self.sid <= 0:
+            raise ValueError("Nonlinear control ID must be a positive integer.")
+        if self.source not in {"NLSTEP", "NLPARM"}:
+            raise ValueError(f"Unsupported nonlinear control source: {self.source}")
+        if not np.isfinite(self.total_time) or self.total_time <= 0.0:
+            raise ValueError("Nonlinear step total_time must be finite and positive.")
+        if self.control_definition not in {None, "QLINEAR", "MILDLY", "SEVERELY"}:
+            raise ValueError(
+                f"Unsupported NLSTEP control definition: {self.control_definition}"
+            )
+        if self.increment_method not in {"FIXED", "ADAPT"}:
+            raise ValueError(
+                f"Unsupported nonlinear increment method: {self.increment_method}"
+            )
+        if self.increment_method == "FIXED":
+            if self.number_of_increments is None or self.number_of_increments <= 0:
+                raise ValueError("FIXED nonlinear stepping requires NINC > 0.")
+        else:
+            fractions = (
+                self.initial_step_fraction,
+                self.minimum_step_fraction,
+                self.maximum_step_fraction,
+            )
+            if any(value is None or not np.isfinite(value) or value <= 0.0 for value in fractions):
+                raise ValueError("ADAPT stepping requires positive DTINITF, DTMINF and DTMAXF.")
+            if not (
+                self.minimum_step_fraction
+                <= self.initial_step_fraction
+                <= self.maximum_step_fraction
+            ):
+                raise ValueError("ADAPT step fractions must satisfy DTMINF <= DTINITF <= DTMAXF.")
+            if self.desired_iterations is not None and self.desired_iterations <= 0:
+                raise ValueError("ADAPT desired_iterations must be positive.")
+            if self.step_scale_factor is not None and (
+                not np.isfinite(self.step_scale_factor) or self.step_scale_factor <= 0.0
+            ):
+                raise ValueError("ADAPT step_scale_factor must be finite and positive.")
+            if self.maximum_increments is not None and self.maximum_increments <= 0:
+                raise ValueError("ADAPT maximum_increments must be positive.")
+        if self.output_intervals < -1:
+            raise ValueError("Nonlinear output_intervals must be -1, 0 or a positive integer.")
+        if self.minimum_iterations < 0 or self.maximum_iterations <= 0:
+            raise ValueError("Nonlinear iteration limits must be non-negative/positive.")
+        if self.minimum_iterations > self.maximum_iterations:
+            raise ValueError("MINITER cannot exceed MAXITER.")
+        if self.maximum_bisections < 0:
+            raise ValueError("MAXBIS must be non-negative in this project.")
+        if not self.convergence or not set(self.convergence) <= set("UPWVNA"):
+            raise ValueError(f"Unsupported nonlinear convergence flags: {self.convergence}")
+        for name, value in (
+            ("displacement_tolerance", self.displacement_tolerance),
+            ("residual_tolerance", self.residual_tolerance),
+            ("work_tolerance", self.work_tolerance),
+        ):
+            if value is not None and (not np.isfinite(value) or value <= 0.0):
+                raise ValueError(f"{name} must be finite and positive when supplied.")
+        if self.stiffness_update_method not in {"PFNT", "ITER", "AUTO", "SEMI"}:
+            raise ValueError(
+                f"Unsupported stiffness update method: {self.stiffness_update_method}"
+            )
+        if (
+            self.stiffness_update_method == "ITER"
+            and (self.stiffness_update_interval is None or self.stiffness_update_interval <= 0)
+        ):
+            raise ValueError("ITER stiffness updates require KSTEP > 0.")
+
+
+@dataclass
+class AnalysisConfiguration:
+    """Analysis selection and global geometric/load-stiffness switches."""
+
+    solution_sequence: Optional[int] = None
+    analysis_type: AnalysisType = AnalysisType.LINEAR_STATIC
+    analysis_keyword: Optional[str] = None
+    large_displacement_parameter: Optional[int] = None
+    large_displacements: bool = False
+    follower_force_stiffness: bool = False
+    nonlinear_step: Optional[NonlinearStepControl] = None
+
+
+# endregion Analysis configuration
+
 # region FEMModel
 class FEMModel:
     """
@@ -451,6 +583,7 @@ class FEMModel:
         self.active_subcase_id: Optional[int] = None
         self.active_load_sid: Optional[int] = None
         self.active_spc_sid: Optional[int] = None
+        self.analysis = AnalysisConfiguration()
 
     def validate(self, require_elements: bool = True) -> None:
         """Validate references and finite geometry before matrix assembly."""

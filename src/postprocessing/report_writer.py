@@ -1,4 +1,4 @@
-"""Formatted text reports for linear-static analyses.
+"""Formatted text reports for supported static analyses.
 
 The report layout lives here so the application entry point only orchestrates
 parse, solve and post-processing.  Element results are intentionally split by
@@ -14,6 +14,7 @@ from typing import Iterable, Mapping, TextIO
 import numpy as np
 
 from src.preprocessing.data_model import (
+    AnalysisType,
     BarElement,
     BarProperty,
     CQUAD4Element,
@@ -64,8 +65,17 @@ def _write_table(
     stream.write("\n")
 
 
-def _write_report_heading(stream: TextIO, job_name: str) -> None:
-    stream.write("LINEAR STATIC ANALYSIS REPORT\n")
+def _write_report_heading(stream: TextIO, job_name: str, model) -> None:
+    analysis_type = getattr(
+        getattr(model, "analysis", None),
+        "analysis_type",
+        AnalysisType.LINEAR_STATIC,
+    )
+    if analysis_type is AnalysisType.NONLINEAR_STATIC:
+        title = "NONLINEAR STATIC ANALYSIS REPORT"
+    else:
+        title = "LINEAR STATIC ANALYSIS REPORT"
+    stream.write(title + "\n")
     stream.write(f"JOB: {job_name}\n")
     stream.write("All values use the consistent unit system defined by the input model.\n")
     stream.write("=" * _REPORT_WIDTH + "\n\n")
@@ -99,6 +109,28 @@ def _write_model_summary(stream: TextIO, model) -> None:
         stream,
         ("ENTRY TYPE", "NUMBER OF ENTRIES"),
         (22, 20),
+        rows,
+        left_aligned_columns=frozenset({0}),
+    )
+
+
+def _write_nonlinear_summary(stream: TextIO, results: Mapping) -> None:
+    """Write incremental convergence metadata when supplied by the solver."""
+    if "increments" not in results:
+        return
+    increments = results["increments"]
+    stream.write("0A. NONLINEAR SOLUTION SUMMARY\n")
+    rows = (
+        ("FINAL LOAD FACTOR", results.get("load_factor", 0.0)),
+        ("CONVERGED INCREMENTS", len(increments)),
+        ("NEWTON ITERATIONS", len(results.get("iterations", ()))),
+        ("CUTBACKS", results.get("cutbacks", 0)),
+        ("STRAIN ENERGY", results.get("strain_energy", 0.0)),
+    )
+    _write_table(
+        stream,
+        ("QUANTITY", "VALUE"),
+        (28, 20),
         rows,
         left_aligned_columns=frozenset({0}),
     )
@@ -310,8 +342,9 @@ def write_report(path: Path | str, job_name: str, model, results: Mapping, solve
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
     with report_path.open("w", encoding="utf-8", newline="\n") as stream:
-        _write_report_heading(stream, job_name)
+        _write_report_heading(stream, job_name, model)
         _write_model_summary(stream, model)
+        _write_nonlinear_summary(stream, results)
         _write_displacements(stream, model, results["displacements"], solver.dof_mapper)
         _write_reactions(stream, results["reactions"])
         _write_element_results(stream, results["stresses"])

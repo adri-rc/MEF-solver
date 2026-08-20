@@ -30,7 +30,10 @@ from .data_model import (
     SPCConstraint,
     ShellProperty,
     CTRIA3Element,
-    CQUAD4Element
+    CQUAD4Element,
+    AnalysisConfiguration,
+    AnalysisType,
+    NonlinearStepControl,
 )
 
 """
@@ -474,6 +477,251 @@ def _select_case_control(bdf: BDF, requested_subcase_id: Optional[int]):
     return selected_id, load_sid, spc_sid
 
 
+def _nastran_float(value: str) -> float:
+    """Parse ordinary and compact Nastran floating-point notation."""
+    normalized = value.strip().upper().replace("D", "E")
+    if "E" not in normalized:
+        for index in range(1, len(normalized)):
+            if normalized[index] in "+-" and any(
+                character.isdigit() for character in normalized[:index]
+            ):
+                normalized = f"{normalized[:index]}E{normalized[index:]}"
+                break
+    return float(normalized)
+
+
+def _rejected_card_rows(card_lines) -> list[list[str]]:
+    """Return one field row per line of an unsupported pyNastran card."""
+    rows = []
+    for raw_line in card_lines:
+        line = raw_line.split("$", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        if "," in line:
+            fields = [field.strip() for field in line.split(",")]
+        else:
+            fields = [line[index:index + 8].strip() for index in range(0, len(line), 8)]
+        if fields:
+            fields = fields[1:]
+        while fields and fields[-1] == "":
+            fields.pop()
+        rows.append(fields)
+    return rows
+
+
+def _field(row: list[str], index: int, default=None):
+    if index >= len(row) or row[index] == "":
+        return default
+    return row[index]
+
+
+def _parse_nlstep_cards(bdf: BDF) -> dict[int, NonlinearStepControl]:
+    """Parse MSC NLSTEP cards rejected by pyNastran 1.4.1."""
+    controls = {}
+    for rejected_card in bdf.reject_lines:
+        rows = _rejected_card_rows(rejected_card)
+        if not rows:
+            continue
+        # pyNastran may attach comments immediately preceding an unsupported
+        # card to the same reject_lines group.  Identify the first physical
+        # card line after removing comments instead of treating '$' as the
+        # rejected card name.
+        first_raw = next(
+            (
+                content
+                for raw_line in rejected_card
+                if (content := raw_line.split("$", 1)[0].strip())
+            ),
+            "",
+        )
+        card_name = first_raw.split(",", 1)[0].strip().split()[0].upper()
+        if card_name != "NLSTEP":
+            continue
+
+        header = rows[0]
+        if not header or _field(header, 0) is None:
+            raise ValueError("NLSTEP requires a positive ID.")
+        sid = int(_field(header, 0))
+        values = {
+            "sid": sid,
+            "source": "NLSTEP",
+            "total_time": _nastran_float(_field(header, 1, "1.0")),
+            "control_definition": _field(header, 2),
+            "increment_method": "FIXED",
+            "number_of_increments": 50,
+            "output_intervals": 0,
+            "maximum_iterations": 10,
+            "minimum_iterations": 1,
+            "maximum_bisections": 10,
+            "convergence": "PV",
+            "stiffness_update_method": "PFNT",
+        }
+
+        increment_keyword_seen = False
+        for row in rows[1:]:
+            if not row:
+                continue
+            keyword = row[0].upper()
+            if keyword == "GENERAL":
+                values["maximum_iterations"] = int(_field(row, 1, "10"))
+                values["minimum_iterations"] = int(_field(row, 2, "1"))
+                values["maximum_bisections"] = int(_field(row, 3, "10"))
+                creep = int(_field(row, 4, "0"))
+                if creep != 0:
+                    raise ValueError(f"NLSTEP {sid} requests unsupported creep analysis.")
+            elif keyword == "FIXED":
+                if increment_keyword_seen:
+                    raise ValueError(f"NLSTEP {sid} defines more than one stepping method.")
+                increment_keyword_seen = True
+                values["increment_method"] = "FIXED"
+                values["number_of_increments"] = int(_field(row, 1, "50"))
+            elif keyword == "ADAPT":
+                if increment_keyword_seen:
+                    raise ValueError(f"NLSTEP {sid} defines more than one stepping method.")
+                increment_keyword_seen = True
+                values["increment_method"] = "ADAPT"
+                values["number_of_increments"] = None
+                values["initial_step_fraction"] = _nastran_float(_field(row, 1, "0.01"))
+                values["minimum_step_fraction"] = _nastran_float(_field(row, 2, "1.E-5"))
+                values["maximum_step_fraction"] = _nastran_float(_field(row, 3, "0.5"))
+                values["desired_iterations"] = int(_field(row, 4, "4"))
+                values["step_scale_factor"] = _nastran_float(_field(row, 5, "1.2"))
+                values["output_intervals"] = int(_field(row, 6, "0"))
+                values["maximum_increments"] = int(_field(row, 7, "99999"))
+            elif keyword == "MECH":
+                values["convergence"] = _field(row, 1, "PV")
+                eps_u = _field(row, 2)
+                eps_p = _field(row, 3)
+                eps_w = _field(row, 4)
+                values["displacement_tolerance"] = (
+                    None if eps_u is None else _nastran_float(eps_u)
+                )
+                values["residual_tolerance"] = (
+                    None if eps_p is None else _nastran_float(eps_p)
+                )
+                values["work_tolerance"] = (
+                    None if eps_w is None else _nastran_float(eps_w)
+                )
+                values["stiffness_update_method"] = _field(row, 5, "PFNT")
+                kstep = _field(row, 6)
+                values["stiffness_update_interval"] = (
+                    None if kstep is None else int(kstep)
+                )
+            else:
+                raise ValueError(
+                    f"NLSTEP {sid} uses unsupported continuation keyword {keyword}. "
+                    "Supported keywords are GENERAL, FIXED, ADAPT and MECH."
+                )
+        if sid in controls:
+            raise ValueError(f"Duplicate NLSTEP ID {sid}.")
+        controls[sid] = NonlinearStepControl(**values)
+    return controls
+
+
+def _legacy_nlparm_control(nlparm) -> NonlinearStepControl:
+    output_intervals = -1 if nlparm.int_out == "NO" else 0
+    return NonlinearStepControl(
+        sid=nlparm.nlparm_id,
+        source="NLPARM",
+        increment_method="FIXED",
+        number_of_increments=nlparm.ninc or 10,
+        output_intervals=output_intervals,
+        maximum_iterations=nlparm.max_iter,
+        minimum_iterations=1,
+        maximum_bisections=abs(nlparm.max_bisect),
+        convergence=nlparm.conv,
+        displacement_tolerance=nlparm.eps_u,
+        residual_tolerance=nlparm.eps_p,
+        work_tolerance=nlparm.eps_w,
+        stiffness_update_method=nlparm.kmethod,
+        stiffness_update_interval=nlparm.kstep,
+    )
+
+
+def _map_analysis_configuration(
+    bdf: BDF,
+    model: FEMModel,
+    selected_subcase_id: Optional[int],
+) -> None:
+    """Map the active solution sequence and nonlinear solution controls."""
+    solution_sequence = int(bdf.sol) if bdf.sol is not None else None
+    subcase = bdf.subcases.get(selected_subcase_id) if selected_subcase_id is not None else None
+    analysis_keyword = None
+    if subcase is not None and "ANALYSIS" in subcase.params:
+        analysis_keyword = str(subcase.get_parameter("ANALYSIS")[0]).upper()
+
+    nonlinear_aliases = {"NLSTAT", "NLSTATIC", "NLSTATICS"}
+    if (
+        solution_sequence == 400
+        and analysis_keyword is not None
+        and analysis_keyword not in nonlinear_aliases
+    ):
+        raise ValueError(
+            "This preprocessor stage supports only ANALYSIS=NLSTAT for SOL 400; "
+            f"found {analysis_keyword}."
+        )
+    is_nonlinear_static = solution_sequence == 400 or analysis_keyword in nonlinear_aliases
+    analysis_type = (
+        AnalysisType.NONLINEAR_STATIC if is_nonlinear_static else AnalysisType.LINEAR_STATIC
+    )
+
+    lgdisp_value = None
+    large_displacements = False
+    if "LGDISP" in bdf.params:
+        lgdisp_value = int(bdf.params["LGDISP"].values[0])
+        if lgdisp_value not in {-1, 0, 1, 2}:
+            raise ValueError(f"Unsupported PARAM,LGDISP value: {lgdisp_value}")
+        large_displacements = lgdisp_value in {1, 2}
+    follower_force_stiffness = lgdisp_value == 1
+    if "FOLLOWK" in bdf.params:
+        followk_value = str(bdf.params["FOLLOWK"].values[0]).strip().upper()
+        if followk_value in {"YES", "Y", "1"}:
+            follower_force_stiffness = True
+        elif followk_value in {"NO", "N", "0"}:
+            follower_force_stiffness = False
+        else:
+            raise ValueError(f"Unsupported PARAM,FOLLOWK value: {followk_value}")
+
+    nonlinear_step = None
+    if is_nonlinear_static:
+        nlstep_sid = None
+        nlparm_sid = None
+        if subcase is not None and "NLSTEP" in subcase.params:
+            nlstep_sid = int(subcase.get_parameter("NLSTEP")[0])
+        if subcase is not None and "NLPARM" in subcase.params:
+            nlparm_sid = int(subcase.get_parameter("NLPARM")[0])
+        if nlstep_sid is not None and nlparm_sid is not None:
+            raise ValueError("Select either NLSTEP or NLPARM, not both, for one nonlinear subcase.")
+        if nlstep_sid is not None:
+            nlsteps = _parse_nlstep_cards(bdf)
+            if nlstep_sid not in nlsteps:
+                raise ValueError(
+                    f"Case Control selects NLSTEP {nlstep_sid}, but that Bulk Data entry was not found."
+                )
+            nonlinear_step = nlsteps[nlstep_sid]
+        elif nlparm_sid is not None:
+            if nlparm_sid not in bdf.nlparms:
+                raise ValueError(
+                    f"Case Control selects NLPARM {nlparm_sid}, but that Bulk Data entry was not found."
+                )
+            nonlinear_step = _legacy_nlparm_control(bdf.nlparms[nlparm_sid])
+        else:
+            raise ValueError(
+                "Nonlinear static analysis requires an NLSTEP (preferred for SOL 400) "
+                "or NLPARM Case Control selection."
+            )
+
+    model.analysis = AnalysisConfiguration(
+        solution_sequence=solution_sequence,
+        analysis_type=analysis_type,
+        analysis_keyword=analysis_keyword,
+        large_displacement_parameter=lgdisp_value,
+        large_displacements=large_displacements,
+        follower_force_stiffness=follower_force_stiffness,
+        nonlinear_step=nonlinear_step,
+    )
+
+
 def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) -> FEMModel:
     """
     @brief Main entry point using pyNastran.
@@ -520,6 +768,7 @@ def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) 
     model.active_subcase_id = selected_subcase
     model.active_load_sid = load_sid
     model.active_spc_sid = spc_sid
+    _map_analysis_configuration(bdf, model, selected_subcase)
 
     # --- EXTRAER PARÁMETROS DEL DECK DE NASTRAN ---
     if 'K6ROT' in bdf.params:

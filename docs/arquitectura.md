@@ -33,10 +33,11 @@ MEF-solver/
 │   │   └── deprecated/             lector manual y pruebas antiguas
 │   ├── solver/
 │   │   ├── linear_static_solver.py ensamblaje, contorno, solución y resultados
+│   │   ├── nonlinear_analysis.py    incrementos, Newton, tangente y residuo CROD
 │   │   ├── transformations.py      sistemas locales y matrices T
 │   │   ├── quadrature.py           reglas de Gauss-Legendre 1D
 │   │   ├── utilities.py            mapeo nodo/GDL
-│   │   └── elements/               CROD, CBAR, CTRIA3 y CQUAD4
+│   │   └── elements/               CROD lineal/no lineal, CBAR, CTRIA3 y CQUAD4
 │   └── postprocessing/
 │       └── report_writer.py        escritor del informe de resultados
 └── tests/
@@ -60,6 +61,8 @@ Los ficheros `draft_*` están ignorados por Git y no forman parte del camino de 
 - cargas nodales `SinglePointLoad` y `SinglePointMoment`.
 - restricciones `SPCConstraint`.
 - `FEMModel`: diccionarios de entidades y listas de cargas/restricciones.
+- `AnalysisConfiguration` y `NonlinearStepControl`: selección `SOL 101/400`,
+  `LGDISP`/`FOLLOWK` y control incremental normalizado.
 
 Materiales, propiedades, nodos y elementos se indexan por el ID de usuario. Las cargas y restricciones se guardan en listas para permitir SIDs repetidos.
 
@@ -82,6 +85,13 @@ también a coordenadas básicas antes de almacenarse. El lector selecciona un
 `SUBCASE` y reduce sus combinaciones `LOAD`, `SPCADD`, `SPC` y `SPC1`.
 
 El lector aplica una política *fail fast*: no ignora silenciosamente entidades estructurales desconocidas. Esta política protege frente a modelos aparentemente resueltos a los que les falte física.
+
+pyNastran 1.4.1 no construye un objeto para `NLSTEP`, aunque conserva sus
+líneas rechazadas. El adaptador las interpreta explícitamente y admite el
+subconjunto mecánico `GENERAL`, `FIXED`/`ADAPT` y `MECH`. El resultado queda en
+`FEMModel.analysis`; una continuación no soportada produce error. Como
+pyNastran puede agrupar con la tarjeta un comentario inmediatamente anterior,
+el adaptador elimina comentarios antes de identificar el nombre de la entrada.
 
 ## Numeración de grados de libertad
 
@@ -116,6 +126,26 @@ Antes de resolver, la matriz se convierte a CSC. `MatrixRankWarning` se transfor
 ```text
 R = K u - F
 ```
+
+Esta ruta no se reutiliza silenciosamente para `SOL 400`. `main.py` inspecciona
+`FEMModel.analysis` e instancia el módulo hermano `NonlinearStaticSolver`, que
+comparte sólo `DofMapper`, el modelo y las convenciones de transformación. Es
+propietario del estado incremental, el residuo, la tangente, los recortes, la
+convergencia y la recuperación por incremento.
+
+En la ruta no lineal cada iteración ensambla:
+
+```text
+r = lambda F_ext - F_int(u)
+K_T(u) Delta_u = r
+u <- u + Delta_u
+```
+
+`CRODNonlinear` devuelve fuerza interna, tangente consistente y estado físico
+en coordenadas básicas. El ensamblador transforma después vectores y matrices
+al sistema `GRID.CD`, igual que la ruta lineal. Los estados convergidos se
+guardan en `NonlinearIncrementResult`; los residuos y correcciones de Newton,
+en `NonlinearIterationResult`.
 
 ## Transformaciones
 

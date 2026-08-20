@@ -1,6 +1,6 @@
 # Validación
 
-## Estado final observado
+## Estado observado
 
 Comando:
 
@@ -8,10 +8,11 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 16 de agosto de 2026 sobre `0cc154c`:
+Resultado verificado el 20 de agosto de 2026 después de implementar y validar
+la ruta no lineal CROD con los decks 92--122:
 
 ```text
-337 passed, 6 xfailed
+418 passed, 6 xfailed
 ```
 
 Las advertencias visibles proceden de que pytest no puede escribir su caché en
@@ -123,3 +124,54 @@ La implementación CQUAD4 se considera cerrada para elementos coplanares porque:
 
 La única mejora específica no bloqueante es reproducir con mayor precisión la
 convención de impresión centroidal de `Qx/Qy`.
+
+## Campaña no lineal geométrica de CROD
+
+Los casos 92--111 forman la campaña inicial de 20 decks `SOL 400`. Cubren el
+límite lineal, tracción y compresión finitas, control fijo/adaptativo,
+`CD/CID`, series, paralelo, `LOAD`, cerchas 2D, estructuras 3D y sensibilidad
+al tamaño de incremento. La auditoría añadió los casos 112--122 para
+objetividad 3D, tangente por perturbación central, torsión, `LGDISP=2` y
+respuesta próxima al punto límite, además de un par lineal/no lineal sensible
+a la rotación de la estructura.
+
+El test `test_nonlinear_analysis_control.py` verifica que todos los decks:
+
+- seleccionan `SOL 400`, `ANALYSIS=NLSTAT` y el `NLSTEP` correcto;
+- sólo contienen CROD dentro del alcance de esta campaña;
+- mapean `LGDISP` y `FOLLOWK` sin contaminar la ruta lineal;
+- se enrutan desde el CLI a `NonlinearStaticSolver` sin pasar por
+  `LinearStaticSolver`.
+
+Como control adicional, los modelos se ensamblan y resuelven con su rigidez
+lineal inicial cuando ese control es físicamente aplicable; los decks de
+torsión conservan expresamente el GDL `R1` al que aporta rigidez el `J` de
+`PROD`.
+
+La primera ejecución 92--111 con MSC Nastran 2026.1 (`NLPERF`) terminó
+normalmente y alcanzó el 100 % de carga en todos los casos. No hubo cortes ni
+separaciones. Los pares 92/93 y 94/95 coinciden en sus estados finales; los
+casos 104/109/110 coinciden en desplazamiento, tensión y reacción, mientras el
+trabajo/energía del mallado incremental grueso 109 difiere un `0.65 %`. El
+caso 102 converge a la rama posterior al *snap-through* en su último
+incremento (`uy: -42.830 -> -223.31`); 105 hace lo mismo en el incremento 17
+(`uy: -33.975 -> -218.50`). Ambos se conservan como controles avanzados.
+
+La campaña completa se relanzó después de corregir `NLOPRM`. Los 30 casos
+convergidos se comparan con diccionarios explícitos en
+`test_nonlinear_validation_end_to_end.py`; ningún test lee F06/PCH durante la
+ejecución. Los casos 95/104/111 reproducen 9/14/15 incrementos adaptativos.
+
+`test_nonlinear_intermediate_validation.py` transcribe cuatro estados de 112 y
+compara además la flexibilidad tangente horizontal con la diferencia central
+de 114/115 (`6.127186e-6`). `test_crod_non_linear.py` verifica por diferencias
+finitas todos los términos de la tangente elemental.
+
+El caso 120 conserva su terminación no convergida en `lambda≈0.98387`: es una
+validación del punto límite bajo control de fuerza, no un fallo pendiente. Los
+casos 102/105 convergen mediante salto a una rama posterior; sus resultados
+mecánicos coinciden, pero el acumulado `TotStrEn` de Nastran no es la energía
+elástica del estado final y no se usa como aserción.
+Véanse
+[`nonlinear_crod.md`](nonlinear_crod.md) y la
+[guía de campaña](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).

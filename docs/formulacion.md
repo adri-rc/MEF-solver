@@ -48,6 +48,54 @@ K_torsion = G*J/L * [[1,-1],[-1,1]]
 Se recuperan deformación y tensión axial, fuerza normal, giro por unidad de
 longitud, torsor y tensión torsional.
 
+### CROD no lineal geométrico
+
+`CRODNonlinear` usa las posiciones de referencia `X1`, `X2` y los
+desplazamientos totales para construir la cuerda actual:
+
+```text
+d  = (X2 + u2) - (X1 + u1)
+l  = ||d||
+n  = d/l
+L0 = ||X2-X1||
+epsilon = (l-L0)/L0
+sigma   = E*epsilon
+N       = A*sigma
+```
+
+La fuerza interna traslacional en coordenadas básicas es
+`[-N*n, +N*n]`. Su derivada consistente contiene las partes material y
+geométrica:
+
+```text
+k = (E*A/L0) (n outer n) + (N/l) (I - n outer n)
+K_e = [[ k, -k],
+       [-k,  k]]
+```
+
+La segunda contribución puede ser negativa en compresión y es imprescindible
+para reproducir pérdida de rigidez, grandes rotaciones y *snap-through*. El
+área y el módulo permanecen referidos al estado inicial: no se implementa
+gran deformación material ni actualización isócora de sección.
+
+En cada incremento el solver resuelve:
+
+```text
+r(u, lambda) = lambda F_ext - F_int(u)
+K_T(u) Delta_u = r(u, lambda)
+```
+
+La tangente se actualiza en cada iteración mediante Newton completo. La torsión
+permanece desacoplada y usa `T=G*J*(theta2-theta1).n0/L0`, tal como confirman
+116/117 incluso con extensión axial. Esta primera implementación proyecta el
+giro sobre el eje de referencia; una cinemática general de sección con
+rotaciones finitas pertenece al futuro CBAR no lineal.
+
+Con `LGDISP=-1` se conserva la dirección y rigidez de referencia; `LGDISP=1`
+y `2` activan la cuerda actual. Como las cargas soportadas son conservativas y
+`FOLLOWK=NO`, ambos valores producen la misma respuesta en 112/118. El diseño,
+las tarjetas y límites están en [`nonlinear_crod.md`](nonlinear_crod.md).
+
 ## CBAR
 
 CBAR usa una formulación de viga espacial con extensión axial, torsión y
