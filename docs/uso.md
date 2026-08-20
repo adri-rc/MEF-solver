@@ -105,10 +105,16 @@ iteración. No admite `ARCLN`, controles térmicos/acoplados, cargas seguidoras,
 actualizaciones parciales de rigidez ni más de una estrategia incremental por
 entrada.
 
-Los ejemplos ejecutables por MSC Nastran están en `case_92` a `case_122` y
-todos conservan las salidas auditadas de MSC Nastran 2026.1. Los 30 casos que
+Los desplazamientos impuestos no nulos se introducen con el campo `D` de
+`SPC`; el solver no lineal los escala con el factor de carga hasta alcanzar el
+valor completo. La tarjeta de carga `SPCD` no está implementada. `K6ROT` sólo
+se aplica a las láminas y no estabiliza los GDL rotacionales de CROD.
+
+Los ejemplos ejecutables por MSC Nastran están en `case_92` a `case_127` y
+todos conservan las salidas auditadas de MSC Nastran 2026.1. Los 35 casos que
 alcanzan carga completa se comparan con valores explícitos; el 120 documenta
-la terminación esperada cerca del punto límite. La guía está en
+la terminación esperada cerca del punto límite. Los modelos 123--127 amplían
+la campaña a estructuras de 10--30 CROD. La guía está en
 [`NONLINEAR_CROD_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).
 El significado de las tarjetas está desarrollado en
 [`nonlinear_crod.md`](nonlinear_crod.md).
@@ -163,7 +169,21 @@ añade:
 - `stresses` contiene magnitudes diferentes según el tipo de elemento.
 
 El informe `output/<nombre>.rpt` se genera desde
-`src/postprocessing/report_writer.py` y organiza los resultados por familia:
+`src/postprocessing/report_writer.py`. El cabecero identifica explícitamente
+`LINEAR STATIC` o `NONLINEAR STATIC`, y tras el resumen del modelo muestra la
+secuencia `SOL`, el tipo de análisis y los parámetros globales aplicables.
+
+En SOL 400 se imprimen además:
+
+- los parámetros principales de `NLSTEP`/`NLPARM`, incluidos método y tamaños
+  de incremento, límites de Newton/recortes, criterios y tolerancias;
+- un resumen con factor final, incrementos, iteraciones, recortes y energía;
+- después del estado final, el historial de incrementos convergidos y el de
+  cada corrección de Newton con factor de carga, residuos y norma de la
+  corrección.
+
+El bloque `FINAL CONVERGED STATE RESULTS` contiene el estado final. Sus
+resultados se organizan por familia:
 
 - CROD: fuerzas y torsor; tensiones, deformación y giro unitario;
 - CBAR: fuerzas y momentos en los extremos A/B; tensiones en los puntos PBAR;
@@ -175,6 +195,9 @@ Todas las componentes se identifican por su nombre físico; ya no se utilizan
 cabeceras genéricas `PRIMARY 1`, `PRIMARY 2`, etc. Las magnitudes se expresan
 en el sistema coherente de unidades elegido en el deck de entrada. Para placas,
 `TOP` corresponde a `z=+t/2` y `BOTTOM` a `z=-t/2` en los ejes locales.
+El significado de las tablas, las razones por las que cambia el número de
+iteraciones y su correspondencia con el F06 están en
+[`result_report.md`](result_report.md).
 
 ## Ejecución de pruebas
 

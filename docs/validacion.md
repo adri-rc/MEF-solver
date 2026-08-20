@@ -8,11 +8,11 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 20 de agosto de 2026 después de implementar y validar
-la ruta no lineal CROD con los decks 92--122:
+Resultado verificado el 20 de agosto de 2026 después de implementar la ruta no
+lineal CROD y validar los decks 92--127:
 
 ```text
-418 passed, 6 xfailed
+430 passed, 6 xfailed
 ```
 
 Las advertencias visibles proceden de que pytest no puede escribir su caché en
@@ -135,6 +135,12 @@ objetividad 3D, tangente por perturbación central, torsión, `LGDISP=2` y
 respuesta próxima al punto límite, además de un par lineal/no lineal sensible
 a la rotación de la estructura.
 
+Los casos 123--127 amplían la escala a estructuras de 10--30 CROD: una
+cubierta arqueada, un puente de celosía, una cubierta espacial, una marquesina
+y una torre 3D. Mezclan PROD/MAT1, orientaciones, cargas y apoyos; 124/126
+incluyen valores no nulos de SPC. Los cinco convergen con MSC y con el solver,
+reproducen `25/30/30/40/14` incrementos y forman parte del diccionario E2E.
+
 El test `test_nonlinear_analysis_control.py` verifica que todos los decks:
 
 - seleccionan `SOL 400`, `ANALYSIS=NLSTAT` y el `NLSTEP` correcto;
@@ -157,7 +163,7 @@ caso 102 converge a la rama posterior al *snap-through* en su último
 incremento (`uy: -42.830 -> -223.31`); 105 hace lo mismo en el incremento 17
 (`uy: -33.975 -> -218.50`). Ambos se conservan como controles avanzados.
 
-La campaña completa se relanzó después de corregir `NLOPRM`. Los 30 casos
+La campaña completa se relanzó después de corregir `NLOPRM`. Los 35 casos
 convergidos se comparan con diccionarios explícitos en
 `test_nonlinear_validation_end_to_end.py`; ningún test lee F06/PCH durante la
 ejecución. Los casos 95/104/111 reproducen 9/14/15 incrementos adaptativos.
@@ -166,6 +172,12 @@ ejecución. Los casos 95/104/111 reproducen 9/14/15 incrementos adaptativos.
 compara además la flexibilidad tangente horizontal con la diferencia central
 de 114/115 (`6.127186e-6`). `test_crod_non_linear.py` verifica por diferencias
 finitas todos los términos de la tangente elemental.
+
+Para 123--127 se contrastaron todas las filas finales impresas: los máximos
+errores relativos fueron `3.77e-7` en desplazamientos, `3.76e-7` en reacciones
+y `3.72e-7` en tensión/deformación. El caso 125 atraviesa un *snap-through*
+entre `lambda=0.533333/0.566667`; su estado final coincide, pero el acumulado
+`TotStrEn` de MSC no se usa como energía elástica de estado.
 
 El caso 120 conserva su terminación no convergida en `lambda≈0.98387`: es una
 validación del punto límite bajo control de fuerza, no un fallo pendiente. Los

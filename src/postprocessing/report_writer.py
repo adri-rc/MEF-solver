@@ -65,13 +65,24 @@ def _write_table(
     stream.write("\n")
 
 
-def _write_report_heading(stream: TextIO, job_name: str, model) -> None:
-    analysis_type = getattr(
+def _analysis_type(model) -> AnalysisType:
+    return getattr(
         getattr(model, "analysis", None),
         "analysis_type",
         AnalysisType.LINEAR_STATIC,
     )
-    if analysis_type is AnalysisType.NONLINEAR_STATIC:
+
+
+def _yes_no(value: bool) -> str:
+    return "YES" if value else "NO"
+
+
+def _configured_value(value):
+    return "DEFAULT" if value is None else value
+
+
+def _write_report_heading(stream: TextIO, job_name: str, model) -> None:
+    if _analysis_type(model) == AnalysisType.NONLINEAR_STATIC:
         title = "NONLINEAR STATIC ANALYSIS REPORT"
     else:
         title = "LINEAR STATIC ANALYSIS REPORT"
@@ -82,29 +93,27 @@ def _write_report_heading(stream: TextIO, job_name: str, model) -> None:
 
 
 def _write_model_summary(stream: TextIO, model) -> None:
-    property_counts = {
-        "PROD": sum(isinstance(prop, RodProperty) for prop in model.properties.values()),
-        "PBAR": sum(isinstance(prop, BarProperty) for prop in model.properties.values()),
-        "PSHELL": sum(isinstance(prop, ShellProperty) for prop in model.properties.values()),
-    }
-    element_counts = {
-        "CROD": sum(isinstance(element, RodElement) for element in model.elements.values()),
-        "CBAR": sum(isinstance(element, BarElement) for element in model.elements.values()),
-        "CTRIA3": sum(isinstance(element, CTRIA3Element) for element in model.elements.values()),
-        "CQUAD4": sum(isinstance(element, CQUAD4Element) for element in model.elements.values()),
-    }
-    counts = {
-        "GRID": len(model.nodes),
-        "MAT1": len(model.materials),
-        **property_counts,
-        **element_counts,
-        "FORCE": sum(isinstance(load, SinglePointLoad) for load in model.loads),
-        "MOMENT": sum(isinstance(load, SinglePointMoment) for load in model.loads),
-        "SPC": sum(isinstance(constraint, SPCConstraint) for constraint in model.constraints),
-    }
+    counts = getattr(model, "source_entry_counts", None)
+    if not counts:
+        counts = {
+            "GRID": len(model.nodes),
+            "MAT1": len(model.materials),
+            "PROD": sum(isinstance(prop, RodProperty) for prop in model.properties.values()),
+            "PBAR": sum(isinstance(prop, BarProperty) for prop in model.properties.values()),
+            "PSHELL": sum(isinstance(prop, ShellProperty) for prop in model.properties.values()),
+            "CROD": sum(isinstance(element, RodElement) for element in model.elements.values()),
+            "CBAR": sum(isinstance(element, BarElement) for element in model.elements.values()),
+            "CTRIA3": sum(isinstance(element, CTRIA3Element) for element in model.elements.values()),
+            "CQUAD4": sum(isinstance(element, CQUAD4Element) for element in model.elements.values()),
+            "FORCE": sum(isinstance(load, SinglePointLoad) for load in model.loads),
+            "MOMENT": sum(isinstance(load, SinglePointMoment) for load in model.loads),
+            "SPC (NORMALIZED)": sum(
+                isinstance(constraint, SPCConstraint) for constraint in model.constraints
+            ),
+        }
 
     stream.write("0. MODEL SUMMARY\n")
-    rows = ((name, count) for name, count in counts.items() if count)
+    rows = ((name, counts[name]) for name in sorted(counts) if counts[name])
     _write_table(
         stream,
         ("ENTRY TYPE", "NUMBER OF ENTRIES"),
@@ -114,16 +123,104 @@ def _write_model_summary(stream: TextIO, model) -> None:
     )
 
 
+def _write_analysis_configuration(stream: TextIO, model) -> None:
+    """Write the format-independent analysis selection used by the solver."""
+    analysis = getattr(model, "analysis", None)
+    analysis_type = _analysis_type(model)
+    nonlinear = analysis_type == AnalysisType.NONLINEAR_STATIC
+    solution_sequence = getattr(analysis, "solution_sequence", None)
+    if solution_sequence is None:
+        solution_label = "SOL 101 (DEFAULT)" if not nonlinear else "UNSPECIFIED"
+    else:
+        solution_label = f"SOL {solution_sequence}"
+
+    rows = [
+        ("SOLUTION SEQUENCE", solution_label),
+        ("ANALYSIS TYPE", "NONLINEAR STATIC" if nonlinear else "LINEAR STATIC"),
+        ("CASE CONTROL ANALYSIS", _configured_value(getattr(analysis, "analysis_keyword", None))),
+    ]
+    if nonlinear:
+        rows.extend(
+            (
+                ("LARGE DISPLACEMENTS", _yes_no(getattr(analysis, "large_displacements", False))),
+                ("PARAM,LGDISP", _configured_value(getattr(analysis, "large_displacement_parameter", None))),
+                ("PARAM,FOLLOWK", _yes_no(getattr(analysis, "follower_force_stiffness", False))),
+            )
+        )
+
+    stream.write("0A. ANALYSIS CONFIGURATION\n")
+    _write_table(
+        stream,
+        ("PARAMETER", "VALUE"),
+        (32, 24),
+        rows,
+        left_aligned_columns=frozenset({0, 1}),
+    )
+
+
+def _write_nonlinear_step_control(stream: TextIO, model) -> None:
+    analysis = getattr(model, "analysis", None)
+    control = getattr(analysis, "nonlinear_step", None)
+    if control is None:
+        return
+
+    rows = [
+        ("CONTROL ENTRY", control.source),
+        ("CONTROL ID", control.sid),
+        ("TOTAL TIME", control.total_time),
+        ("CONTROL DEFINITION", _configured_value(control.control_definition)),
+        ("INCREMENT METHOD", control.increment_method),
+    ]
+    if control.increment_method == "FIXED":
+        rows.append(("NUMBER OF INCREMENTS", control.number_of_increments))
+    else:
+        rows.extend(
+            (
+                ("INITIAL STEP FRACTION", control.initial_step_fraction),
+                ("MINIMUM STEP FRACTION", control.minimum_step_fraction),
+                ("MAXIMUM STEP FRACTION", control.maximum_step_fraction),
+                ("DESIRED ITERATIONS", _configured_value(control.desired_iterations)),
+                ("STEP SCALE FACTOR", _configured_value(control.step_scale_factor)),
+                ("MAXIMUM INCREMENTS", _configured_value(control.maximum_increments)),
+            )
+        )
+    rows.extend(
+        (
+            ("OUTPUT INTERVALS", control.output_intervals),
+            ("MINIMUM ITERATIONS", control.minimum_iterations),
+            ("MAXIMUM ITERATIONS", control.maximum_iterations),
+            ("MAXIMUM BISECTIONS", control.maximum_bisections),
+            ("CONVERGENCE FLAGS", control.convergence),
+            ("DISPLACEMENT TOLERANCE", _configured_value(control.displacement_tolerance)),
+            ("RESIDUAL TOLERANCE", _configured_value(control.residual_tolerance)),
+            ("WORK TOLERANCE", _configured_value(control.work_tolerance)),
+            ("STIFFNESS UPDATE METHOD", control.stiffness_update_method),
+        )
+    )
+    if control.stiffness_update_interval is not None:
+        rows.append(("STIFFNESS UPDATE INTERVAL", control.stiffness_update_interval))
+
+    stream.write("0B. NONLINEAR STEP CONTROL\n")
+    _write_table(
+        stream,
+        ("PARAMETER", "VALUE"),
+        (32, 24),
+        rows,
+        left_aligned_columns=frozenset({0, 1}),
+    )
+
+
 def _write_nonlinear_summary(stream: TextIO, results: Mapping) -> None:
     """Write incremental convergence metadata when supplied by the solver."""
     if "increments" not in results:
         return
     increments = results["increments"]
-    stream.write("0A. NONLINEAR SOLUTION SUMMARY\n")
+    stream.write("0C. NONLINEAR SOLUTION SUMMARY\n")
     rows = (
         ("FINAL LOAD FACTOR", results.get("load_factor", 0.0)),
         ("CONVERGED INCREMENTS", len(increments)),
-        ("NEWTON ITERATIONS", len(results.get("iterations", ()))),
+        ("CONVERGED NEWTON ITERATIONS", sum(increment.iterations for increment in increments)),
+        ("RECORDED NEWTON CORRECTIONS", len(results.get("iterations", ()))),
         ("CUTBACKS", results.get("cutbacks", 0)),
         ("STRAIN ENERGY", results.get("strain_energy", 0.0)),
     )
@@ -136,9 +233,75 @@ def _write_nonlinear_summary(stream: TextIO, results: Mapping) -> None:
     )
 
 
+def _write_nonlinear_histories(stream: TextIO, results: Mapping) -> None:
+    if "increments" not in results:
+        return
+
+    increments = results["increments"]
+    stream.write("4. NONLINEAR SOLUTION HISTORY\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+    stream.write("4.1. CONVERGED INCREMENT HISTORY\n")
+    _write_table(
+        stream,
+        (
+            "INCREMENT", "LOAD FACTOR", "STEP SIZE", "ITERATIONS",
+            "RESIDUAL NORM", "RELATIVE RESIDUAL", "CUTBACKS", "STRAIN ENERGY",
+        ),
+        (9, 16, 16, 10, 17, 18, 9, 17),
+        (
+            (
+                increment.increment,
+                increment.load_factor,
+                increment.step_size,
+                increment.iterations,
+                increment.residual_norm,
+                increment.relative_residual_norm,
+                increment.cutbacks,
+                increment.strain_energy,
+            )
+            for increment in increments
+        ),
+    )
+
+    iterations = results.get("iterations", ())
+    stream.write("4.2. NEWTON ITERATION HISTORY\n")
+    stream.write(
+        "     One row is written after each Newton correction. Repeated increment IDs may belong "
+        "to attempts retried after a cutback.\n"
+    )
+    _write_table(
+        stream,
+        (
+            "INCREMENT", "LOAD FACTOR", "ITERATION", "RESIDUAL NORM",
+            "RELATIVE RESIDUAL", "CORRECTION NORM",
+        ),
+        (9, 16, 10, 17, 18, 18),
+        (
+            (
+                iteration.increment,
+                iteration.load_factor,
+                iteration.iteration,
+                iteration.residual_norm,
+                iteration.relative_residual_norm,
+                iteration.correction_norm,
+            )
+            for iteration in iterations
+        ),
+    )
+
+
+def _write_final_results_heading(stream: TextIO, model) -> None:
+    if _analysis_type(model) == AnalysisType.NONLINEAR_STATIC:
+        title = "FINAL CONVERGED STATE RESULTS"
+    else:
+        title = "FINAL LINEAR SOLUTION RESULTS"
+    stream.write(title + "\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+
+
 def _write_displacements(stream: TextIO, model, displacements, dof_mapper) -> None:
     stream.write("1. NODAL DISPLACEMENTS\n")
-    headers = ("NODE ID", "T1 (X)", "T2 (Y)", "T3 (Z)", "R1 (RX)", "R2 (RY)", "R3 (RZ)")
+    headers = ("NODE ID", "T1", "T2", "T3", "R1", "R2", "R3")
     widths = (10, 17, 17, 17, 17, 17, 17)
 
     def rows():
@@ -152,7 +315,7 @@ def _write_displacements(stream: TextIO, model, displacements, dof_mapper) -> No
 
 def _write_reactions(stream: TextIO, reactions: Mapping[int, np.ndarray]) -> None:
     stream.write("2. SPC REACTION FORCES AND MOMENTS (NON-ZERO NODES)\n")
-    headers = ("NODE ID", "F1 (X)", "F2 (Y)", "F3 (Z)", "M1 (MX)", "M2 (MY)", "M3 (MZ)")
+    headers = ("NODE ID", "F1", "F2", "F3", "M1", "M2", "M3")
     widths = (10, 17, 17, 17, 17, 17, 17)
     rows = [
         (node_id, *reactions[node_id])
@@ -344,7 +507,11 @@ def write_report(path: Path | str, job_name: str, model, results: Mapping, solve
     with report_path.open("w", encoding="utf-8", newline="\n") as stream:
         _write_report_heading(stream, job_name, model)
         _write_model_summary(stream, model)
+        _write_analysis_configuration(stream, model)
+        _write_nonlinear_step_control(stream, model)
         _write_nonlinear_summary(stream, results)
+        _write_final_results_heading(stream, model)
         _write_displacements(stream, model, results["displacements"], solver.dof_mapper)
         _write_reactions(stream, results["reactions"])
         _write_element_results(stream, results["stresses"])
+        _write_nonlinear_histories(stream, results)

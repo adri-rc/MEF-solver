@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `418 passed, 6 xfailed`; los xfail documentan geometría CQUAD4 alabeada y
+con `430 passed, 6 xfailed`; los xfail documentan geometría CQUAD4 alabeada y
 suavizado `SNORM`, ambos fuera de alcance.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
@@ -16,10 +16,10 @@ el caso mixto 80 con CBAR, CTRIA3 y CQUAD4. `requirements.txt` declara
 dependencias mínimas, aunque todavía falta un bloqueo reproducible.
 
 El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
-`NLPARM`, `LGDISP` y `FOLLOWK`, y dispone de 31 casos CROD (92--122) ejecutados
+`NLPARM`, `LGDISP` y `FOLLOWK`, y dispone de 36 casos CROD (92--127) ejecutados
 con MSC Nastran 2026.1/NLPERF. `NonlinearStaticSolver` resuelve el subconjunto
 MAT1/PROD/CROD mediante Newton completo, tangente consistente, stepping fijo o
-adaptativo y recortes. Los 30 trabajos convergidos coinciden con referencias
+adaptativo y recortes. Los 35 trabajos convergidos coinciden con referencias
 explícitas y el 120 reproduce el límite bajo control de fuerza.
 
 ## Prioridad 0 completada: no linealidad geométrica CROD
@@ -28,7 +28,8 @@ explícitas y el 120 reproduce el límite bajo control de fuerza.
 2. Transcritos estados intermedios, tangente por sonda y resultados finales.
 3. Implementados `CRODNonlinear` y `NonlinearStaticSolver` sin modificar la
    formulación lineal.
-4. Integrados CLI, historial incremental, recuperación e informe.
+4. Integrados CLI, recuperación e informe con configuración, historial de
+   incrementos, correcciones de Newton y estado final diferenciado.
 5. Documentado el punto límite 120 y el alcance sin arco de longitud.
 
 La siguiente ampliación física será CBAR con grandes desplazamientos, como una

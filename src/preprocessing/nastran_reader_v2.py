@@ -45,6 +45,29 @@ from .data_model import (
     and the user's data_model.py.
 """
 
+
+def _get_source_entry_counts(bdf_model: BDF) -> dict[str, int]:
+    """Return F06-like logical Bulk Data counts for report presentation.
+
+    MSC consolidates SPC1 cards that share the same SID and component string
+    in MODEL SUMMARY.  pyNastran retains the physical-card count, so SPC1 is
+    normalized here without affecting the constraints used by the solver.
+    """
+    counts = {
+        str(name).upper(): int(count)
+        for name, count in bdf_model.card_count.items()
+        if name != "ENDDATA" and count
+    }
+    spc1_entries = {
+        (int(sid), str(spc.components))
+        for sid, cards in bdf_model.spcs.items()
+        for spc in cards
+        if spc.type == "SPC1"
+    }
+    if spc1_entries:
+        counts["SPC1"] = len(spc1_entries)
+    return dict(sorted(counts.items()))
+
 def _map_materials(bdf_model: BDF, model: FEMModel):
     """
     @brief Translates pyNastran materials to IsotropicMaterial project class.
@@ -768,6 +791,7 @@ def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) 
     model.active_subcase_id = selected_subcase
     model.active_load_sid = load_sid
     model.active_spc_sid = spc_sid
+    model.source_entry_counts = _get_source_entry_counts(bdf)
     _map_analysis_configuration(bdf, model, selected_subcase)
 
     # --- EXTRAER PARÁMETROS DEL DECK DE NASTRAN ---

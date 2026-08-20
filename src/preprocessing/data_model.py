@@ -583,6 +583,10 @@ class FEMModel:
         self.active_subcase_id: Optional[int] = None
         self.active_load_sid: Optional[int] = None
         self.active_spc_sid: Optional[int] = None
+        # Logical Bulk Data entry counts retained for an F06-like model summary.
+        # They are deliberately separate from normalized loads/constraints,
+        # which may expand or combine the source entries used by the solver.
+        self.source_entry_counts: Dict[str, int] = {}
         self.analysis = AnalysisConfiguration()
 
     def validate(self, require_elements: bool = True) -> None:

@@ -44,7 +44,7 @@ Comando de referencia:
 Resultado observado el 20 de agosto de 2026:
 
 ```text
-418 passed, 6 xfailed, 2 warnings
+430 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`
@@ -86,13 +86,17 @@ independientes (`SNORM,0`) y pasan.
   transforman a la base adecuada.
 - `PARAM,K6ROT` se aplica a CTRIA3 y CQUAD4.
 - No hay `AUTOSPC` general: los mecanismos reales deben fallar.
-- El informe `.rpt` contiene resumen del modelo, desplazamientos, reacciones y
-  tablas físicas específicas para CROD, CBAR, CTRIA3 y CQUAD4.
+- El informe `.rpt` distingue análisis lineal/no lineal y contiene resumen del
+  modelo, configuración, desplazamientos, reacciones y tablas físicas
+  específicas para CROD, CBAR, CTRIA3 y CQUAD4. En SOL 400 incluye además los
+  historiales de incrementos convergidos y correcciones de Newton al final. La
+  correspondencia con F06 está en `docs/result_report.md`.
 - El preproceso distingue `SOL 101` y estática no lineal `SOL 400`; para esta
   última lee `ANALYSIS=NLSTAT`, `NLSTEP`/`NLPARM`, `LGDISP` y `FOLLOWK`.
-- La campaña CROD comprende 31 referencias, casos 92--122, ejecutadas con MSC
-  Nastran 2026.1/NLPERF. Treinta alcanzan carga completa y el 120 documenta un
-  punto límite bajo control de fuerza.
+- La campaña CROD comprende 36 referencias, casos 92--127, ejecutadas con MSC
+  Nastran 2026.1/NLPERF. Treinta y cinco alcanzan carga completa y el 120
+  documenta un punto límite bajo control de fuerza. Los modelos 123--127
+  validan estructuras de 10--30 barras, propiedades mixtas y SPC no nulos.
 - `NonlinearStaticSolver` resuelve SOL 400 para MAT1/PROD/CROD, cargas nodales
   conservativas, `FIXED`/`ADAPT`, Newton completo y recortes.
 
@@ -215,16 +219,18 @@ controles extremadamente mal condicionados.
   escritas directamente; no lee F06 durante el test.
 - El caso 80 de ese último módulo mezcla CBAR, CTRIA3 y CQUAD4 y comprueba
   desplazamientos, cargas, reacciones y resultados de las tres familias.
-- `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT.
+- `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT,
+  incluida configuración, convergencia iterativa y estado final no lineal.
 - `tests/preprocessing_tst/test_nonlinear_analysis_control.py`: normalización
-  SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 31
-  casos CROD.
+  SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 36
+  decks CROD.
 - `tests/solver_tst/elements/test_crod_non_linear.py`: cinemática, fuerzas,
   torsión, objetividad y derivada numérica de la tangente.
 - `tests/solver_tst/test_nonlinear_intermediate_validation.py`: estados de 112
   y flexibilidad tangente de 114/115.
 - `tests/solver_tst/test_nonlinear_validation_end_to_end.py`: diccionarios
-  explícitos de los 30 casos convergidos.
+  explícitos de los 35 casos convergidos; 123--127 documentan además metadatos,
+  tolerancias y descripciones legibles por caso.
 - `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
   ejecución y resultados de MSC que deben conservarse.
 

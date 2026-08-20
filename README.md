@@ -11,10 +11,13 @@ El solver activo implementa estática lineal para CROD, CBAR, CTRIA3 y CQUAD4
 coplanar, además de estática no lineal geométrica `SOL 400` para modelos
 `MAT1`/`PROD`/`CROD`. La ruta no lineal usa incrementos fijos o adaptativos,
 Newton-Raphson completo y una tangente material más geométrica; está validada
-con los 31 casos 92--122 de MSC Nastran 2026.1. El alcance y sus límites están
+con los 36 casos 92--127 de MSC Nastran 2026.1. Treinta y cinco alcanzan carga
+completa y el 120 conserva el fallo de punto límite. El alcance y sus límites están
 en [docs/nonlinear_crod.md](docs/nonlinear_crod.md), y el detalle de CQUAD4 en
-[docs/cquad4.md](docs/cquad4.md). La revisión obtiene
-`418 passed, 6 xfailed`; los `xfail` documentan sólo
+[docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
+correspondencia con F06 se explican en
+[docs/result_report.md](docs/result_report.md). La revisión obtiene
+`430 passed, 6 xfailed`; los `xfail` documentan sólo
 geometrías alabeadas y el suavizado `SNORM`, ambos fuera de alcance.
 
 ```powershell

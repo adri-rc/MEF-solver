@@ -177,6 +177,14 @@ def test_nonlinear_crod_campaign_decks_are_parseable(case_id):
         assert len(model.loads) == expected["loads"]
         assert len(model.materials) == 2
 
+    if case_id == 124:
+        assert model.source_entry_counts["SPC"] == 1
+        assert model.source_entry_counts["SPC1"] == 3
+        assert model.source_entry_counts["FORCE"] == 7
+    elif case_id == 127:
+        assert model.source_entry_counts["SPC1"] == 2
+        assert model.source_entry_counts["FORCE"] == 8
+
     prescribed_values = sorted(
         constraint.value for constraint in model.constraints if constraint.value != 0.0
     )
@@ -205,4 +213,13 @@ def test_cli_routes_sol400_to_nonlinear_solver(tmp_path, monkeypatch):
     assert result["displacements"][6] == pytest.approx(1.0)
     report = (output_dir / "nonlinear.rpt").read_text()
     assert "NONLINEAR STATIC ANALYSIS REPORT" in report
+    assert "ANALYSIS CONFIGURATION" in report
+    assert "NONLINEAR STEP CONTROL" in report
+    assert "NUMBER OF INCREMENTS" in report
     assert "CONVERGED INCREMENTS" in report
+    assert "CONVERGED INCREMENT HISTORY" in report
+    assert "NEWTON ITERATION HISTORY" in report
+    assert "FINAL CONVERGED STATE RESULTS" in report
+    assert report.index("FINAL CONVERGED STATE RESULTS") < report.index(
+        "CONVERGED INCREMENT HISTORY"
+    )

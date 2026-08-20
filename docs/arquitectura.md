@@ -61,6 +61,8 @@ Los ficheros `draft_*` están ignorados por Git y no forman parte del camino de 
 - cargas nodales `SinglePointLoad` y `SinglePointMoment`.
 - restricciones `SPCConstraint`.
 - `FEMModel`: diccionarios de entidades y listas de cargas/restricciones.
+- `FEMModel.source_entry_counts`: recuento lógico de las entradas Bulk Data
+  para el resumen F06-like, separado de cargas y restricciones normalizadas.
 - `AnalysisConfiguration` y `NonlinearStepControl`: selección `SOL 101/400`,
   `LGDISP`/`FOLLOWK` y control incremental normalizado.
 
@@ -169,7 +171,18 @@ La recuperación numérica sigue delegada en cada solver de elemento:
 
 La presentación se desacopla del solver mediante
 `src/postprocessing/report_writer.py`. El escritor genera el resumen del
-modelo, desplazamientos, reacciones y tablas específicas para cada familia de
-elemento. En placas separa las resultantes internas `N/M/Q` de las tensiones
-en las fibras `TOP/BOTTOM`, siguiendo una organización análoga a F06. De este
-modo `main.py` se limita a coordinar lectura, ensamblaje, solución y escritura.
+modelo, identifica en el cabecero si la solución es lineal o no lineal y
+expone la configuración independiente del formato de entrada. Para SOL 400
+añade el control `NLSTEP`/`NLPARM`, el resumen de convergencia, una tabla por
+incremento convergido y otra por corrección de Newton después de escribir el
+estado final. Cada fila iterativa conserva incremento, factor de carga,
+iteración, residuos absoluto/relativo y norma de la corrección; la tabla de
+incrementos añade tamaño de paso, recortes y energía elástica.
+
+Las tablas finales contienen desplazamientos, reacciones y resultados
+específicos para cada familia de elemento. En placas separa las resultantes
+internas `N/M/Q` de las tensiones en las fibras `TOP/BOTTOM`, siguiendo una
+organización análoga a F06. De este modo `main.py` se limita a coordinar
+lectura, ensamblaje, solución y escritura.
+La interpretación de cada columna y su correspondencia con F06 se documenta
+en [`result_report.md`](result_report.md).
