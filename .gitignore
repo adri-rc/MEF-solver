@@ -6,6 +6,8 @@ __pycache__/
 draft_*
 .pytest_cache/
 output/
+input/
+docs/TFM/
 *.f04
 *.op2
 *.aux
