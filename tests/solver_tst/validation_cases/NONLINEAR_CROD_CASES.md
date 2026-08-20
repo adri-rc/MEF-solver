@@ -4,7 +4,9 @@ La campaña inicial contiene 20 casos, de `case_92` a `case_111`. Tras auditar
 sus resultados se añadieron once controles focalizados, `case_112` a
 `case_122`, para objetividad, tangente por diferencias centrales, torsión,
 comportamiento próximo al punto límite y un límite lineal sensible a cambios
-de geometría.
+de geometría. Los casos 123--127 forman una campaña de escala estructural con
+10--30 barras, propiedades mixtas, cargas múltiples y desplazamientos
+impuestos; sus referencias MSC ya están auditadas e incorporadas al E2E.
 
 ## Objetivo de cada caso
 
@@ -41,6 +43,11 @@ de geometría.
 | 120 | V de 102 con `ADAPT` agresivo | Cambios de paso, cortes y salto; puede fallar de forma informativa |
 | 121 | V simétrica con carga pequeña y `LGDISP=-1` | Límite lineal geométricamente sensible |
 | 122 | Copia de 121 con `LGDISP=1` | Convergencia al límite lineal en una cercha que sí rota |
+| 123 | Cubierta arqueada 2D, 10 CROD | Ensamblaje redundante, tres PROD y siete fuerzas nodales |
+| 124 | Puente de celosía 2D, 20 CROD | Cinco PROD, cargas repartidas y apoyo con `T1=-4` impuesto |
+| 125 | Cubierta espacial, 30 CROD | Gran desplazamiento 3D, cuatro apoyos y dos materiales |
+| 126 | Marquesina espacial, 24 CROD | Fuerzas 3D combinadas y desplazamiento impuesto de un apoyo |
+| 127 | Torre arriostrada 3D, 30 CROD | Seis PROD, dos materiales y stepping `ADAPT` |
 
 ## Auditoría completa
 
@@ -73,19 +80,31 @@ Resultados observados con **MSC Nastran Student Edition 2026.1**, motor
   en `lambda=0.98387` tras alcanzar el paso mínimo, resultado que se conserva
   como referencia negativa;
 - 121/122 dan `uy=-0.269374/-0.2699212`, una diferencia geométrica del `0.2031 %`.
+- 123--127 terminaron con `exit number 0`, alcanzaron factor de carga `1.0` y
+  reprodujeron `25/30/30/40/14` incrementos. La comparación exhaustiva de las
+  tablas impresas obtuvo errores relativos máximos de `3.77e-7` en
+  desplazamientos, `3.76e-7` en reacciones y `3.72e-7` en tensión/deformación;
+- la secuencia adaptativa completa de 127 coincide desde `0.025` hasta `1.0`,
+  incluidos los pasos crecientes y los cinco últimos incrementos de `0.1`;
+- 124 y 126 confirman exactamente los desplazamientos impuestos finales
+  `T1=-4.0` y `T1=+5.0`, junto con sus reacciones conjugadas;
+- 125 presenta un *snap-through* de GRID 5 entre `lambda=0.533333` y
+  `0.566667`, donde `T3` salta de `-13.5215` a `-69.40416`. El estado mecánico
+  final coincide, pero `TotStrEn=4.7083e7` de MSC acumula trabajo a través del
+  salto y no se compara con la energía elástica de estado `1.3756e7`.
 
-No queda ningún trabajo pendiente de relanzamiento para cerrar CROD.
+No queda ningún trabajo pendiente de relanzamiento entre 92--127.
 
 ## Ejecución y archivos que deben conservarse
 
 Ejecutar cada `.dat` desde su propia carpeta para que las salidas queden junto
-al modelo. Conservar, como mínimo:
-
-- `.f06`: resultados impresos, resumen `NLSTEP` y tabla de iteraciones;
-- `.pch`: desplazamientos, reacciones, fuerzas y tensiones solicitadas;
-- `.op2`: estados convergidos e incrementos intermedios;
-- `.sts`: progreso incremental y factores de convergencia;
-- `.log` y `.f04`: versión, motor no lineal y diagnóstico del trabajo.
+al modelo. Conservar en el repositorio, como mínimo, el `.dat` y el `.f06`. El
+F06 aporta los resultados impresos, el resumen `NLSTEP`, las iteraciones y la
+versión de MSC. Conservar además el `.pch` sólo si se va a automatizar una
+extracción de estados. Los `.op2`, `.f04`, `.itr`, `.log` y `.sts` son
+artefactos de trabajo; para un caso fallido conviene mantener temporalmente
+`.log` y `.sts` hasta diagnosticarlo, pero no son referencias permanentes por
+defecto.
 
 No renombrar la raíz del trabajo: los tests futuros asociarán las referencias
 por el prefijo `ejNNN_...`.
@@ -113,6 +132,11 @@ fallo para decidir si el deck o el fenómeno físico necesita otra estrategia.
   residuo antes/después del punto límite.
 - Casos 121/122: diferencia relativa de desplazamiento y reacciones para el
   límite de pequeñas rotaciones de una cercha transversalmente cargada.
+- Casos 123--127: desplazamientos de todos los nodos libres, reacciones de
+  todos los apoyos y tensiones de al menos un elemento por cada PROD; en
+  124/126 comprobar además que el desplazamiento impuesto final sea exactamente
+  `-4.0/+5.0` y registrar su reacción conjugada; en 127 registrar todos los
+  factores de carga adaptativos.
 
 La campaña no solicita una DMIG tangente por iteración: MSC Nastran no ofrece
 una tarjeta estándar equivalente a la exportación lineal usada para las

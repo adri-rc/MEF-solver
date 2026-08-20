@@ -89,3 +89,20 @@ def test_unsupported_convergence_without_force_residual_is_rejected():
 
     with pytest.raises(NotImplementedError, match="requires force-residual"):
         NonlinearStaticSolver(model)
+
+
+def test_nonzero_spc_is_ramped_with_the_nonlinear_load_factor():
+    solver = _solver(124)
+    free_dofs, fixed_dofs, prescribed = solver.get_dof_partition()
+    support_x = solver.dof_mapper.get_dof_indices(5)[0]
+
+    assert support_x not in free_dofs
+    assert support_x in fixed_dofs
+    assert prescribed[support_x] == pytest.approx(-4.0)
+
+    result = solver.solve()
+
+    assert _node_result(solver, result["displacements"], 5)[0] == pytest.approx(-4.0)
+    for increment in result["increments"]:
+        support_displacement = _node_result(solver, increment.displacements, 5)[0]
+        assert support_displacement == pytest.approx(-4.0 * increment.load_factor)

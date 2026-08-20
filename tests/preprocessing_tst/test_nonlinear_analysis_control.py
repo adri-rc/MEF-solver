@@ -138,7 +138,16 @@ CROD,1,1,1,2
     assert model.analysis.nonlinear_step is None
 
 
-@pytest.mark.parametrize("case_id", range(92, 123))
+EXTENDED_CAMPAIGN_COUNTS = {
+    123: {"nodes": 6, "elements": 10, "properties": 3, "loads": 7},
+    124: {"nodes": 10, "elements": 20, "properties": 5, "loads": 7},
+    125: {"nodes": 13, "elements": 30, "properties": 4, "loads": 6},
+    126: {"nodes": 9, "elements": 24, "properties": 5, "loads": 6},
+    127: {"nodes": 12, "elements": 30, "properties": 6, "loads": 8},
+}
+
+
+@pytest.mark.parametrize("case_id", range(92, 128))
 def test_nonlinear_crod_campaign_decks_are_parseable(case_id):
     validation_root = (
         Path(__file__).parents[1] / "solver_tst" / "validation_cases"
@@ -159,6 +168,22 @@ def test_nonlinear_crod_campaign_decks_are_parseable(case_id):
     assert model.active_spc_sid == case_id
     assert model.elements
     assert all(isinstance(element, RodElement) for element in model.elements.values())
+
+    if case_id in EXTENDED_CAMPAIGN_COUNTS:
+        expected = EXTENDED_CAMPAIGN_COUNTS[case_id]
+        assert len(model.nodes) == expected["nodes"]
+        assert len(model.elements) == expected["elements"]
+        assert len(model.properties) == expected["properties"]
+        assert len(model.loads) == expected["loads"]
+        assert len(model.materials) == 2
+
+    prescribed_values = sorted(
+        constraint.value for constraint in model.constraints if constraint.value != 0.0
+    )
+    if case_id == 124:
+        assert prescribed_values == [-4.0]
+    elif case_id == 126:
+        assert prescribed_values == [5.0]
 
 
 def test_cli_routes_sol400_to_nonlinear_solver(tmp_path, monkeypatch):
