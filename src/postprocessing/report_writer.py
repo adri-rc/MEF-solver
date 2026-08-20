@@ -1,0 +1,517 @@
+"""Formatted text reports for supported static analyses.
+
+The report layout lives here so the application entry point only orchestrates
+parse, solve and post-processing.  Element results are intentionally split by
+element family: a single set of generic columns cannot describe rods, bars and
+shell resultants without losing their physical meaning.
+"""
+
+from collections import defaultdict
+from numbers import Integral, Real
+from pathlib import Path
+from typing import Iterable, Mapping, TextIO
+
+import numpy as np
+
+from src.preprocessing.data_model import (
+    AnalysisType,
+    BarElement,
+    BarProperty,
+    CQUAD4Element,
+    CTRIA3Element,
+    RodElement,
+    RodProperty,
+    ShellProperty,
+    SinglePointLoad,
+    SinglePointMoment,
+    SPCConstraint,
+)
+
+
+_REPORT_WIDTH = 148
+_RESULT_TYPE_ORDER = ("CROD", "CBAR", "CTRIA3", "CQUAD4")
+
+
+def _format_cell(value, width: int) -> str:
+    if isinstance(value, Integral):
+        return f"{int(value):>{width}d}"
+    if isinstance(value, Real):
+        return f"{float(value):>{width}.6E}"
+    return f"{str(value):<{width}}"
+
+
+def _write_table(
+    stream: TextIO,
+    headers: tuple[str, ...],
+    widths: tuple[int, ...],
+    rows: Iterable[tuple],
+    left_aligned_columns: frozenset[int] = frozenset(),
+) -> None:
+    """Write a fixed-width table using the same alignment for headers and data."""
+    if len(headers) != len(widths):
+        raise ValueError("Each report column requires a matching width.")
+
+    line_width = sum(widths) + len(widths) - 1
+    header_cells = (
+        f"{header:<{width}}" if index in left_aligned_columns else f"{header:>{width}}"
+        for index, (header, width) in enumerate(zip(headers, widths))
+    )
+    stream.write(" ".join(header_cells) + "\n")
+    stream.write("-" * line_width + "\n")
+    for row in rows:
+        if len(row) != len(headers):
+            raise ValueError("Report row length does not match its table header.")
+        stream.write(" ".join(_format_cell(value, width) for value, width in zip(row, widths)) + "\n")
+    stream.write("\n")
+
+
+def _analysis_type(model) -> AnalysisType:
+    return getattr(
+        getattr(model, "analysis", None),
+        "analysis_type",
+        AnalysisType.LINEAR_STATIC,
+    )
+
+
+def _yes_no(value: bool) -> str:
+    return "YES" if value else "NO"
+
+
+def _configured_value(value):
+    return "DEFAULT" if value is None else value
+
+
+def _write_report_heading(stream: TextIO, job_name: str, model) -> None:
+    if _analysis_type(model) == AnalysisType.NONLINEAR_STATIC:
+        title = "NONLINEAR STATIC ANALYSIS REPORT"
+    else:
+        title = "LINEAR STATIC ANALYSIS REPORT"
+    stream.write(title + "\n")
+    stream.write(f"JOB: {job_name}\n")
+    stream.write("All values use the consistent unit system defined by the input model.\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+
+
+def _write_model_summary(stream: TextIO, model) -> None:
+    counts = getattr(model, "source_entry_counts", None)
+    if not counts:
+        counts = {
+            "GRID": len(model.nodes),
+            "MAT1": len(model.materials),
+            "PROD": sum(isinstance(prop, RodProperty) for prop in model.properties.values()),
+            "PBAR": sum(isinstance(prop, BarProperty) for prop in model.properties.values()),
+            "PSHELL": sum(isinstance(prop, ShellProperty) for prop in model.properties.values()),
+            "CROD": sum(isinstance(element, RodElement) for element in model.elements.values()),
+            "CBAR": sum(isinstance(element, BarElement) for element in model.elements.values()),
+            "CTRIA3": sum(isinstance(element, CTRIA3Element) for element in model.elements.values()),
+            "CQUAD4": sum(isinstance(element, CQUAD4Element) for element in model.elements.values()),
+            "FORCE": sum(isinstance(load, SinglePointLoad) for load in model.loads),
+            "MOMENT": sum(isinstance(load, SinglePointMoment) for load in model.loads),
+            "SPC (NORMALIZED)": sum(
+                isinstance(constraint, SPCConstraint) for constraint in model.constraints
+            ),
+        }
+
+    stream.write("0. MODEL SUMMARY\n")
+    rows = ((name, counts[name]) for name in sorted(counts) if counts[name])
+    _write_table(
+        stream,
+        ("ENTRY TYPE", "NUMBER OF ENTRIES"),
+        (22, 20),
+        rows,
+        left_aligned_columns=frozenset({0}),
+    )
+
+
+def _write_analysis_configuration(stream: TextIO, model) -> None:
+    """Write the format-independent analysis selection used by the solver."""
+    analysis = getattr(model, "analysis", None)
+    analysis_type = _analysis_type(model)
+    nonlinear = analysis_type == AnalysisType.NONLINEAR_STATIC
+    solution_sequence = getattr(analysis, "solution_sequence", None)
+    if solution_sequence is None:
+        solution_label = "SOL 101 (DEFAULT)" if not nonlinear else "UNSPECIFIED"
+    else:
+        solution_label = f"SOL {solution_sequence}"
+
+    rows = [
+        ("SOLUTION SEQUENCE", solution_label),
+        ("ANALYSIS TYPE", "NONLINEAR STATIC" if nonlinear else "LINEAR STATIC"),
+        ("CASE CONTROL ANALYSIS", _configured_value(getattr(analysis, "analysis_keyword", None))),
+    ]
+    if nonlinear:
+        rows.extend(
+            (
+                ("LARGE DISPLACEMENTS", _yes_no(getattr(analysis, "large_displacements", False))),
+                ("PARAM,LGDISP", _configured_value(getattr(analysis, "large_displacement_parameter", None))),
+                ("PARAM,FOLLOWK", _yes_no(getattr(analysis, "follower_force_stiffness", False))),
+            )
+        )
+
+    stream.write("0A. ANALYSIS CONFIGURATION\n")
+    _write_table(
+        stream,
+        ("PARAMETER", "VALUE"),
+        (32, 24),
+        rows,
+        left_aligned_columns=frozenset({0, 1}),
+    )
+
+
+def _write_nonlinear_step_control(stream: TextIO, model) -> None:
+    analysis = getattr(model, "analysis", None)
+    control = getattr(analysis, "nonlinear_step", None)
+    if control is None:
+        return
+
+    rows = [
+        ("CONTROL ENTRY", control.source),
+        ("CONTROL ID", control.sid),
+        ("TOTAL TIME", control.total_time),
+        ("CONTROL DEFINITION", _configured_value(control.control_definition)),
+        ("INCREMENT METHOD", control.increment_method),
+    ]
+    if control.increment_method == "FIXED":
+        rows.append(("NUMBER OF INCREMENTS", control.number_of_increments))
+    else:
+        rows.extend(
+            (
+                ("INITIAL STEP FRACTION", control.initial_step_fraction),
+                ("MINIMUM STEP FRACTION", control.minimum_step_fraction),
+                ("MAXIMUM STEP FRACTION", control.maximum_step_fraction),
+                ("DESIRED ITERATIONS", _configured_value(control.desired_iterations)),
+                ("STEP SCALE FACTOR", _configured_value(control.step_scale_factor)),
+                ("MAXIMUM INCREMENTS", _configured_value(control.maximum_increments)),
+            )
+        )
+    rows.extend(
+        (
+            ("OUTPUT INTERVALS", control.output_intervals),
+            ("MINIMUM ITERATIONS", control.minimum_iterations),
+            ("MAXIMUM ITERATIONS", control.maximum_iterations),
+            ("MAXIMUM BISECTIONS", control.maximum_bisections),
+            ("CONVERGENCE FLAGS", control.convergence),
+            ("DISPLACEMENT TOLERANCE", _configured_value(control.displacement_tolerance)),
+            ("RESIDUAL TOLERANCE", _configured_value(control.residual_tolerance)),
+            ("WORK TOLERANCE", _configured_value(control.work_tolerance)),
+            ("STIFFNESS UPDATE METHOD", control.stiffness_update_method),
+        )
+    )
+    if control.stiffness_update_interval is not None:
+        rows.append(("STIFFNESS UPDATE INTERVAL", control.stiffness_update_interval))
+
+    stream.write("0B. NONLINEAR STEP CONTROL\n")
+    _write_table(
+        stream,
+        ("PARAMETER", "VALUE"),
+        (32, 24),
+        rows,
+        left_aligned_columns=frozenset({0, 1}),
+    )
+
+
+def _write_nonlinear_summary(stream: TextIO, results: Mapping) -> None:
+    """Write incremental convergence metadata when supplied by the solver."""
+    if "increments" not in results:
+        return
+    increments = results["increments"]
+    stream.write("0C. NONLINEAR SOLUTION SUMMARY\n")
+    rows = (
+        ("FINAL LOAD FACTOR", results.get("load_factor", 0.0)),
+        ("CONVERGED INCREMENTS", len(increments)),
+        ("CONVERGED NEWTON ITERATIONS", sum(increment.iterations for increment in increments)),
+        ("RECORDED NEWTON CORRECTIONS", len(results.get("iterations", ()))),
+        ("CUTBACKS", results.get("cutbacks", 0)),
+        ("STRAIN ENERGY", results.get("strain_energy", 0.0)),
+    )
+    _write_table(
+        stream,
+        ("QUANTITY", "VALUE"),
+        (28, 20),
+        rows,
+        left_aligned_columns=frozenset({0}),
+    )
+
+
+def _write_nonlinear_histories(stream: TextIO, results: Mapping) -> None:
+    if "increments" not in results:
+        return
+
+    increments = results["increments"]
+    stream.write("4. NONLINEAR SOLUTION HISTORY\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+    stream.write("4.1. CONVERGED INCREMENT HISTORY\n")
+    _write_table(
+        stream,
+        (
+            "INCREMENT", "LOAD FACTOR", "STEP SIZE", "ITERATIONS",
+            "RESIDUAL NORM", "RELATIVE RESIDUAL", "CUTBACKS", "STRAIN ENERGY",
+        ),
+        (9, 16, 16, 10, 17, 18, 9, 17),
+        (
+            (
+                increment.increment,
+                increment.load_factor,
+                increment.step_size,
+                increment.iterations,
+                increment.residual_norm,
+                increment.relative_residual_norm,
+                increment.cutbacks,
+                increment.strain_energy,
+            )
+            for increment in increments
+        ),
+    )
+
+    iterations = results.get("iterations", ())
+    stream.write("4.2. NEWTON ITERATION HISTORY\n")
+    stream.write(
+        "     One row is written after each Newton correction. Repeated increment IDs may belong "
+        "to attempts retried after a cutback.\n"
+    )
+    _write_table(
+        stream,
+        (
+            "INCREMENT", "LOAD FACTOR", "ITERATION", "RESIDUAL NORM",
+            "RELATIVE RESIDUAL", "CORRECTION NORM",
+        ),
+        (9, 16, 10, 17, 18, 18),
+        (
+            (
+                iteration.increment,
+                iteration.load_factor,
+                iteration.iteration,
+                iteration.residual_norm,
+                iteration.relative_residual_norm,
+                iteration.correction_norm,
+            )
+            for iteration in iterations
+        ),
+    )
+
+
+def _write_final_results_heading(stream: TextIO, model) -> None:
+    if _analysis_type(model) == AnalysisType.NONLINEAR_STATIC:
+        title = "FINAL CONVERGED STATE RESULTS"
+    else:
+        title = "FINAL LINEAR SOLUTION RESULTS"
+    stream.write(title + "\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+
+
+def _write_displacements(stream: TextIO, model, displacements, dof_mapper) -> None:
+    stream.write("1. NODAL DISPLACEMENTS\n")
+    headers = ("NODE ID", "T1", "T2", "T3", "R1", "R2", "R3")
+    widths = (10, 17, 17, 17, 17, 17, 17)
+
+    def rows():
+        for node_id in sorted(model.nodes):
+            indices = dof_mapper.get_dof_indices(node_id)
+            values = displacements[indices]
+            yield (node_id, *values)
+
+    _write_table(stream, headers, widths, rows())
+
+
+def _write_reactions(stream: TextIO, reactions: Mapping[int, np.ndarray]) -> None:
+    stream.write("2. SPC REACTION FORCES AND MOMENTS (NON-ZERO NODES)\n")
+    headers = ("NODE ID", "F1", "F2", "F3", "M1", "M2", "M3")
+    widths = (10, 17, 17, 17, 17, 17, 17)
+    rows = [
+        (node_id, *reactions[node_id])
+        for node_id in sorted(reactions)
+        if np.linalg.norm(reactions[node_id]) > 1.0e-9
+    ]
+    if rows:
+        _write_table(stream, headers, widths, rows)
+    else:
+        stream.write("(No non-zero SPC reactions recorded)\n\n")
+
+
+def _write_crod_results(stream: TextIO, section: int, items: list[tuple[int, Mapping]]) -> int:
+    stream.write(f"3.{section}. FORCES IN CROD ELEMENTS\n")
+    _write_table(
+        stream,
+        ("ELEMENT ID", "AXIAL FORCE", "TORQUE"),
+        (12, 18, 18),
+        ((eid, data.get("axial_force", 0.0), data.get("torque", 0.0)) for eid, data in items),
+    )
+    section += 1
+
+    stream.write(f"3.{section}. STRESSES AND STRAINS IN CROD ELEMENTS\n")
+    _write_table(
+        stream,
+        ("ELEMENT ID", "AXIAL STRESS", "TORSIONAL STRESS", "AXIAL STRAIN", "TWIST RATE"),
+        (12, 18, 20, 18, 18),
+        (
+            (
+                eid,
+                data.get("axial_stress", 0.0),
+                data.get("torsional_stress", 0.0),
+                data.get("axial_strain", 0.0),
+                data.get("twist_rate", 0.0),
+            )
+            for eid, data in items
+        ),
+    )
+    return section + 1
+
+
+def _write_cbar_results(stream: TextIO, section: int, items: list[tuple[int, Mapping]]) -> int:
+    stream.write(f"3.{section}. END FORCES AND MOMENTS IN CBAR ELEMENTS\n")
+    force_rows = []
+    for eid, data in items:
+        for end, key in (("A", "forces_n1"), ("B", "forces_n2")):
+            forces = data.get(key, {})
+            force_rows.append(
+                (
+                    eid, end,
+                    forces.get("Fx", 0.0), forces.get("Fy", 0.0), forces.get("Fz", 0.0),
+                    forces.get("Mx", 0.0), forces.get("My", 0.0), forces.get("Mz", 0.0),
+                )
+            )
+    _write_table(
+        stream,
+        ("ELEMENT ID", "END", "AXIAL FX", "SHEAR FY", "SHEAR FZ", "TORQUE MX", "BENDING MY", "BENDING MZ"),
+        (12, 6, 17, 17, 17, 17, 17, 17),
+        force_rows,
+        left_aligned_columns=frozenset({1}),
+    )
+    section += 1
+
+    stream.write(f"3.{section}. STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS\n")
+    stress_rows = []
+    for eid, data in items:
+        for end, key in (("A", "stress_points_end_a"), ("B", "stress_points_end_b")):
+            for point_id, point in sorted(data.get(key, {}).items()):
+                stress_rows.append(
+                    (
+                        eid, end, point_id, point.get("y", 0.0), point.get("z", 0.0),
+                        point.get("sigma_axial", 0.0), point.get("sigma_bending", 0.0),
+                        point.get("sigma_total", 0.0), point.get("tau_xy", 0.0),
+                    )
+                )
+    _write_table(
+        stream,
+        ("ELEMENT ID", "END", "POINT", "LOCAL Y", "LOCAL Z", "AXIAL", "BENDING", "TOTAL", "TORSIONAL"),
+        (12, 6, 8, 16, 16, 17, 17, 17, 17),
+        stress_rows,
+        left_aligned_columns=frozenset({1, 2}),
+    )
+    return section + 1
+
+
+def _write_shell_results(
+    stream: TextIO,
+    section: int,
+    element_type: str,
+    items: list[tuple[int, Mapping]],
+) -> int:
+    stream.write(f"3.{section}. FORCE AND MOMENT RESULTANTS IN {element_type} ELEMENTS\n")
+    stream.write("     N and Q are force resultants per unit length; M are moment resultants per unit length.\n")
+    _write_table(
+        stream,
+        ("ELEMENT ID", "MEMBRANE NX", "MEMBRANE NY", "MEMBRANE NXY", "BENDING MX", "BENDING MY", "TWIST MXY", "SHEAR QX", "SHEAR QY"),
+        (12, 17, 17, 18, 17, 17, 17, 17, 17),
+        (
+            (
+                eid,
+                data.get("membrane_force_x", 0.0), data.get("membrane_force_y", 0.0),
+                data.get("membrane_force_xy", 0.0), data.get("bending_moment_x", 0.0),
+                data.get("bending_moment_y", 0.0), data.get("bending_moment_xy", 0.0),
+                data.get("shear_force_x", 0.0), data.get("shear_force_y", 0.0),
+            )
+            for eid, data in items
+        ),
+    )
+    section += 1
+
+    stream.write(f"3.{section}. TOP AND BOTTOM FIBER STRESSES IN {element_type} ELEMENTS\n")
+    stream.write("     TOP is local z=+t/2; BOTTOM is local z=-t/2.\n")
+    stress_rows = []
+    for eid, data in items:
+        stress_rows.extend(
+            (
+                (
+                    eid, "TOP (+T/2)", data.get("stress_top_fiber_x", 0.0),
+                    data.get("stress_top_fiber_y", 0.0), data.get("tau_top_fiber_xy", 0.0),
+                    data.get("major_principal_top", 0.0), data.get("minor_principal_top", 0.0),
+                    data.get("von_mises_top", 0.0),
+                ),
+                (
+                    eid, "BOTTOM (-T/2)", data.get("stress_bot_fiber_x", 0.0),
+                    data.get("stress_bot_fiber_y", 0.0), data.get("tau_bot_fiber_xy", 0.0),
+                    data.get("major_principal_bot", 0.0), data.get("minor_principal_bot", 0.0),
+                    data.get("von_mises_bot", 0.0),
+                ),
+            )
+        )
+    _write_table(
+        stream,
+        ("ELEMENT ID", "FIBER", "NORMAL X", "NORMAL Y", "SHEAR XY", "MAJOR PRINCIPAL", "MINOR PRINCIPAL", "VON MISES"),
+        (12, 15, 17, 17, 17, 20, 20, 17),
+        stress_rows,
+        left_aligned_columns=frozenset({1}),
+    )
+    return section + 1
+
+
+def _write_element_results(stream: TextIO, stresses: Mapping[int, Mapping]) -> None:
+    stream.write("3. ELEMENT RESULTS IN LOCAL ELEMENT AXES\n")
+    stream.write("=" * _REPORT_WIDTH + "\n\n")
+    if not stresses:
+        stream.write("(No element results recorded)\n\n")
+        return
+
+    by_type: dict[str, list[tuple[int, Mapping]]] = defaultdict(list)
+    for eid, data in sorted(stresses.items()):
+        by_type[str(data.get("type", "UNKNOWN")).upper()].append((eid, data))
+
+    section = 1
+    for element_type in _RESULT_TYPE_ORDER:
+        items = by_type.pop(element_type, [])
+        if not items:
+            continue
+        if element_type == "CROD":
+            section = _write_crod_results(stream, section, items)
+        elif element_type == "CBAR":
+            section = _write_cbar_results(stream, section, items)
+        else:
+            section = _write_shell_results(stream, section, element_type, items)
+
+    if by_type:
+        stream.write(f"3.{section}. UNRECOGNIZED ELEMENT RESULT TYPES\n")
+        rows = (
+            (eid, element_type)
+            for element_type, items in sorted(by_type.items())
+            for eid, _ in items
+        )
+        _write_table(
+            stream,
+            ("ELEMENT ID", "RESULT TYPE"),
+            (12, 20),
+            rows,
+            left_aligned_columns=frozenset({1}),
+        )
+
+
+def write_report(path: Path | str, job_name: str, model, results: Mapping, solver) -> None:
+    """Write the complete analysis report to ``path``.
+
+    ``solver.dof_mapper`` is used only to map the displacement vector back to
+    node IDs.  All other content comes from the model and result dictionaries.
+    """
+    report_path = Path(path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with report_path.open("w", encoding="utf-8", newline="\n") as stream:
+        _write_report_heading(stream, job_name, model)
+        _write_model_summary(stream, model)
+        _write_analysis_configuration(stream, model)
+        _write_nonlinear_step_control(stream, model)
+        _write_nonlinear_summary(stream, results)
+        _write_final_results_heading(stream, model)
+        _write_displacements(stream, model, results["displacements"], solver.dof_mapper)
+        _write_reactions(stream, results["reactions"])
+        _write_element_results(stream, results["stresses"])
+        _write_nonlinear_histories(stream, results)

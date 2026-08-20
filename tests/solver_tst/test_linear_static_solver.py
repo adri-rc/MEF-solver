@@ -12,7 +12,7 @@ import numpy as np
 from src.solver.linear_static_solver import LinearStaticSolver
 from src.preprocessing.data_model import (
     FEMModel, Node, IsotropicMaterial, RodProperty, RodElement,
-    BarProperty, BarElement, 
+    BarProperty, BarElement, CTRIA3Element, CQUAD4Element,
     SPCConstraint, SinglePointLoad, SinglePointMoment
 )
 
@@ -120,21 +120,6 @@ class TestLinearStaticSolverIntegration:
 
 
     # --- ERROR HANDLING TESTS (Fail Fast) ---
-
-    def test_error_unsupported_element(self):
-        """@test Fail on Unsupported Element (e.g., QUAD)."""
-        from src.preprocessing.data_model import QUADElement
-        
-        model = FEMModel()
-        model.nodes[1] = Node(1, 0, 0.,0.,0., 0, "", 0)
-        model.elements[1] = QUADElement(eid=1, prop_id=1, nodes=[1, 2, 3, 4])
-        
-        solver = LinearStaticSolver(model)
-        
-        with pytest.raises(NotImplementedError) as excinfo:
-            solver.build_stiffness_matrix()
-        
-        assert "QUADElement" in str(excinfo.value)
     
     def test_error_unsupported_load(self):
         """@test Fail on Unsupported Load Type."""

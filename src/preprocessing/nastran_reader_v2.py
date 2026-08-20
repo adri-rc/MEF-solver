@@ -1,5 +1,5 @@
-import sys
 from typing import Optional
+import numpy as np
 
 # Intentamos importar pyNastran. Si no está, avisamos al usuario.
 try:
@@ -10,10 +10,12 @@ try:
     from pyNastran.bdf.cards.properties.bars import PBAR
     from pyNastran.bdf.cards.elements.rods import CROD
     from pyNastran.bdf.cards.elements.bars import CBAR
+    from pyNastran.bdf.cards.properties.shell import PSHELL
+    from pyNastran.bdf.cards.elements.shell import CTRIA3, CQUAD4
 except ImportError:
-    print("[ERROR] 'pyNastran' library is not installed.")
-    print("        Please install it using: pip install pyNastran")
-    sys.exit(1)
+    raise ImportError(
+        "'pyNastran' is required to read Nastran files. Install it with: pip install pyNastran"
+    )
 
 from .data_model import (
     FEMModel, 
@@ -25,7 +27,13 @@ from .data_model import (
     BarElement,
     SinglePointLoad, 
     SinglePointMoment, 
-    SPCConstraint
+    SPCConstraint,
+    ShellProperty,
+    CTRIA3Element,
+    CQUAD4Element,
+    AnalysisConfiguration,
+    AnalysisType,
+    NonlinearStepControl,
 )
 
 """
@@ -36,6 +44,29 @@ from .data_model import (
     It acts as a 'mapper' between pyNastran internal objects 
     and the user's data_model.py.
 """
+
+
+def _get_source_entry_counts(bdf_model: BDF) -> dict[str, int]:
+    """Return F06-like logical Bulk Data counts for report presentation.
+
+    MSC consolidates SPC1 cards that share the same SID and component string
+    in MODEL SUMMARY.  pyNastran retains the physical-card count, so SPC1 is
+    normalized here without affecting the constraints used by the solver.
+    """
+    counts = {
+        str(name).upper(): int(count)
+        for name, count in bdf_model.card_count.items()
+        if name != "ENDDATA" and count
+    }
+    spc1_entries = {
+        (int(sid), str(spc.components))
+        for sid, cards in bdf_model.spcs.items()
+        for spc in cards
+        if spc.type == "SPC1"
+    }
+    if spc1_entries:
+        counts["SPC1"] = len(spc1_entries)
+    return dict(sorted(counts.items()))
 
 def _map_materials(bdf_model: BDF, model: FEMModel):
     """
@@ -125,6 +156,29 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
                 stress_points=extracted_points
             )
 
+        # --- PSHELL Mapping ---
+        elif isinstance(prop, PSHELL):
+            
+            mid2_val = prop.Mid2()
+            if mid2_val == 0 or mid2_val is None:
+                mid2_val = None
+            
+            mid3_val = prop.Mid3()
+            if mid3_val == 0 or mid3_val is None:
+                mid3_val = -1
+                
+            model.properties[pid] = ShellProperty(
+                pid=pid,
+                mat_id=prop.Mid1(),
+                t=prop.t,
+                mat_id_bending=mid2_val,
+                mat_id_shear=None if mid3_val == -1 else mid3_val,
+                bending_inertia_ratio=prop.twelveIt3,
+                shear_thickness_ratio=prop.tst,
+            )
+
+
+
 def _map_nodes(bdf_model: BDF, model: FEMModel):
     """
     @brief Translates pyNastran nodes to Node project class.
@@ -159,16 +213,31 @@ def _map_nodes(bdf_model: BDF, model: FEMModel):
         new_node.x = global_xyz[0]
         new_node.y = global_xyz[1]
         new_node.z = global_xyz[2]
+
+        if node.cd not in (None, 0):
+            coord = node.cd_ref
+            basis_global = np.column_stack([
+                coord.transform_vector_to_global(np.eye(3)[axis]) for axis in range(3)
+            ])
+            new_node.dof_transform = basis_global.T
         
         model.nodes[nid] = new_node
 
 def _map_elements(bdf_model: BDF, model: FEMModel):
     """
-    @brief Translates elements (CROD, CBAR) to data_model project classes.
+    @brief Translates elements (CROD, CBAR, CTRIA3, CQUAD4) to data_model project classes.
     @details Raises ValueError if unsupported elements are found.
     """
     # Set to avoid spamming the same warning 1000 times if there are 1000 identical elements
     unsupported_types = set()
+
+    def material_angle_degrees(shell_element) -> float:
+        _, _, element_x, element_y, _ = shell_element.element_coordinate_system()
+        _, _, material_x, _, _ = shell_element.material_coordinate_system()
+        return round(float(np.degrees(np.arctan2(
+            np.dot(material_x, element_y), np.dot(material_x, element_x)
+        ))), 12)
+
     for eid, elem in bdf_model.elements.items():
         
         # --- CROD ---
@@ -192,9 +261,15 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 if elem.x is not None:
                     orient_vec = list(elem.x)
             
-            # Offsets (wa, wb)
-            wa = list(elem.wa) if elem.wa is not None else [0.0, 0.0, 0.0]
-            wb = list(elem.wb) if elem.wb is not None else [0.0, 0.0, 0.0]
+            # Let pyNastran resolve G0/X, OFFT and the WA/WB coordinate flags.
+            # The returned orientation and offsets are expressed in basic axes.
+            axes_failed, axes = elem.get_axes(bdf_model)
+            if axes_failed:
+                raise ValueError(f"Unable to determine axes for CBAR {eid}.")
+            _, _, yhat, _, wa_basic, wb_basic = axes
+            orient_vec = list(yhat)
+            wa = list(wa_basic)
+            wb = list(wb_basic)
             
             model.elements[eid] = BarElement(
                 eid=eid,
@@ -208,9 +283,28 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
                 wa=wa,
                 wb=wb
             )
+
+        # --- CTRIA3 ---
+        elif isinstance(elem, CTRIA3):
+            model.elements[eid] = CTRIA3Element(
+                eid=eid,
+                prop_id=elem.Pid(),
+                nodes=elem.node_ids,
+                theta=material_angle_degrees(elem)
+            )
+        
+        # --- CQUAD4 ---
+        elif isinstance(elem, CQUAD4):
+            model.elements[eid] = CQUAD4Element(
+                eid=eid,
+                prop_id=elem.Pid(),
+                nodes=elem.node_ids,
+                theta=material_angle_degrees(elem)
+            )
+
         # --- CATCH-ALL FOR UNSUPPORTED ELEMENTS ---
         else:
-            # store the type of element (e.g., 'CTRIA3', 'CQUAD4', 'CTETRA')
+            # store the type of element
             unsupported_types.add(elem.type)
         
         # CRITICAL: Stop execution if the mesh contains elements we cannot solve.
@@ -218,13 +312,18 @@ def _map_elements(bdf_model: BDF, model: FEMModel):
         error_msg = (
             f"\n[FATAL ERROR] The model contains element types not supported by this solver:\n"
             f"              Found: {', '.join(unsupported_types)}\n"
-            f"              Supported types are only: CROD, CBAR.\n"
+            f"              Supported types are only: CROD, CBAR, CTRIA3, CQUAD4.\n"
             f"              Execution stopped to prevent incorrect physics."
         )
         print(error_msg)
         raise ValueError(error_msg)
 
-def _map_loads(bdf_model: BDF, model: FEMModel):
+def _map_loads(
+    bdf_model: BDF,
+    model: FEMModel,
+    load_sid: Optional[int] = None,
+    map_all_base_cards: bool = True,
+):
     """
     @brief Translates loads (FORCE, MOMENT) to data_model objects.
     @details 
@@ -232,9 +331,30 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
     pyNastran groups loads by Set ID (SID) in bdf_model.loads.
     """
     unsupported_loads = set()
-    # bdf_model.loads is a dict {sid: [LoadCard1, LoadCard2, ...]}
-    for sid, loads_list in bdf_model.loads.items():
-        for load in loads_list:
+    if load_sid is not None and not (bdf_model.loads or bdf_model.load_combinations):
+        selected_loads = []
+    elif load_sid is not None:
+        loads_list, scale_factors, _ = bdf_model.get_reduced_loads(
+            load_sid, consider_load_combinations=True
+        )
+        selected_loads = zip(loads_list, scale_factors)
+    elif map_all_base_cards:
+        selected_loads = (
+            (load, 1.0)
+            for loads_list in bdf_model.loads.values()
+            for load in loads_list
+        )
+    else:
+        selected_loads = []
+
+    for load, combination_scale in selected_loads:
+            sid = load_sid if load_sid is not None else load.sid
+            if load.type not in ('FORCE', 'MOMENT'):
+                unsupported_loads.add(load.type)
+                continue
+            vector_global = np.asarray(load.xyz, dtype=float)
+            if load.cid not in (None, 0):
+                vector_global = load.cid_ref.transform_vector_to_global(vector_global)
             
             # pyNastran has a “type” attribute to identify the card
             if load.type == 'FORCE':
@@ -242,18 +362,18 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
                 model.loads.append(SinglePointLoad(
                     sid=sid,
                     appnode_id=load.node_id,
-                    module=load.mag,
-                    vector=list(load.xyz),
-                    cid=load.cid
+                    module=combination_scale * load.mag,
+                    vector=list(vector_global),
+                    cid=0
                 ))
             
             elif load.type == 'MOMENT':
                 model.loads.append(SinglePointMoment(
                     sid=sid,
                     appnode_id=load.node_id,
-                    module=load.mag,
-                    vector=list(load.xyz),
-                    cid=load.cid
+                    module=combination_scale * load.mag,
+                    vector=list(vector_global),
+                    cid=0
                 ))
             # --- CATCH-ALL FOR UNSUPPORTED LOADS ---
             else:
@@ -269,7 +389,12 @@ def _map_loads(bdf_model: BDF, model: FEMModel):
         print(error_msg)
         raise ValueError(error_msg)
 
-def _map_constraints(bdf_model: BDF, model: FEMModel):
+def _map_constraints(
+    bdf_model: BDF,
+    model: FEMModel,
+    spc_sid: Optional[int] = None,
+    map_all_base_cards: bool = True,
+):
     """
     @brief Translates SPCs (Single Point Constraints) to data_model project classes.
     @details 
@@ -289,9 +414,24 @@ def _map_constraints(bdf_model: BDF, model: FEMModel):
     # or master/slave elimination, we must forbid them.
     if bdf_model.mpcs or bdf_model.rigid_elements:
         unsupported_constraints.add("MPC / Rigid Elements (RBE2, RBE3)")
+
+    for node in model.nodes.values():
+        if node.ps:
+            model.constraints.append(SPCConstraint(
+                sid=0, node_id=node.nid, components=str(node.ps), value=0.0
+            ))
     
     # --- 2. CHECK FOR SINGLE-POINT CONSTRAINTS (SPCs) ---
-    for sid, spcs_list in bdf_model.spcs.items():
+    if spc_sid is not None and not (bdf_model.spcs or bdf_model.spcadds):
+        spc_groups = []
+    elif spc_sid is not None:
+        spc_groups = [(spc_sid, bdf_model.get_reduced_spcs(spc_sid, consider_spcadd=True))]
+    elif map_all_base_cards:
+        spc_groups = bdf_model.spcs.items()
+    else:
+        spc_groups = []
+
+    for sid, spcs_list in spc_groups:
         for spc in spcs_list:
             if spc.type == 'SPC1':
                 # SPC1 applies to a list of nodes with 0 enforced displacement
@@ -332,7 +472,280 @@ def _map_constraints(bdf_model: BDF, model: FEMModel):
         print(error_msg)
         raise ValueError(error_msg)
 
-def parse_nastran_input(entry_file_path: str) -> FEMModel:
+def _select_case_control(bdf: BDF, requested_subcase_id: Optional[int]):
+    """Select one analysis SUBCASE and return its LOAD/SPC set IDs."""
+    analysis_subcases = sorted(sid for sid in bdf.subcases if sid != 0)
+    if requested_subcase_id is not None:
+        if requested_subcase_id not in analysis_subcases:
+            raise ValueError(
+                f"SUBCASE {requested_subcase_id} does not exist. Available: {analysis_subcases}"
+            )
+        selected_id = requested_subcase_id
+    elif len(analysis_subcases) == 1:
+        selected_id = analysis_subcases[0]
+    elif len(analysis_subcases) > 1:
+        raise ValueError(
+            "The input contains multiple analysis subcases. Pass subcase_id explicitly "
+            f"to parse_nastran_input(). Available: {analysis_subcases}"
+        )
+    else:
+        global_subcase = bdf.subcases.get(0)
+        if global_subcase is None or not ({'LOAD', 'SPC'} & set(global_subcase.params)):
+            return None, None, None
+        selected_id = 0
+
+    subcase = bdf.subcases[selected_id]
+    load_sid = subcase.get_parameter('LOAD')[0] if 'LOAD' in subcase.params else None
+    spc_sid = subcase.get_parameter('SPC')[0] if 'SPC' in subcase.params else None
+    return selected_id, load_sid, spc_sid
+
+
+def _nastran_float(value: str) -> float:
+    """Parse ordinary and compact Nastran floating-point notation."""
+    normalized = value.strip().upper().replace("D", "E")
+    if "E" not in normalized:
+        for index in range(1, len(normalized)):
+            if normalized[index] in "+-" and any(
+                character.isdigit() for character in normalized[:index]
+            ):
+                normalized = f"{normalized[:index]}E{normalized[index:]}"
+                break
+    return float(normalized)
+
+
+def _rejected_card_rows(card_lines) -> list[list[str]]:
+    """Return one field row per line of an unsupported pyNastran card."""
+    rows = []
+    for raw_line in card_lines:
+        line = raw_line.split("$", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        if "," in line:
+            fields = [field.strip() for field in line.split(",")]
+        else:
+            fields = [line[index:index + 8].strip() for index in range(0, len(line), 8)]
+        if fields:
+            fields = fields[1:]
+        while fields and fields[-1] == "":
+            fields.pop()
+        rows.append(fields)
+    return rows
+
+
+def _field(row: list[str], index: int, default=None):
+    if index >= len(row) or row[index] == "":
+        return default
+    return row[index]
+
+
+def _parse_nlstep_cards(bdf: BDF) -> dict[int, NonlinearStepControl]:
+    """Parse MSC NLSTEP cards rejected by pyNastran 1.4.1."""
+    controls = {}
+    for rejected_card in bdf.reject_lines:
+        rows = _rejected_card_rows(rejected_card)
+        if not rows:
+            continue
+        # pyNastran may attach comments immediately preceding an unsupported
+        # card to the same reject_lines group.  Identify the first physical
+        # card line after removing comments instead of treating '$' as the
+        # rejected card name.
+        first_raw = next(
+            (
+                content
+                for raw_line in rejected_card
+                if (content := raw_line.split("$", 1)[0].strip())
+            ),
+            "",
+        )
+        card_name = first_raw.split(",", 1)[0].strip().split()[0].upper()
+        if card_name != "NLSTEP":
+            continue
+
+        header = rows[0]
+        if not header or _field(header, 0) is None:
+            raise ValueError("NLSTEP requires a positive ID.")
+        sid = int(_field(header, 0))
+        values = {
+            "sid": sid,
+            "source": "NLSTEP",
+            "total_time": _nastran_float(_field(header, 1, "1.0")),
+            "control_definition": _field(header, 2),
+            "increment_method": "FIXED",
+            "number_of_increments": 50,
+            "output_intervals": 0,
+            "maximum_iterations": 10,
+            "minimum_iterations": 1,
+            "maximum_bisections": 10,
+            "convergence": "PV",
+            "stiffness_update_method": "PFNT",
+        }
+
+        increment_keyword_seen = False
+        for row in rows[1:]:
+            if not row:
+                continue
+            keyword = row[0].upper()
+            if keyword == "GENERAL":
+                values["maximum_iterations"] = int(_field(row, 1, "10"))
+                values["minimum_iterations"] = int(_field(row, 2, "1"))
+                values["maximum_bisections"] = int(_field(row, 3, "10"))
+                creep = int(_field(row, 4, "0"))
+                if creep != 0:
+                    raise ValueError(f"NLSTEP {sid} requests unsupported creep analysis.")
+            elif keyword == "FIXED":
+                if increment_keyword_seen:
+                    raise ValueError(f"NLSTEP {sid} defines more than one stepping method.")
+                increment_keyword_seen = True
+                values["increment_method"] = "FIXED"
+                values["number_of_increments"] = int(_field(row, 1, "50"))
+            elif keyword == "ADAPT":
+                if increment_keyword_seen:
+                    raise ValueError(f"NLSTEP {sid} defines more than one stepping method.")
+                increment_keyword_seen = True
+                values["increment_method"] = "ADAPT"
+                values["number_of_increments"] = None
+                values["initial_step_fraction"] = _nastran_float(_field(row, 1, "0.01"))
+                values["minimum_step_fraction"] = _nastran_float(_field(row, 2, "1.E-5"))
+                values["maximum_step_fraction"] = _nastran_float(_field(row, 3, "0.5"))
+                values["desired_iterations"] = int(_field(row, 4, "4"))
+                values["step_scale_factor"] = _nastran_float(_field(row, 5, "1.2"))
+                values["output_intervals"] = int(_field(row, 6, "0"))
+                values["maximum_increments"] = int(_field(row, 7, "99999"))
+            elif keyword == "MECH":
+                values["convergence"] = _field(row, 1, "PV")
+                eps_u = _field(row, 2)
+                eps_p = _field(row, 3)
+                eps_w = _field(row, 4)
+                values["displacement_tolerance"] = (
+                    None if eps_u is None else _nastran_float(eps_u)
+                )
+                values["residual_tolerance"] = (
+                    None if eps_p is None else _nastran_float(eps_p)
+                )
+                values["work_tolerance"] = (
+                    None if eps_w is None else _nastran_float(eps_w)
+                )
+                values["stiffness_update_method"] = _field(row, 5, "PFNT")
+                kstep = _field(row, 6)
+                values["stiffness_update_interval"] = (
+                    None if kstep is None else int(kstep)
+                )
+            else:
+                raise ValueError(
+                    f"NLSTEP {sid} uses unsupported continuation keyword {keyword}. "
+                    "Supported keywords are GENERAL, FIXED, ADAPT and MECH."
+                )
+        if sid in controls:
+            raise ValueError(f"Duplicate NLSTEP ID {sid}.")
+        controls[sid] = NonlinearStepControl(**values)
+    return controls
+
+
+def _legacy_nlparm_control(nlparm) -> NonlinearStepControl:
+    output_intervals = -1 if nlparm.int_out == "NO" else 0
+    return NonlinearStepControl(
+        sid=nlparm.nlparm_id,
+        source="NLPARM",
+        increment_method="FIXED",
+        number_of_increments=nlparm.ninc or 10,
+        output_intervals=output_intervals,
+        maximum_iterations=nlparm.max_iter,
+        minimum_iterations=1,
+        maximum_bisections=abs(nlparm.max_bisect),
+        convergence=nlparm.conv,
+        displacement_tolerance=nlparm.eps_u,
+        residual_tolerance=nlparm.eps_p,
+        work_tolerance=nlparm.eps_w,
+        stiffness_update_method=nlparm.kmethod,
+        stiffness_update_interval=nlparm.kstep,
+    )
+
+
+def _map_analysis_configuration(
+    bdf: BDF,
+    model: FEMModel,
+    selected_subcase_id: Optional[int],
+) -> None:
+    """Map the active solution sequence and nonlinear solution controls."""
+    solution_sequence = int(bdf.sol) if bdf.sol is not None else None
+    subcase = bdf.subcases.get(selected_subcase_id) if selected_subcase_id is not None else None
+    analysis_keyword = None
+    if subcase is not None and "ANALYSIS" in subcase.params:
+        analysis_keyword = str(subcase.get_parameter("ANALYSIS")[0]).upper()
+
+    nonlinear_aliases = {"NLSTAT", "NLSTATIC", "NLSTATICS"}
+    if (
+        solution_sequence == 400
+        and analysis_keyword is not None
+        and analysis_keyword not in nonlinear_aliases
+    ):
+        raise ValueError(
+            "This preprocessor stage supports only ANALYSIS=NLSTAT for SOL 400; "
+            f"found {analysis_keyword}."
+        )
+    is_nonlinear_static = solution_sequence == 400 or analysis_keyword in nonlinear_aliases
+    analysis_type = (
+        AnalysisType.NONLINEAR_STATIC if is_nonlinear_static else AnalysisType.LINEAR_STATIC
+    )
+
+    lgdisp_value = None
+    large_displacements = False
+    if "LGDISP" in bdf.params:
+        lgdisp_value = int(bdf.params["LGDISP"].values[0])
+        if lgdisp_value not in {-1, 0, 1, 2}:
+            raise ValueError(f"Unsupported PARAM,LGDISP value: {lgdisp_value}")
+        large_displacements = lgdisp_value in {1, 2}
+    follower_force_stiffness = lgdisp_value == 1
+    if "FOLLOWK" in bdf.params:
+        followk_value = str(bdf.params["FOLLOWK"].values[0]).strip().upper()
+        if followk_value in {"YES", "Y", "1"}:
+            follower_force_stiffness = True
+        elif followk_value in {"NO", "N", "0"}:
+            follower_force_stiffness = False
+        else:
+            raise ValueError(f"Unsupported PARAM,FOLLOWK value: {followk_value}")
+
+    nonlinear_step = None
+    if is_nonlinear_static:
+        nlstep_sid = None
+        nlparm_sid = None
+        if subcase is not None and "NLSTEP" in subcase.params:
+            nlstep_sid = int(subcase.get_parameter("NLSTEP")[0])
+        if subcase is not None and "NLPARM" in subcase.params:
+            nlparm_sid = int(subcase.get_parameter("NLPARM")[0])
+        if nlstep_sid is not None and nlparm_sid is not None:
+            raise ValueError("Select either NLSTEP or NLPARM, not both, for one nonlinear subcase.")
+        if nlstep_sid is not None:
+            nlsteps = _parse_nlstep_cards(bdf)
+            if nlstep_sid not in nlsteps:
+                raise ValueError(
+                    f"Case Control selects NLSTEP {nlstep_sid}, but that Bulk Data entry was not found."
+                )
+            nonlinear_step = nlsteps[nlstep_sid]
+        elif nlparm_sid is not None:
+            if nlparm_sid not in bdf.nlparms:
+                raise ValueError(
+                    f"Case Control selects NLPARM {nlparm_sid}, but that Bulk Data entry was not found."
+                )
+            nonlinear_step = _legacy_nlparm_control(bdf.nlparms[nlparm_sid])
+        else:
+            raise ValueError(
+                "Nonlinear static analysis requires an NLSTEP (preferred for SOL 400) "
+                "or NLPARM Case Control selection."
+            )
+
+    model.analysis = AnalysisConfiguration(
+        solution_sequence=solution_sequence,
+        analysis_type=analysis_type,
+        analysis_keyword=analysis_keyword,
+        large_displacement_parameter=lgdisp_value,
+        large_displacements=large_displacements,
+        follower_force_stiffness=follower_force_stiffness,
+        nonlinear_step=nonlinear_step,
+    )
+
+
+def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) -> FEMModel:
     """
     @brief Main entry point using pyNastran.
     @param entry_file_path Path to the .bdf or .dat file.
@@ -374,6 +787,18 @@ def parse_nastran_input(entry_file_path: str) -> FEMModel:
     
     # 2. Initialize our container
     model = FEMModel()
+    selected_subcase, load_sid, spc_sid = _select_case_control(bdf, subcase_id)
+    model.active_subcase_id = selected_subcase
+    model.active_load_sid = load_sid
+    model.active_spc_sid = spc_sid
+    model.source_entry_counts = _get_source_entry_counts(bdf)
+    _map_analysis_configuration(bdf, model, selected_subcase)
+
+    # --- EXTRAER PARÁMETROS DEL DECK DE NASTRAN ---
+    if 'K6ROT' in bdf.params:
+        # pyNastran guarda el valor del parámetro en la lista '.values'
+        model.k6rot = float(bdf.params['K6ROT'].values[0])
+        print(f"[INFO] PARAM, K6ROT detectado en el archivo de entrada. Valor: {model.k6rot}")
     
     # 3. Entity Mapping (Logical Order: Mat -> Prop -> Node -> Elem -> Loads)
     try:
@@ -381,8 +806,10 @@ def parse_nastran_input(entry_file_path: str) -> FEMModel:
         _map_properties(bdf, model)
         _map_nodes(bdf, model)
         _map_elements(bdf, model)
-        _map_loads(bdf, model)
-        _map_constraints(bdf, model)
+        bulk_only = selected_subcase is None
+        _map_loads(bdf, model, load_sid=load_sid, map_all_base_cards=bulk_only)
+        _map_constraints(bdf, model, spc_sid=spc_sid, map_all_base_cards=bulk_only)
+        model.validate(require_elements=False)
         
     except Exception as e:
         print(f"[ERROR] Error during data mapping: {e}")

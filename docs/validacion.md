@@ -1,0 +1,189 @@
+# Validación
+
+## Estado observado
+
+Comando:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Resultado verificado el 20 de agosto de 2026 después de implementar la ruta no
+lineal CROD y validar los decks 92--127:
+
+```text
+430 passed, 6 xfailed
+```
+
+Las advertencias visibles proceden de que pytest no puede escribir su caché en
+el entorno de ejecución; no afectan a los resultados.
+
+## Capas de comprobación
+
+1. Modelo de datos, lector, referencias y sistemas de coordenadas.
+2. Funciones de forma, jacobianos, transformaciones y cuadratura.
+3. Propiedades matemáticas de cada elemento: simetría, modos rígidos,
+   orientación, desacoplamientos y geometrías inválidas.
+4. Matrices DMIG frente a Nastran.
+5. Validación E2E de desplazamientos, cargas, reacciones y resultados de
+   elemento con referencias transcritas en los tests.
+
+El caso 80 añade una comprobación integrada con CBAR, CTRIA3 y CQUAD4 en el
+mismo modelo. Contrasta desplazamientos, cargas, reacciones, resultados de las
+dos familias de lámina y esfuerzos de CBAR. Es la referencia más directa para
+detectar regresiones de ensamblaje o recuperación entre tipos de elemento.
+
+Las validaciones E2E de CBAR transcriben las tablas F06, sin leerlas durante la
+prueba. Los casos 13--17 cubren voladizo, orientación 3D, vigas en serie,
+marco espacial y trípode híbrido; el caso 15 comprueba las tensiones PBAR C/D
+en ambos extremos A/B. El caso 18 amplía la recuperación a C--F y el 19 a una
+geometría espacial con varias propiedades. Los signos de `forces_n1` y
+`forces_n2` son acciones nodales del elemento, mientras que las tablas
+`FORCES IN BAR ELEMENTS` del F06 son acciones internas de sección; cada
+assertion conserva explícitamente esa conversión de convención.
+
+## Matrices CQUAD4
+
+El test `test_E2E_CQUAD_Nastran_K_solution.py` aplica dos criterios
+complementarios:
+
+- error relativo de Frobenius para medir la discrepancia global;
+- comparación término a término mediante `allclose`.
+
+Además repite la comparación en ejes del elemento para membrana,
+placa/cortante, drilling y sus acoplamientos. Esta descomposición evita que la
+mayor magnitud de la membrana oculte un término incorrecto de cortante.
+
+Los casos activos cubren:
+
+- membrana, flexión y combinación de ambas;
+- `K6ROT=0/100`;
+- `MID3` vacío y activo;
+- cambios de `G3` y `TS/T`;
+- rectángulos, trapecios y cuadriláteros afines sesgados;
+- orientación arbitraria de un plano en 3D;
+- DMIG completas de oblicuidad moderada y alta.
+
+El caso 90 reveló que la ley oblicua anterior era demasiado blanda en alta
+oblicuidad. Se mantuvieron el operador por aristas, la flexibilidad residual y
+la contribución MID3 y se ajustó únicamente la métrica torsional racional. El
+resultado cumple:
+
+- matriz completa: error de Frobenius menor que `1e-6`;
+- placa/cortante: menor que `4e-6`;
+- términos del bloque: `rtol=1e-5`, `atol=2e-3`.
+
+## E2E CQUAD4
+
+`test_validation_end_to_end_cquad4.py` no lee F06 durante su ejecución. Los
+valores de Nastran están escritos directamente en los casos, lo que permite
+auditar cada referencia.
+
+El caso 91, pareja cargada del DMIG 90, confirma el ajuste con dos paneles y
+propiedades distintas:
+
+- error vectorial de desplazamientos: `2.07e-5`;
+- error vectorial de reacciones: `6.30e-5`;
+- `N`, `M` y tensiones de fibra: menos de 0.1 % por componente;
+- mayor discrepancia `Qx/Qy`: 47.1 %, con 0.0216 absoluto.
+
+La diferencia de `Q` pertenece a la recuperación centroidal, no a la matriz de
+rigidez. No se observa una discrepancia asociada en desplazamientos, reacciones
+o momentos.
+
+### Casos 57–59
+
+- **57:** `cond(K)=2.90e25`; errores vectoriales `U=1.72e-3`, `R=4.07e-3` y
+  resultados `9.28e-4`. La mayor diferencia relativa de desplazamiento está
+  en una rotación casi nula.
+- **58:** `cond(K)=8.52e26`; traslaciones próximas al 0.3 %, pero rotaciones,
+  momentos secundarios y `Qy` sensibles. Error vectorial de resultados
+  `2.94e-2`.
+- **59:** geometría alabeada, fuera de alcance. El test es `xfail` estricto y
+  espera que el solver la rechace.
+
+## Significado de los seis xfail
+
+| Casos | Motivo | Interpretación |
+|---|---|---|
+| 54, 59, 62, 63, 64 | CQUAD4 alabeados | Fuera del alcance plano; rechazo esperado |
+| 78 | suavizado `SNORM` por defecto | No implementado; usar la variante `SNORM,0` |
+
+Son límites declarados, no errores pendientes del CQUAD4 plano. Los casos 82 y
+88 confirman ensamblajes facetados con normales independientes.
+
+## Criterio de cierre
+
+La implementación CQUAD4 se considera cerrada para elementos coplanares porque:
+
+- sus invariantes y modos rígidos están cubiertos;
+- las DMIG activas coinciden globalmente, por bloques y término a término;
+- los modelos con varios elementos, materiales y orientaciones reproducen la
+  respuesta global de Nastran;
+- el dominio no soportado se rechaza en código y se documenta en tests.
+
+La única mejora específica no bloqueante es reproducir con mayor precisión la
+convención de impresión centroidal de `Qx/Qy`.
+
+## Campaña no lineal geométrica de CROD
+
+Los casos 92--111 forman la campaña inicial de 20 decks `SOL 400`. Cubren el
+límite lineal, tracción y compresión finitas, control fijo/adaptativo,
+`CD/CID`, series, paralelo, `LOAD`, cerchas 2D, estructuras 3D y sensibilidad
+al tamaño de incremento. La auditoría añadió los casos 112--122 para
+objetividad 3D, tangente por perturbación central, torsión, `LGDISP=2` y
+respuesta próxima al punto límite, además de un par lineal/no lineal sensible
+a la rotación de la estructura.
+
+Los casos 123--127 amplían la escala a estructuras de 10--30 CROD: una
+cubierta arqueada, un puente de celosía, una cubierta espacial, una marquesina
+y una torre 3D. Mezclan PROD/MAT1, orientaciones, cargas y apoyos; 124/126
+incluyen valores no nulos de SPC. Los cinco convergen con MSC y con el solver,
+reproducen `25/30/30/40/14` incrementos y forman parte del diccionario E2E.
+
+El test `test_nonlinear_analysis_control.py` verifica que todos los decks:
+
+- seleccionan `SOL 400`, `ANALYSIS=NLSTAT` y el `NLSTEP` correcto;
+- sólo contienen CROD dentro del alcance de esta campaña;
+- mapean `LGDISP` y `FOLLOWK` sin contaminar la ruta lineal;
+- se enrutan desde el CLI a `NonlinearStaticSolver` sin pasar por
+  `LinearStaticSolver`.
+
+Como control adicional, los modelos se ensamblan y resuelven con su rigidez
+lineal inicial cuando ese control es físicamente aplicable; los decks de
+torsión conservan expresamente el GDL `R1` al que aporta rigidez el `J` de
+`PROD`.
+
+La primera ejecución 92--111 con MSC Nastran 2026.1 (`NLPERF`) terminó
+normalmente y alcanzó el 100 % de carga en todos los casos. No hubo cortes ni
+separaciones. Los pares 92/93 y 94/95 coinciden en sus estados finales; los
+casos 104/109/110 coinciden en desplazamiento, tensión y reacción, mientras el
+trabajo/energía del mallado incremental grueso 109 difiere un `0.65 %`. El
+caso 102 converge a la rama posterior al *snap-through* en su último
+incremento (`uy: -42.830 -> -223.31`); 105 hace lo mismo en el incremento 17
+(`uy: -33.975 -> -218.50`). Ambos se conservan como controles avanzados.
+
+La campaña completa se relanzó después de corregir `NLOPRM`. Los 35 casos
+convergidos se comparan con diccionarios explícitos en
+`test_nonlinear_validation_end_to_end.py`; ningún test lee F06/PCH durante la
+ejecución. Los casos 95/104/111 reproducen 9/14/15 incrementos adaptativos.
+
+`test_nonlinear_intermediate_validation.py` transcribe cuatro estados de 112 y
+compara además la flexibilidad tangente horizontal con la diferencia central
+de 114/115 (`6.127186e-6`). `test_crod_non_linear.py` verifica por diferencias
+finitas todos los términos de la tangente elemental.
+
+Para 123--127 se contrastaron todas las filas finales impresas: los máximos
+errores relativos fueron `3.77e-7` en desplazamientos, `3.76e-7` en reacciones
+y `3.72e-7` en tensión/deformación. El caso 125 atraviesa un *snap-through*
+entre `lambda=0.533333/0.566667`; su estado final coincide, pero el acumulado
+`TotStrEn` de MSC no se usa como energía elástica de estado.
+
+El caso 120 conserva su terminación no convergida en `lambda≈0.98387`: es una
+validación del punto límite bajo control de fuerza, no un fallo pendiente. Los
+casos 102/105 convergen mediante salto a una rama posterior; sus resultados
+mecánicos coinciden, pero el acumulado `TotStrEn` de Nastran no es la energía
+elástica del estado final y no se usa como aserción.
+Véanse
+[`nonlinear_crod.md`](nonlinear_crod.md) y la
+[guía de campaña](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).

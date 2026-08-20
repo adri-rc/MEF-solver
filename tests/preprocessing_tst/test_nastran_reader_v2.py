@@ -175,6 +175,113 @@ PBAR, 100, 1, 10.0, 20.0, 20.0, 10.0, 0.0
         # Check values (Point E)
         assert prop.stress_points[2] == pytest.approx((-1.0, -1.0))
       
+    def test_ctria3_parsing(self, tmp_path):
+        """
+        @test CTRIA3 and PSHELL parsing.
+        @brief Verifies that shell elements and properties are correctly mapped.
+        """
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.005, 1, , 1 
+CTRIA3, 100, 10, 1, 2, 3, 30.0
+        """
+        p = tmp_path / "ctria3_test.bdf"
+        p.write_text(bdf_content)
+
+        model = parse_nastran_input(str(p))
+
+        # Check Property
+        assert 10 in model.properties
+        prop = model.properties[10]
+        assert prop.t == 0.005
+        assert prop.mat_id == 1
+        assert prop.mat_id_bending == 1 # mid2 mapped
+
+
+        # Check Element
+        assert 100 in model.elements
+        elem = model.elements[100]
+        assert elem.nodes == [1, 2, 3]
+        assert elem.prop_id == 10
+        assert elem.theta == 30.0
+
+    def test_cquad4_parsing(self, tmp_path):
+        """
+        @test CQUAD4 and PSHELL parsing.
+        @brief Verifies that quadrilateral shell elements and properties are correctly mapped.
+        """
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01, 1, , 1 
+CQUAD4, 200, 10, 1, 2, 3, 4, 45.0
+        """
+        p = tmp_path / "cquad4_test.bdf"
+        p.write_text(bdf_content)
+
+        model = parse_nastran_input(str(p))
+
+        # Check Property
+        assert 10 in model.properties
+        prop = model.properties[10]
+        assert prop.t == 0.01
+        assert prop.mat_id == 1
+        assert prop.mat_id_bending == 1
+
+        # Check Element
+        assert 200 in model.elements
+        elem = model.elements[200]
+        assert elem.nodes == [1, 2, 3, 4]
+        assert elem.prop_id == 10
+        assert elem.theta == 45.0
+        assert elem.__class__.__name__ == "CQUAD4Element"
+
+    def test_pshell_blank_mid3_does_not_inherit_mid2(self, tmp_path):
+        """A blank MID3 means no physical transverse-shear material."""
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01, 1, 0.75, , 0.5
+CQUAD4, 200, 10, 1, 2, 3, 4
+        """
+        path = tmp_path / "pshell_blank_mid3.bdf"
+        path.write_text(bdf_content)
+
+        prop = parse_nastran_input(str(path)).properties[10]
+
+        assert prop.mat_id_bending == 1
+        assert prop.mat_id_shear is None
+        assert prop.bending_inertia_ratio == pytest.approx(0.75)
+        assert prop.shear_thickness_ratio == pytest.approx(0.5)
+
+    def test_pshell_blank_mid2_does_not_inherit_mid1(self, tmp_path):
+        """A membrane-only PSHELL preserves its blank bending material."""
+        bdf_content = """
+GRID, 1, , 0.0, 0.0, 0.0
+GRID, 2, , 1.0, 0.0, 0.0
+GRID, 3, , 1.0, 1.0, 0.0
+GRID, 4, , 0.0, 1.0, 0.0
+MAT1, 1, 70.E9, , 0.3
+PSHELL, 10, 1, 0.01
+CQUAD4, 200, 10, 1, 2, 3, 4
+        """
+        path = tmp_path / "pshell_blank_mid2.bdf"
+        path.write_text(bdf_content)
+
+        prop = parse_nastran_input(str(path)).properties[10]
+
+        assert prop.mat_id_bending is None
+        assert prop.mat_id_shear is None
+
 # endregion --- Dummy Nastran texts Tests --
 
 
@@ -298,9 +405,11 @@ MAT1, 1, 100.0, 10.0, 0.0
 GRID, 1, , 0.,0.,0.
 GRID, 2, , 1.,0.,0.
 GRID, 3, , 0.,1.,0.
+GRID, 4, , 1.,1.,0.
 MAT1, 1, 2.1E11, , 0.3
-PSHELL, 10, 1, 0.1
-CTRIA3, 99, 10, 1, 2, 3
+PSOLID, 10, 1
+CTETRA, 99, 10, 1, 2, 3, 4
+
         """
         p = tmp_path / "unsupported_elem.bdf"
         p.write_text(content)
@@ -310,7 +419,8 @@ CTRIA3, 99, 10, 1, 2, 3
         
         # Verify message is about the element type
         error_msg = str(excinfo.value)
-        assert "CTRIA3" in error_msg or "FATAL ERROR" in error_msg
+        assert "CTETRA" in error_msg or "FATAL ERROR" in error_msg
+
 
     def test_unsupported_load_error(self, tmp_path):
         """

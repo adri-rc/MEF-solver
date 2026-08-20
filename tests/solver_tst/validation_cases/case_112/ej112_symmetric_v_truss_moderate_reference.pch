@@ -1,0 +1,1960 @@
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                     1
+$SUBTITLE=                                                                     2
+$LABEL   =                                                                     3
+$ELEMENT STRESSES                                                              4
+$REAL OUTPUT                                                                   5
+$SUBCASE ID =           1                                                      6
+$ELEMENT TYPE =          89  RODNL                                             7
+$LOAD FACTOR =   2.5000000E-02                                                 7
+         1             -3.541527E+02      3.541527E+02     -1.686441E-03       8
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00       9
+         2             -3.541527E+02      3.541527E+02     -1.686441E-03      10
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      11
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    12
+$SUBTITLE=                                                                    13
+$LABEL   =                                                                    14
+$GLOBAL WORKS-ENERGIES                                                        15
+$REAL OUTPUT                                                                  16
+$SUBCASE ID =           1                                                     17
+$LOAD FACTOR =   2.5000000E-02                                                17
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork      18
+$ -CONT-                  TotKinEn          TotDampEn                         19
+      8.439341E+03      8.439341E+03      0.000000E+00      0.000000E+00      20
+-CONT-                  0.000000E+00      0.000000E+00                        21
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    22
+$SUBTITLE=                                                                    23
+$LABEL   =                                                                    24
+$DISPLACEMENTS                                                                25
+$REAL OUTPUT                                                                  26
+$SUBCASE ID =           1                                                     27
+$LOAD FACTOR =   2.5000000E-02                                                27
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00      28
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      29
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00      30
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      31
+         3    G         0.000000E+00     -3.375736E-01      0.000000E+00      32
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      33
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    34
+$SUBTITLE=                                                                    35
+$LABEL   =                                                                    36
+$SPCF                                                                         37
+$REAL OUTPUT                                                                  38
+$SUBCASE ID =           1                                                     39
+$LOAD FACTOR =   2.5000000E-02
+         1       G      2.508468E+04      2.500000E+04      0.000000E+00      40
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      41
+         2       G     -2.508468E+04      2.500000E+04      0.000000E+00      42
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      43
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00      44
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      45
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    46
+$SUBTITLE=                                                                    47
+$LABEL   =                                                                    48
+$ELEMENT STRESSES                                                             49
+$REAL OUTPUT                                                                  50
+$SUBCASE ID =           1                                                     51
+$ELEMENT TYPE =          89  RODNL                                            52
+$LOAD FACTOR =   5.0000000E-02                                                52
+         1             -7.095203E+02      7.095203E+02     -3.378668E-03      53
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      54
+         2             -7.095203E+02      7.095203E+02     -3.378668E-03      55
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      56
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    57
+$SUBTITLE=                                                                    58
+$LABEL   =                                                                    59
+$GLOBAL WORKS-ENERGIES                                                        60
+$REAL OUTPUT                                                                  61
+$SUBCASE ID =           1                                                     62
+$LOAD FACTOR =   5.0000000E-02                                                62
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork      63
+$ -CONT-                  TotKinEn          TotDampEn                         64
+      3.388754E+04      3.388754E+04      0.000000E+00      0.000000E+00      65
+-CONT-                  0.000000E+00      0.000000E+00                        66
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    67
+$SUBTITLE=                                                                    68
+$LABEL   =                                                                    69
+$DISPLACEMENTS                                                                70
+$REAL OUTPUT                                                                  71
+$SUBCASE ID =           1                                                     72
+$LOAD FACTOR =   5.0000000E-02                                                72
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00      73
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      74
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00      75
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      76
+         3    G         0.000000E+00     -6.768830E-01      0.000000E+00      77
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      78
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    79
+$SUBTITLE=                                                                    80
+$LABEL   =                                                                    81
+$SPCF                                                                         82
+$REAL OUTPUT                                                                  83
+$SUBCASE ID =           1                                                     84
+$LOAD FACTOR =   5.0000000E-02
+         1       G      5.034075E+04      5.000000E+04      0.000000E+00      85
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      86
+         2       G     -5.034075E+04      5.000000E+04      0.000000E+00      87
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      88
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00      89
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      90
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                    91
+$SUBTITLE=                                                                    92
+$LABEL   =                                                                    93
+$ELEMENT STRESSES                                                             94
+$REAL OUTPUT                                                                  95
+$SUBCASE ID =           1                                                     96
+$ELEMENT TYPE =          89  RODNL                                            97
+$LOAD FACTOR =   7.5000000E-02                                                97
+         1             -1.066128E+03      1.066128E+03     -5.076801E-03      98
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00      99
+         2             -1.066128E+03      1.066128E+03     -5.076801E-03     100
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     101
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   102
+$SUBTITLE=                                                                   103
+$LABEL   =                                                                   104
+$GLOBAL WORKS-ENERGIES                                                       105
+$REAL OUTPUT                                                                 106
+$SUBCASE ID =           1                                                    107
+$LOAD FACTOR =   7.5000000E-02                                               107
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     108
+$ -CONT-                  TotKinEn          TotDampEn                        109
+      7.652268E+04      7.652268E+04      0.000000E+00      0.000000E+00     110
+-CONT-                  0.000000E+00      0.000000E+00                       111
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   112
+$SUBTITLE=                                                                   113
+$LABEL   =                                                                   114
+$DISPLACEMENTS                                                               115
+$REAL OUTPUT                                                                 116
+$SUBCASE ID =           1                                                    117
+$LOAD FACTOR =   7.5000000E-02                                               117
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     118
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     119
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     120
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     121
+         3    G         0.000000E+00     -1.017964E+00      0.000000E+00     122
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     123
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   124
+$SUBTITLE=                                                                   125
+$LABEL   =                                                                   126
+$SPCF                                                                        127
+$REAL OUTPUT                                                                 128
+$SUBCASE ID =           1                                                    129
+$LOAD FACTOR =   7.5000000E-02
+         1       G      7.577132E+04      7.500000E+04      0.000000E+00     130
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     131
+         2       G     -7.577132E+04      7.500000E+04      0.000000E+00     132
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     133
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     134
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     135
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   136
+$SUBTITLE=                                                                   137
+$LABEL   =                                                                   138
+$ELEMENT STRESSES                                                            139
+$REAL OUTPUT                                                                 140
+$SUBCASE ID =           1                                                    141
+$ELEMENT TYPE =          89  RODNL                                           142
+$LOAD FACTOR =   1.0000000E-01                                               142
+         1             -1.424002E+03      1.424002E+03     -6.780964E-03     143
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     144
+         2             -1.424002E+03      1.424002E+03     -6.780964E-03     145
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     146
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   147
+$SUBTITLE=                                                                   148
+$LABEL   =                                                                   149
+$GLOBAL WORKS-ENERGIES                                                       150
+$REAL OUTPUT                                                                 151
+$SUBCASE ID =           1                                                    152
+$LOAD FACTOR =   1.0000000E-01                                               152
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     153
+$ -CONT-                  TotKinEn          TotDampEn                        154
+      1.365285E+05      1.365285E+05      0.000000E+00      0.000000E+00     155
+-CONT-                  0.000000E+00      0.000000E+00                       156
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   157
+$SUBTITLE=                                                                   158
+$LABEL   =                                                                   159
+$DISPLACEMENTS                                                               160
+$REAL OUTPUT                                                                 161
+$SUBCASE ID =           1                                                    162
+$LOAD FACTOR =   1.0000000E-01                                               162
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     163
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     164
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     165
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     166
+         3    G         0.000000E+00     -1.360854E+00      0.000000E+00     167
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     168
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   169
+$SUBTITLE=                                                                   170
+$LABEL   =                                                                   171
+$SPCF                                                                        172
+$REAL OUTPUT                                                                 173
+$SUBCASE ID =           1                                                    174
+$LOAD FACTOR =   1.0000000E-01
+         1       G      1.013796E+05      1.000000E+05      0.000000E+00     175
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     176
+         2       G     -1.013796E+05      1.000000E+05      0.000000E+00     177
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     178
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     179
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     180
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   181
+$SUBTITLE=                                                                   182
+$LABEL   =                                                                   183
+$ELEMENT STRESSES                                                            184
+$REAL OUTPUT                                                                 185
+$SUBCASE ID =           1                                                    186
+$ELEMENT TYPE =          89  RODNL                                           187
+$LOAD FACTOR =   1.2500000E-01                                               187
+         1             -1.783170E+03      1.783170E+03     -8.491285E-03     188
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     189
+         2             -1.783170E+03      1.783170E+03     -8.491285E-03     190
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     191
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   192
+$SUBTITLE=                                                                   193
+$LABEL   =                                                                   194
+$GLOBAL WORKS-ENERGIES                                                       195
+$REAL OUTPUT                                                                 196
+$SUBCASE ID =           1                                                    197
+$LOAD FACTOR =   1.2500000E-01                                               197
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     198
+$ -CONT-                  TotKinEn          TotDampEn                        199
+      2.140945E+05      2.140945E+05      0.000000E+00      0.000000E+00     200
+-CONT-                  0.000000E+00      0.000000E+00                       201
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   202
+$SUBTITLE=                                                                   203
+$LABEL   =                                                                   204
+$DISPLACEMENTS                                                               205
+$REAL OUTPUT                                                                 206
+$SUBCASE ID =           1                                                    207
+$LOAD FACTOR =   1.2500000E-01                                               207
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     208
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     209
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     210
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     211
+         3    G         0.000000E+00     -1.705592E+00      0.000000E+00     212
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     213
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   214
+$SUBTITLE=                                                                   215
+$LABEL   =                                                                   216
+$SPCF                                                                        217
+$REAL OUTPUT                                                                 218
+$SUBCASE ID =           1                                                    219
+$LOAD FACTOR =   1.2500000E-01
+         1       G      1.271690E+05      1.250000E+05      0.000000E+00     220
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     221
+         2       G     -1.271690E+05      1.250000E+05      0.000000E+00     222
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     223
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     224
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     225
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   226
+$SUBTITLE=                                                                   227
+$LABEL   =                                                                   228
+$ELEMENT STRESSES                                                            229
+$REAL OUTPUT                                                                 230
+$SUBCASE ID =           1                                                    231
+$ELEMENT TYPE =          89  RODNL                                           232
+$LOAD FACTOR =   1.5000000E-01                                               232
+         1             -2.143659E+03      2.143659E+03     -1.020790E-02     233
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     234
+         2             -2.143659E+03      2.143659E+03     -1.020790E-02     235
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     236
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   237
+$SUBTITLE=                                                                   238
+$LABEL   =                                                                   239
+$GLOBAL WORKS-ENERGIES                                                       240
+$REAL OUTPUT                                                                 241
+$SUBCASE ID =           1                                                    242
+$LOAD FACTOR =   1.5000000E-01                                               242
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     243
+$ -CONT-                  TotKinEn          TotDampEn                        244
+      3.094165E+05      3.094165E+05      0.000000E+00      0.000000E+00     245
+-CONT-                  0.000000E+00      0.000000E+00                       246
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   247
+$SUBTITLE=                                                                   248
+$LABEL   =                                                                   249
+$DISPLACEMENTS                                                               250
+$REAL OUTPUT                                                                 251
+$SUBCASE ID =           1                                                    252
+$LOAD FACTOR =   1.5000000E-01                                               252
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     253
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     254
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     255
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     256
+         3    G         0.000000E+00     -2.052218E+00      0.000000E+00     257
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     258
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   259
+$SUBTITLE=                                                                   260
+$LABEL   =                                                                   261
+$SPCF                                                                        262
+$REAL OUTPUT                                                                 263
+$SUBCASE ID =           1                                                    264
+$LOAD FACTOR =   1.5000000E-01
+         1       G      1.531428E+05      1.500000E+05      0.000000E+00     265
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     266
+         2       G     -1.531428E+05      1.500000E+05      0.000000E+00     267
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     268
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     269
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     270
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   271
+$SUBTITLE=                                                                   272
+$LABEL   =                                                                   273
+$ELEMENT STRESSES                                                            274
+$REAL OUTPUT                                                                 275
+$SUBCASE ID =           1                                                    276
+$ELEMENT TYPE =          89  RODNL                                           277
+$LOAD FACTOR =   1.7500000E-01                                               277
+         1             -2.505497E+03      2.505497E+03     -1.193094E-02     278
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     279
+         2             -2.505497E+03      2.505497E+03     -1.193094E-02     280
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     281
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   282
+$SUBTITLE=                                                                   283
+$LABEL   =                                                                   284
+$GLOBAL WORKS-ENERGIES                                                       285
+$REAL OUTPUT                                                                 286
+$SUBCASE ID =           1                                                    287
+$LOAD FACTOR =   1.7500000E-01                                               287
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     288
+$ -CONT-                  TotKinEn          TotDampEn                        289
+      4.226966E+05      4.226966E+05      0.000000E+00      0.000000E+00     290
+-CONT-                  0.000000E+00      0.000000E+00                       291
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   292
+$SUBTITLE=                                                                   293
+$LABEL   =                                                                   294
+$DISPLACEMENTS                                                               295
+$REAL OUTPUT                                                                 296
+$SUBCASE ID =           1                                                    297
+$LOAD FACTOR =   1.7500000E-01                                               297
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     298
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     299
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     300
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     301
+         3    G         0.000000E+00     -2.400772E+00      0.000000E+00     302
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     303
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   304
+$SUBTITLE=                                                                   305
+$LABEL   =                                                                   306
+$SPCF                                                                        307
+$REAL OUTPUT                                                                 308
+$SUBCASE ID =           1                                                    309
+$LOAD FACTOR =   1.7500000E-01
+         1       G      1.793047E+05      1.750000E+05      0.000000E+00     310
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     311
+         2       G     -1.793047E+05      1.750000E+05      0.000000E+00     312
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     313
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     314
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     315
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   316
+$SUBTITLE=                                                                   317
+$LABEL   =                                                                   318
+$ELEMENT STRESSES                                                            319
+$REAL OUTPUT                                                                 320
+$SUBCASE ID =           1                                                    321
+$ELEMENT TYPE =          89  RODNL                                           322
+$LOAD FACTOR =   2.0000000E-01                                               322
+         1             -2.868716E+03      2.868716E+03     -1.366055E-02     323
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     324
+         2             -2.868716E+03      2.868716E+03     -1.366055E-02     325
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     326
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   327
+$SUBTITLE=                                                                   328
+$LABEL   =                                                                   329
+$GLOBAL WORKS-ENERGIES                                                       330
+$REAL OUTPUT                                                                 331
+$SUBCASE ID =           1                                                    332
+$LOAD FACTOR =   2.0000000E-01                                               332
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     333
+$ -CONT-                  TotKinEn          TotDampEn                        334
+      5.541438E+05      5.541438E+05      0.000000E+00      0.000000E+00     335
+-CONT-                  0.000000E+00      0.000000E+00                       336
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   337
+$SUBTITLE=                                                                   338
+$LABEL   =                                                                   339
+$DISPLACEMENTS                                                               340
+$REAL OUTPUT                                                                 341
+$SUBCASE ID =           1                                                    342
+$LOAD FACTOR =   2.0000000E-01                                               342
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     343
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     344
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     345
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     346
+         3    G         0.000000E+00     -2.751298E+00      0.000000E+00     347
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     348
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   349
+$SUBTITLE=                                                                   350
+$LABEL   =                                                                   351
+$SPCF                                                                        352
+$REAL OUTPUT                                                                 353
+$SUBCASE ID =           1                                                    354
+$LOAD FACTOR =   2.0000000E-01
+         1       G      2.056583E+05      2.000000E+05      0.000000E+00     355
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     356
+         2       G     -2.056583E+05      2.000000E+05      0.000000E+00     357
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     358
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     359
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     360
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   361
+$SUBTITLE=                                                                   362
+$LABEL   =                                                                   363
+$ELEMENT STRESSES                                                            364
+$REAL OUTPUT                                                                 365
+$SUBCASE ID =           1                                                    366
+$ELEMENT TYPE =          89  RODNL                                           367
+$LOAD FACTOR =   2.2500000E-01                                               367
+         1             -3.233346E+03      3.233346E+03     -1.539688E-02     368
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     369
+         2             -3.233346E+03      3.233346E+03     -1.539688E-02     370
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     371
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   372
+$SUBTITLE=                                                                   373
+$LABEL   =                                                                   374
+$GLOBAL WORKS-ENERGIES                                                       375
+$REAL OUTPUT                                                                 376
+$SUBCASE ID =           1                                                    377
+$LOAD FACTOR =   2.2500000E-01                                               377
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     378
+$ -CONT-                  TotKinEn          TotDampEn                        379
+      7.039741E+05      7.039741E+05      0.000000E+00      0.000000E+00     380
+-CONT-                  0.000000E+00      0.000000E+00                       381
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   382
+$SUBTITLE=                                                                   383
+$LABEL   =                                                                   384
+$DISPLACEMENTS                                                               385
+$REAL OUTPUT                                                                 386
+$SUBCASE ID =           1                                                    387
+$LOAD FACTOR =   2.2500000E-01                                               387
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     388
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     389
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     390
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     391
+         3    G         0.000000E+00     -3.103840E+00      0.000000E+00     392
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     393
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   394
+$SUBTITLE=                                                                   395
+$LABEL   =                                                                   396
+$SPCF                                                                        397
+$REAL OUTPUT                                                                 398
+$SUBCASE ID =           1                                                    399
+$LOAD FACTOR =   2.2500000E-01
+         1       G      2.322073E+05      2.250000E+05      0.000000E+00     400
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     401
+         2       G     -2.322073E+05      2.250000E+05      0.000000E+00     402
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     403
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     404
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     405
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   406
+$SUBTITLE=                                                                   407
+$LABEL   =                                                                   408
+$ELEMENT STRESSES                                                            409
+$REAL OUTPUT                                                                 410
+$SUBCASE ID =           1                                                    411
+$ELEMENT TYPE =          89  RODNL                                           412
+$LOAD FACTOR =   2.5000000E-01                                               412
+         1             -3.599418E+03      3.599418E+03     -1.714009E-02     413
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     414
+         2             -3.599418E+03      3.599418E+03     -1.714009E-02     415
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     416
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   417
+$SUBTITLE=                                                                   418
+$LABEL   =                                                                   419
+$GLOBAL WORKS-ENERGIES                                                       420
+$REAL OUTPUT                                                                 421
+$SUBCASE ID =           1                                                    422
+$LOAD FACTOR =   2.5000000E-01                                               422
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     423
+$ -CONT-                  TotKinEn          TotDampEn                        424
+      8.724109E+05      8.724109E+05      0.000000E+00      0.000000E+00     425
+-CONT-                  0.000000E+00      0.000000E+00                       426
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   427
+$SUBTITLE=                                                                   428
+$LABEL   =                                                                   429
+$DISPLACEMENTS                                                               430
+$REAL OUTPUT                                                                 431
+$SUBCASE ID =           1                                                    432
+$LOAD FACTOR =   2.5000000E-01                                               432
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     433
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     434
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     435
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     436
+         3    G         0.000000E+00     -3.458443E+00      0.000000E+00     437
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     438
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   439
+$SUBTITLE=                                                                   440
+$LABEL   =                                                                   441
+$SPCF                                                                        442
+$REAL OUTPUT                                                                 443
+$SUBCASE ID =           1                                                    444
+$LOAD FACTOR =   2.5000000E-01
+         1       G      2.589558E+05      2.500000E+05      0.000000E+00     445
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     446
+         2       G     -2.589558E+05      2.500000E+05      0.000000E+00     447
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     448
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     449
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     450
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   451
+$SUBTITLE=                                                                   452
+$LABEL   =                                                                   453
+$ELEMENT STRESSES                                                            454
+$REAL OUTPUT                                                                 455
+$SUBCASE ID =           1                                                    456
+$ELEMENT TYPE =          89  RODNL                                           457
+$LOAD FACTOR =   2.7500000E-01                                               457
+         1             -3.966967E+03      3.966967E+03     -1.889032E-02     458
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     459
+         2             -3.966967E+03      3.966967E+03     -1.889032E-02     460
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     461
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   462
+$SUBTITLE=                                                                   463
+$LABEL   =                                                                   464
+$GLOBAL WORKS-ENERGIES                                                       465
+$REAL OUTPUT                                                                 466
+$SUBCASE ID =           1                                                    467
+$LOAD FACTOR =   2.7500000E-01                                               467
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     468
+$ -CONT-                  TotKinEn          TotDampEn                        469
+      1.059685E+06      1.059685E+06      0.000000E+00      0.000000E+00     470
+-CONT-                  0.000000E+00      0.000000E+00                       471
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   472
+$SUBTITLE=                                                                   473
+$LABEL   =                                                                   474
+$DISPLACEMENTS                                                               475
+$REAL OUTPUT                                                                 476
+$SUBCASE ID =           1                                                    477
+$LOAD FACTOR =   2.7500000E-01                                               477
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     478
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     479
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     480
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     481
+         3    G         0.000000E+00     -3.815157E+00      0.000000E+00     482
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     483
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   484
+$SUBTITLE=                                                                   485
+$LABEL   =                                                                   486
+$SPCF                                                                        487
+$REAL OUTPUT                                                                 488
+$SUBCASE ID =           1                                                    489
+$LOAD FACTOR =   2.7500000E-01
+         1       G      2.859078E+05      2.750000E+05      0.000000E+00     490
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     491
+         2       G     -2.859078E+05      2.750000E+05      0.000000E+00     492
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     493
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     494
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     495
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   496
+$SUBTITLE=                                                                   497
+$LABEL   =                                                                   498
+$ELEMENT STRESSES                                                            499
+$REAL OUTPUT                                                                 500
+$SUBCASE ID =           1                                                    501
+$ELEMENT TYPE =          89  RODNL                                           502
+$LOAD FACTOR =   3.0000000E-01                                               502
+         1             -4.336027E+03      4.336027E+03     -2.064775E-02     503
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     504
+         2             -4.336027E+03      4.336027E+03     -2.064775E-02     505
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     506
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   507
+$SUBTITLE=                                                                   508
+$LABEL   =                                                                   509
+$GLOBAL WORKS-ENERGIES                                                       510
+$REAL OUTPUT                                                                 511
+$SUBCASE ID =           1                                                    512
+$LOAD FACTOR =   3.0000000E-01                                               512
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     513
+$ -CONT-                  TotKinEn          TotDampEn                        514
+      1.266037E+06      1.266037E+06      0.000000E+00      0.000000E+00     515
+-CONT-                  0.000000E+00      0.000000E+00                       516
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   517
+$SUBTITLE=                                                                   518
+$LABEL   =                                                                   519
+$DISPLACEMENTS                                                               520
+$REAL OUTPUT                                                                 521
+$SUBCASE ID =           1                                                    522
+$LOAD FACTOR =   3.0000000E-01                                               522
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     523
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     524
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     525
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     526
+         3    G         0.000000E+00     -4.174029E+00      0.000000E+00     527
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     528
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   529
+$SUBTITLE=                                                                   530
+$LABEL   =                                                                   531
+$SPCF                                                                        532
+$REAL OUTPUT                                                                 533
+$SUBCASE ID =           1                                                    534
+$LOAD FACTOR =   3.0000000E-01
+         1       G      3.130675E+05      3.000000E+05      0.000000E+00     535
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     536
+         2       G     -3.130675E+05      3.000000E+05      0.000000E+00     537
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     538
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     539
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     540
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   541
+$SUBTITLE=                                                                   542
+$LABEL   =                                                                   543
+$ELEMENT STRESSES                                                            544
+$REAL OUTPUT                                                                 545
+$SUBCASE ID =           1                                                    546
+$ELEMENT TYPE =          89  RODNL                                           547
+$LOAD FACTOR =   3.2500000E-01                                               547
+         1             -4.706633E+03      4.706633E+03     -2.241254E-02     548
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     549
+         2             -4.706633E+03      4.706633E+03     -2.241254E-02     550
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     551
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   552
+$SUBTITLE=                                                                   553
+$LABEL   =                                                                   554
+$GLOBAL WORKS-ENERGIES                                                       555
+$REAL OUTPUT                                                                 556
+$SUBCASE ID =           1                                                    557
+$LOAD FACTOR =   3.2500000E-01                                               557
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     558
+$ -CONT-                  TotKinEn          TotDampEn                        559
+      1.491713E+06      1.491713E+06      0.000000E+00      0.000000E+00     560
+-CONT-                  0.000000E+00      0.000000E+00                       561
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   562
+$SUBTITLE=                                                                   563
+$LABEL   =                                                                   564
+$DISPLACEMENTS                                                               565
+$REAL OUTPUT                                                                 566
+$SUBCASE ID =           1                                                    567
+$LOAD FACTOR =   3.2500000E-01                                               567
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     568
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     569
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     570
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     571
+         3    G         0.000000E+00     -4.535111E+00      0.000000E+00     572
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     573
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   574
+$SUBTITLE=                                                                   575
+$LABEL   =                                                                   576
+$SPCF                                                                        577
+$REAL OUTPUT                                                                 578
+$SUBCASE ID =           1                                                    579
+$LOAD FACTOR =   3.2500000E-01
+         1       G      3.404393E+05      3.250000E+05      0.000000E+00     580
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     581
+         2       G     -3.404393E+05      3.250000E+05      0.000000E+00     582
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     583
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     584
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     585
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   586
+$SUBTITLE=                                                                   587
+$LABEL   =                                                                   588
+$ELEMENT STRESSES                                                            589
+$REAL OUTPUT                                                                 590
+$SUBCASE ID =           1                                                    591
+$ELEMENT TYPE =          89  RODNL                                           592
+$LOAD FACTOR =   3.5000000E-01                                               592
+         1             -5.078822E+03      5.078822E+03     -2.418487E-02     593
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     594
+         2             -5.078822E+03      5.078822E+03     -2.418487E-02     595
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     596
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   597
+$SUBTITLE=                                                                   598
+$LABEL   =                                                                   599
+$GLOBAL WORKS-ENERGIES                                                       600
+$REAL OUTPUT                                                                 601
+$SUBCASE ID =           1                                                    602
+$LOAD FACTOR =   3.5000000E-01                                               602
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     603
+$ -CONT-                  TotKinEn          TotDampEn                        604
+      1.736972E+06      1.736972E+06      0.000000E+00      0.000000E+00     605
+-CONT-                  0.000000E+00      0.000000E+00                       606
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   607
+$SUBTITLE=                                                                   608
+$LABEL   =                                                                   609
+$DISPLACEMENTS                                                               610
+$REAL OUTPUT                                                                 611
+$SUBCASE ID =           1                                                    612
+$LOAD FACTOR =   3.5000000E-01                                               612
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     613
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     614
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     615
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     616
+         3    G         0.000000E+00     -4.898457E+00      0.000000E+00     617
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     618
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   619
+$SUBTITLE=                                                                   620
+$LABEL   =                                                                   621
+$SPCF                                                                        622
+$REAL OUTPUT                                                                 623
+$SUBCASE ID =           1                                                    624
+$LOAD FACTOR =   3.5000000E-01
+         1       G      3.680277E+05      3.500000E+05      0.000000E+00     625
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     626
+         2       G     -3.680277E+05      3.500000E+05      0.000000E+00     627
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     628
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     629
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     630
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   631
+$SUBTITLE=                                                                   632
+$LABEL   =                                                                   633
+$ELEMENT STRESSES                                                            634
+$REAL OUTPUT                                                                 635
+$SUBCASE ID =           1                                                    636
+$ELEMENT TYPE =          89  RODNL                                           637
+$LOAD FACTOR =   3.7500000E-01                                               637
+         1             -5.452634E+03      5.452634E+03     -2.596493E-02     638
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     639
+         2             -5.452634E+03      5.452634E+03     -2.596493E-02     640
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     641
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   642
+$SUBTITLE=                                                                   643
+$LABEL   =                                                                   644
+$GLOBAL WORKS-ENERGIES                                                       645
+$REAL OUTPUT                                                                 646
+$SUBCASE ID =           1                                                    647
+$LOAD FACTOR =   3.7500000E-01                                               647
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     648
+$ -CONT-                  TotKinEn          TotDampEn                        649
+      2.002079E+06      2.002079E+06      0.000000E+00      0.000000E+00     650
+-CONT-                  0.000000E+00      0.000000E+00                       651
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   652
+$SUBTITLE=                                                                   653
+$LABEL   =                                                                   654
+$DISPLACEMENTS                                                               655
+$REAL OUTPUT                                                                 656
+$SUBCASE ID =           1                                                    657
+$LOAD FACTOR =   3.7500000E-01                                               657
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     658
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     659
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     660
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     661
+         3    G         0.000000E+00     -5.264122E+00      0.000000E+00     662
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     663
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   664
+$SUBTITLE=                                                                   665
+$LABEL   =                                                                   666
+$SPCF                                                                        667
+$REAL OUTPUT                                                                 668
+$SUBCASE ID =           1                                                    669
+$LOAD FACTOR =   3.7500000E-01
+         1       G      3.958374E+05      3.750000E+05      0.000000E+00     670
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     671
+         2       G     -3.958374E+05      3.750000E+05      0.000000E+00     672
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     673
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     674
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     675
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   676
+$SUBTITLE=                                                                   677
+$LABEL   =                                                                   678
+$ELEMENT STRESSES                                                            679
+$REAL OUTPUT                                                                 680
+$SUBCASE ID =           1                                                    681
+$ELEMENT TYPE =          89  RODNL                                           682
+$LOAD FACTOR =   4.0000000E-01                                               682
+         1             -5.828109E+03      5.828109E+03     -2.775290E-02     683
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     684
+         2             -5.828109E+03      5.828109E+03     -2.775290E-02     685
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     686
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   687
+$SUBTITLE=                                                                   688
+$LABEL   =                                                                   689
+$GLOBAL WORKS-ENERGIES                                                       690
+$REAL OUTPUT                                                                 691
+$SUBCASE ID =           1                                                    692
+$LOAD FACTOR =   4.0000000E-01                                               692
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     693
+$ -CONT-                  TotKinEn          TotDampEn                        694
+      2.287311E+06      2.287311E+06      0.000000E+00      0.000000E+00     695
+-CONT-                  0.000000E+00      0.000000E+00                       696
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   697
+$SUBTITLE=                                                                   698
+$LABEL   =                                                                   699
+$DISPLACEMENTS                                                               700
+$REAL OUTPUT                                                                 701
+$SUBCASE ID =           1                                                    702
+$LOAD FACTOR =   4.0000000E-01                                               702
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     703
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     704
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     705
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     706
+         3    G         0.000000E+00     -5.632164E+00      0.000000E+00     707
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     708
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   709
+$SUBTITLE=                                                                   710
+$LABEL   =                                                                   711
+$SPCF                                                                        712
+$REAL OUTPUT                                                                 713
+$SUBCASE ID =           1                                                    714
+$LOAD FACTOR =   4.0000000E-01
+         1       G      4.238732E+05      4.000000E+05      0.000000E+00     715
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     716
+         2       G     -4.238732E+05      4.000000E+05      0.000000E+00     717
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     718
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     719
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     720
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   721
+$SUBTITLE=                                                                   722
+$LABEL   =                                                                   723
+$ELEMENT STRESSES                                                            724
+$REAL OUTPUT                                                                 725
+$SUBCASE ID =           1                                                    726
+$ELEMENT TYPE =          89  RODNL                                           727
+$LOAD FACTOR =   4.2500000E-01                                               727
+         1             -6.205287E+03      6.205287E+03     -2.954899E-02     728
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     729
+         2             -6.205287E+03      6.205287E+03     -2.954899E-02     730
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     731
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   732
+$SUBTITLE=                                                                   733
+$LABEL   =                                                                   734
+$GLOBAL WORKS-ENERGIES                                                       735
+$REAL OUTPUT                                                                 736
+$SUBCASE ID =           1                                                    737
+$LOAD FACTOR =   4.2500000E-01                                               737
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     738
+$ -CONT-                  TotKinEn          TotDampEn                        739
+      2.592956E+06      2.592956E+06      0.000000E+00      0.000000E+00     740
+-CONT-                  0.000000E+00      0.000000E+00                       741
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   742
+$SUBTITLE=                                                                   743
+$LABEL   =                                                                   744
+$DISPLACEMENTS                                                               745
+$REAL OUTPUT                                                                 746
+$SUBCASE ID =           1                                                    747
+$LOAD FACTOR =   4.2500000E-01                                               747
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     748
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     749
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     750
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     751
+         3    G         0.000000E+00     -6.002642E+00      0.000000E+00     752
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     753
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   754
+$SUBTITLE=                                                                   755
+$LABEL   =                                                                   756
+$SPCF                                                                        757
+$REAL OUTPUT                                                                 758
+$SUBCASE ID =           1                                                    759
+$LOAD FACTOR =   4.2500000E-01
+         1       G      4.521404E+05      4.250000E+05      0.000000E+00     760
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     761
+         2       G     -4.521404E+05      4.250000E+05      0.000000E+00     762
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     763
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     764
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     765
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   766
+$SUBTITLE=                                                                   767
+$LABEL   =                                                                   768
+$ELEMENT STRESSES                                                            769
+$REAL OUTPUT                                                                 770
+$SUBCASE ID =           1                                                    771
+$ELEMENT TYPE =          89  RODNL                                           772
+$LOAD FACTOR =   4.5000000E-01                                               772
+         1             -6.584214E+03      6.584214E+03     -3.135340E-02     773
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     774
+         2             -6.584214E+03      6.584214E+03     -3.135340E-02     775
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     776
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   777
+$SUBTITLE=                                                                   778
+$LABEL   =                                                                   779
+$GLOBAL WORKS-ENERGIES                                                       780
+$REAL OUTPUT                                                                 781
+$SUBCASE ID =           1                                                    782
+$LOAD FACTOR =   4.5000000E-01                                               782
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     783
+$ -CONT-                  TotKinEn          TotDampEn                        784
+      2.919310E+06      2.919310E+06      0.000000E+00      0.000000E+00     785
+-CONT-                  0.000000E+00      0.000000E+00                       786
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   787
+$SUBTITLE=                                                                   788
+$LABEL   =                                                                   789
+$DISPLACEMENTS                                                               790
+$REAL OUTPUT                                                                 791
+$SUBCASE ID =           1                                                    792
+$LOAD FACTOR =   4.5000000E-01                                               792
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     793
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     794
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     795
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     796
+         3    G         0.000000E+00     -6.375619E+00      0.000000E+00     797
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     798
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   799
+$SUBTITLE=                                                                   800
+$LABEL   =                                                                   801
+$SPCF                                                                        802
+$REAL OUTPUT                                                                 803
+$SUBCASE ID =           1                                                    804
+$LOAD FACTOR =   4.5000000E-01
+         1       G      4.806440E+05      4.500000E+05      0.000000E+00     805
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     806
+         2       G     -4.806440E+05      4.500000E+05      0.000000E+00     807
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     808
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     809
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     810
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   811
+$SUBTITLE=                                                                   812
+$LABEL   =                                                                   813
+$ELEMENT STRESSES                                                            814
+$REAL OUTPUT                                                                 815
+$SUBCASE ID =           1                                                    816
+$ELEMENT TYPE =          89  RODNL                                           817
+$LOAD FACTOR =   4.7500000E-01                                               817
+         1             -6.964933E+03      6.964933E+03     -3.316635E-02     818
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     819
+         2             -6.964933E+03      6.964933E+03     -3.316635E-02     820
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     821
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   822
+$SUBTITLE=                                                                   823
+$LABEL   =                                                                   824
+$GLOBAL WORKS-ENERGIES                                                       825
+$REAL OUTPUT                                                                 826
+$SUBCASE ID =           1                                                    827
+$LOAD FACTOR =   4.7500000E-01                                               827
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     828
+$ -CONT-                  TotKinEn          TotDampEn                        829
+      3.266686E+06      3.266686E+06      0.000000E+00      0.000000E+00     830
+-CONT-                  0.000000E+00      0.000000E+00                       831
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   832
+$SUBTITLE=                                                                   833
+$LABEL   =                                                                   834
+$DISPLACEMENTS                                                               835
+$REAL OUTPUT                                                                 836
+$SUBCASE ID =           1                                                    837
+$LOAD FACTOR =   4.7500000E-01                                               837
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     838
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     839
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     840
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     841
+         3    G         0.000000E+00     -6.751159E+00      0.000000E+00     842
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     843
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   844
+$SUBTITLE=                                                                   845
+$LABEL   =                                                                   846
+$SPCF                                                                        847
+$REAL OUTPUT                                                                 848
+$SUBCASE ID =           1                                                    849
+$LOAD FACTOR =   4.7500000E-01
+         1       G      5.093897E+05      4.750000E+05      0.000000E+00     850
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     851
+         2       G     -5.093897E+05      4.750000E+05      0.000000E+00     852
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     853
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     854
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     855
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   856
+$SUBTITLE=                                                                   857
+$LABEL   =                                                                   858
+$ELEMENT STRESSES                                                            859
+$REAL OUTPUT                                                                 860
+$SUBCASE ID =           1                                                    861
+$ELEMENT TYPE =          89  RODNL                                           862
+$LOAD FACTOR =   5.0000000E-01                                               862
+         1             -7.347492E+03      7.347492E+03     -3.498806E-02     863
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     864
+         2             -7.347492E+03      7.347492E+03     -3.498806E-02     865
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     866
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   867
+$SUBTITLE=                                                                   868
+$LABEL   =                                                                   869
+$GLOBAL WORKS-ENERGIES                                                       870
+$REAL OUTPUT                                                                 871
+$SUBCASE ID =           1                                                    872
+$LOAD FACTOR =   5.0000000E-01                                               872
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     873
+$ -CONT-                  TotKinEn          TotDampEn                        874
+      3.635404E+06      3.635404E+06      0.000000E+00      0.000000E+00     875
+-CONT-                  0.000000E+00      0.000000E+00                       876
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   877
+$SUBTITLE=                                                                   878
+$LABEL   =                                                                   879
+$DISPLACEMENTS                                                               880
+$REAL OUTPUT                                                                 881
+$SUBCASE ID =           1                                                    882
+$LOAD FACTOR =   5.0000000E-01                                               882
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     883
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     884
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     885
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     886
+         3    G         0.000000E+00     -7.129332E+00      0.000000E+00     887
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     888
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   889
+$SUBTITLE=                                                                   890
+$LABEL   =                                                                   891
+$SPCF                                                                        892
+$REAL OUTPUT                                                                 893
+$SUBCASE ID =           1                                                    894
+$LOAD FACTOR =   5.0000000E-01
+         1       G      5.383831E+05      5.000000E+05      0.000000E+00     895
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     896
+         2       G     -5.383831E+05      5.000000E+05      0.000000E+00     897
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     898
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     899
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     900
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   901
+$SUBTITLE=                                                                   902
+$LABEL   =                                                                   903
+$ELEMENT STRESSES                                                            904
+$REAL OUTPUT                                                                 905
+$SUBCASE ID =           1                                                    906
+$ELEMENT TYPE =          89  RODNL                                           907
+$LOAD FACTOR =   5.2500000E-01                                               907
+         1             -7.731941E+03      7.731941E+03     -3.681876E-02     908
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     909
+         2             -7.731941E+03      7.731941E+03     -3.681876E-02     910
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     911
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   912
+$SUBTITLE=                                                                   913
+$LABEL   =                                                                   914
+$GLOBAL WORKS-ENERGIES                                                       915
+$REAL OUTPUT                                                                 916
+$SUBCASE ID =           1                                                    917
+$LOAD FACTOR =   5.2500000E-01                                               917
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     918
+$ -CONT-                  TotKinEn          TotDampEn                        919
+      4.025800E+06      4.025800E+06      0.000000E+00      0.000000E+00     920
+-CONT-                  0.000000E+00      0.000000E+00                       921
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   922
+$SUBTITLE=                                                                   923
+$LABEL   =                                                                   924
+$DISPLACEMENTS                                                               925
+$REAL OUTPUT                                                                 926
+$SUBCASE ID =           1                                                    927
+$LOAD FACTOR =   5.2500000E-01                                               927
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     928
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     929
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     930
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     931
+         3    G         0.000000E+00     -7.510207E+00      0.000000E+00     932
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     933
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   934
+$SUBTITLE=                                                                   935
+$LABEL   =                                                                   936
+$SPCF                                                                        937
+$REAL OUTPUT                                                                 938
+$SUBCASE ID =           1                                                    939
+$LOAD FACTOR =   5.2500000E-01
+         1       G      5.676302E+05      5.250000E+05      0.000000E+00     940
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     941
+         2       G     -5.676302E+05      5.250000E+05      0.000000E+00     942
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     943
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     944
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     945
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   946
+$SUBTITLE=                                                                   947
+$LABEL   =                                                                   948
+$ELEMENT STRESSES                                                            949
+$REAL OUTPUT                                                                 950
+$SUBCASE ID =           1                                                    951
+$ELEMENT TYPE =          89  RODNL                                           952
+$LOAD FACTOR =   5.5000000E-01                                               952
+         1             -8.118330E+03      8.118330E+03     -3.865871E-02     953
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     954
+         2             -8.118330E+03      8.118330E+03     -3.865871E-02     955
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     956
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   957
+$SUBTITLE=                                                                   958
+$LABEL   =                                                                   959
+$GLOBAL WORKS-ENERGIES                                                       960
+$REAL OUTPUT                                                                 961
+$SUBCASE ID =           1                                                    962
+$LOAD FACTOR =   5.5000000E-01                                               962
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork     963
+$ -CONT-                  TotKinEn          TotDampEn                        964
+      4.438226E+06      4.438226E+06      0.000000E+00      0.000000E+00     965
+-CONT-                  0.000000E+00      0.000000E+00                       966
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   967
+$SUBTITLE=                                                                   968
+$LABEL   =                                                                   969
+$DISPLACEMENTS                                                               970
+$REAL OUTPUT                                                                 971
+$SUBCASE ID =           1                                                    972
+$LOAD FACTOR =   5.5000000E-01                                               972
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00     973
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     974
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00     975
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     976
+         3    G         0.000000E+00     -7.893858E+00      0.000000E+00     977
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     978
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   979
+$SUBTITLE=                                                                   980
+$LABEL   =                                                                   981
+$SPCF                                                                        982
+$REAL OUTPUT                                                                 983
+$SUBCASE ID =           1                                                    984
+$LOAD FACTOR =   5.5000000E-01
+         1       G      5.971372E+05      5.500000E+05      0.000000E+00     985
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     986
+         2       G     -5.971372E+05      5.500000E+05      0.000000E+00     987
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     988
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00     989
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     990
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                   991
+$SUBTITLE=                                                                   992
+$LABEL   =                                                                   993
+$ELEMENT STRESSES                                                            994
+$REAL OUTPUT                                                                 995
+$SUBCASE ID =           1                                                    996
+$ELEMENT TYPE =          89  RODNL                                           997
+$LOAD FACTOR =   5.7500000E-01                                               997
+         1             -8.506713E+03      8.506713E+03     -4.050816E-02     998
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00     999
+         2             -8.506713E+03      8.506713E+03     -4.050816E-02    1000
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1001
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1002
+$SUBTITLE=                                                                  1003
+$LABEL   =                                                                  1004
+$GLOBAL WORKS-ENERGIES                                                      1005
+$REAL OUTPUT                                                                1006
+$SUBCASE ID =           1                                                   1007
+$LOAD FACTOR =   5.7500000E-01                                              1007
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1008
+$ -CONT-                  TotKinEn          TotDampEn                       1009
+      4.873043E+06      4.873043E+06      0.000000E+00      0.000000E+00    1010
+-CONT-                  0.000000E+00      0.000000E+00                      1011
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1012
+$SUBTITLE=                                                                  1013
+$LABEL   =                                                                  1014
+$DISPLACEMENTS                                                              1015
+$REAL OUTPUT                                                                1016
+$SUBCASE ID =           1                                                   1017
+$LOAD FACTOR =   5.7500000E-01                                              1017
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1018
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1019
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1020
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1021
+         3    G         0.000000E+00     -8.280363E+00      0.000000E+00    1022
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1023
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1024
+$SUBTITLE=                                                                  1025
+$LABEL   =                                                                  1026
+$SPCF                                                                       1027
+$REAL OUTPUT                                                                1028
+$SUBCASE ID =           1                                                   1029
+$LOAD FACTOR =   5.7500000E-01
+         1       G      6.269105E+05      5.750000E+05      0.000000E+00    1030
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1031
+         2       G     -6.269105E+05      5.750000E+05      0.000000E+00    1032
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1033
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1034
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1035
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1036
+$SUBTITLE=                                                                  1037
+$LABEL   =                                                                  1038
+$ELEMENT STRESSES                                                           1039
+$REAL OUTPUT                                                                1040
+$SUBCASE ID =           1                                                   1041
+$ELEMENT TYPE =          89  RODNL                                          1042
+$LOAD FACTOR =   6.0000000E-01                                              1042
+         1             -8.897147E+03      8.897147E+03     -4.236737E-02    1043
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1044
+         2             -8.897147E+03      8.897147E+03     -4.236737E-02    1045
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1046
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1047
+$SUBTITLE=                                                                  1048
+$LABEL   =                                                                  1049
+$GLOBAL WORKS-ENERGIES                                                      1050
+$REAL OUTPUT                                                                1051
+$SUBCASE ID =           1                                                   1052
+$LOAD FACTOR =   6.0000000E-01                                              1052
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1053
+$ -CONT-                  TotKinEn          TotDampEn                       1054
+      5.330634E+06      5.330634E+06      0.000000E+00      0.000000E+00    1055
+-CONT-                  0.000000E+00      0.000000E+00                      1056
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1057
+$SUBTITLE=                                                                  1058
+$LABEL   =                                                                  1059
+$DISPLACEMENTS                                                              1060
+$REAL OUTPUT                                                                1061
+$SUBCASE ID =           1                                                   1062
+$LOAD FACTOR =   6.0000000E-01                                              1062
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1063
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1064
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1065
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1066
+         3    G         0.000000E+00     -8.669802E+00      0.000000E+00    1067
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1068
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1069
+$SUBTITLE=                                                                  1070
+$LABEL   =                                                                  1071
+$SPCF                                                                       1072
+$REAL OUTPUT                                                                1073
+$SUBCASE ID =           1                                                   1074
+$LOAD FACTOR =   6.0000000E-01
+         1       G      6.569569E+05      6.000000E+05      0.000000E+00    1075
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1076
+         2       G     -6.569569E+05      6.000000E+05      0.000000E+00    1077
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1078
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1079
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1080
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1081
+$SUBTITLE=                                                                  1082
+$LABEL   =                                                                  1083
+$ELEMENT STRESSES                                                           1084
+$REAL OUTPUT                                                                1085
+$SUBCASE ID =           1                                                   1086
+$ELEMENT TYPE =          89  RODNL                                          1087
+$LOAD FACTOR =   6.2500000E-01                                              1087
+         1             -9.289690E+03      9.289690E+03     -4.423662E-02    1088
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1089
+         2             -9.289690E+03      9.289690E+03     -4.423662E-02    1090
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1091
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1092
+$SUBTITLE=                                                                  1093
+$LABEL   =                                                                  1094
+$GLOBAL WORKS-ENERGIES                                                      1095
+$REAL OUTPUT                                                                1096
+$SUBCASE ID =           1                                                   1097
+$LOAD FACTOR =   6.2500000E-01                                              1097
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1098
+$ -CONT-                  TotKinEn          TotDampEn                       1099
+      5.811394E+06      5.811394E+06      0.000000E+00      0.000000E+00    1100
+-CONT-                  0.000000E+00      0.000000E+00                      1101
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1102
+$SUBTITLE=                                                                  1103
+$LABEL   =                                                                  1104
+$DISPLACEMENTS                                                              1105
+$REAL OUTPUT                                                                1106
+$SUBCASE ID =           1                                                   1107
+$LOAD FACTOR =   6.2500000E-01                                              1107
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1108
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1109
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1110
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1111
+         3    G         0.000000E+00     -9.062259E+00      0.000000E+00    1112
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1113
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1114
+$SUBTITLE=                                                                  1115
+$LABEL   =                                                                  1116
+$SPCF                                                                       1117
+$REAL OUTPUT                                                                1118
+$SUBCASE ID =           1                                                   1119
+$LOAD FACTOR =   6.2500000E-01
+         1       G      6.872834E+05      6.250000E+05      0.000000E+00    1120
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1121
+         2       G     -6.872834E+05      6.250000E+05      0.000000E+00    1122
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1123
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1124
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1125
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1126
+$SUBTITLE=                                                                  1127
+$LABEL   =                                                                  1128
+$ELEMENT STRESSES                                                           1129
+$REAL OUTPUT                                                                1130
+$SUBCASE ID =           1                                                   1131
+$ELEMENT TYPE =          89  RODNL                                          1132
+$LOAD FACTOR =   6.5000000E-01                                              1132
+         1             -9.684404E+03      9.684404E+03     -4.611621E-02    1133
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1134
+         2             -9.684404E+03      9.684404E+03     -4.611621E-02    1135
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1136
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1137
+$SUBTITLE=                                                                  1138
+$LABEL   =                                                                  1139
+$GLOBAL WORKS-ENERGIES                                                      1140
+$REAL OUTPUT                                                                1141
+$SUBCASE ID =           1                                                   1142
+$LOAD FACTOR =   6.5000000E-01                                              1142
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1143
+$ -CONT-                  TotKinEn          TotDampEn                       1144
+      6.315739E+06      6.315739E+06      0.000000E+00      0.000000E+00    1145
+-CONT-                  0.000000E+00      0.000000E+00                      1146
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1147
+$SUBTITLE=                                                                  1148
+$LABEL   =                                                                  1149
+$DISPLACEMENTS                                                              1150
+$REAL OUTPUT                                                                1151
+$SUBCASE ID =           1                                                   1152
+$LOAD FACTOR =   6.5000000E-01                                              1152
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1153
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1154
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1155
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1156
+         3    G         0.000000E+00     -9.457823E+00      0.000000E+00    1157
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1158
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1159
+$SUBTITLE=                                                                  1160
+$LABEL   =                                                                  1161
+$SPCF                                                                       1162
+$REAL OUTPUT                                                                1163
+$SUBCASE ID =           1                                                   1164
+$LOAD FACTOR =   6.5000000E-01
+         1       G      7.178975E+05      6.500000E+05      0.000000E+00    1165
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1166
+         2       G     -7.178975E+05      6.500000E+05      0.000000E+00    1167
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1168
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1169
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1170
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1171
+$SUBTITLE=                                                                  1172
+$LABEL   =                                                                  1173
+$ELEMENT STRESSES                                                           1174
+$REAL OUTPUT                                                                1175
+$SUBCASE ID =           1                                                   1176
+$ELEMENT TYPE =          89  RODNL                                          1177
+$LOAD FACTOR =   6.7500000E-01                                              1177
+         1             -1.008135E+04      1.008135E+04     -4.800644E-02    1178
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1179
+         2             -1.008135E+04      1.008135E+04     -4.800644E-02    1180
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1181
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1182
+$SUBTITLE=                                                                  1183
+$LABEL   =                                                                  1184
+$GLOBAL WORKS-ENERGIES                                                      1185
+$REAL OUTPUT                                                                1186
+$SUBCASE ID =           1                                                   1187
+$LOAD FACTOR =   6.7500000E-01                                              1187
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1188
+$ -CONT-                  TotKinEn          TotDampEn                       1189
+      6.844101E+06      6.844101E+06      0.000000E+00      0.000000E+00    1190
+-CONT-                  0.000000E+00      0.000000E+00                      1191
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1192
+$SUBTITLE=                                                                  1193
+$LABEL   =                                                                  1194
+$DISPLACEMENTS                                                              1195
+$REAL OUTPUT                                                                1196
+$SUBCASE ID =           1                                                   1197
+$LOAD FACTOR =   6.7500000E-01                                              1197
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1198
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1199
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1200
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1201
+         3    G         0.000000E+00     -9.856588E+00      0.000000E+00    1202
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1203
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1204
+$SUBTITLE=                                                                  1205
+$LABEL   =                                                                  1206
+$SPCF                                                                       1207
+$REAL OUTPUT                                                                1208
+$SUBCASE ID =           1                                                   1209
+$LOAD FACTOR =   6.7500000E-01
+         1       G      7.488068E+05      6.750000E+05      0.000000E+00    1210
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1211
+         2       G     -7.488068E+05      6.750000E+05      0.000000E+00    1212
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1213
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1214
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1215
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1216
+$SUBTITLE=                                                                  1217
+$LABEL   =                                                                  1218
+$ELEMENT STRESSES                                                           1219
+$REAL OUTPUT                                                                1220
+$SUBCASE ID =           1                                                   1221
+$ELEMENT TYPE =          89  RODNL                                          1222
+$LOAD FACTOR =   7.0000000E-01                                              1222
+         1             -1.048060E+04      1.048060E+04     -4.990763E-02    1223
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1224
+         2             -1.048060E+04      1.048060E+04     -4.990763E-02    1225
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1226
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1227
+$SUBTITLE=                                                                  1228
+$LABEL   =                                                                  1229
+$GLOBAL WORKS-ENERGIES                                                      1230
+$REAL OUTPUT                                                                1231
+$SUBCASE ID =           1                                                   1232
+$LOAD FACTOR =   7.0000000E-01                                              1232
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1233
+$ -CONT-                  TotKinEn          TotDampEn                       1234
+      7.396935E+06      7.396935E+06      0.000000E+00      0.000000E+00    1235
+-CONT-                  0.000000E+00      0.000000E+00                      1236
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1237
+$SUBTITLE=                                                                  1238
+$LABEL   =                                                                  1239
+$DISPLACEMENTS                                                              1240
+$REAL OUTPUT                                                                1241
+$SUBCASE ID =           1                                                   1242
+$LOAD FACTOR =   7.0000000E-01                                              1242
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1243
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1244
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1245
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1246
+         3    G         0.000000E+00     -1.025865E+01      0.000000E+00    1247
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1248
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1249
+$SUBTITLE=                                                                  1250
+$LABEL   =                                                                  1251
+$SPCF                                                                       1252
+$REAL OUTPUT                                                                1253
+$SUBCASE ID =           1                                                   1254
+$LOAD FACTOR =   7.0000000E-01
+         1       G      7.800195E+05      7.000000E+05      0.000000E+00    1255
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1256
+         2       G     -7.800195E+05      7.000000E+05      0.000000E+00    1257
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1258
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1259
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1260
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1261
+$SUBTITLE=                                                                  1262
+$LABEL   =                                                                  1263
+$ELEMENT STRESSES                                                           1264
+$REAL OUTPUT                                                                1265
+$SUBCASE ID =           1                                                   1266
+$ELEMENT TYPE =          89  RODNL                                          1267
+$LOAD FACTOR =   7.2500000E-01                                              1267
+         1             -1.088223E+04      1.088223E+04     -5.182013E-02    1268
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1269
+         2             -1.088223E+04      1.088223E+04     -5.182013E-02    1270
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1271
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1272
+$SUBTITLE=                                                                  1273
+$LABEL   =                                                                  1274
+$GLOBAL WORKS-ENERGIES                                                      1275
+$REAL OUTPUT                                                                1276
+$SUBCASE ID =           1                                                   1277
+$LOAD FACTOR =   7.2500000E-01                                              1277
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1278
+$ -CONT-                  TotKinEn          TotDampEn                       1279
+      7.974716E+06      7.974716E+06      0.000000E+00      0.000000E+00    1280
+-CONT-                  0.000000E+00      0.000000E+00                      1281
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1282
+$SUBTITLE=                                                                  1283
+$LABEL   =                                                                  1284
+$DISPLACEMENTS                                                              1285
+$REAL OUTPUT                                                                1286
+$SUBCASE ID =           1                                                   1287
+$LOAD FACTOR =   7.2500000E-01                                              1287
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1288
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1289
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1290
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1291
+         3    G         0.000000E+00     -1.066411E+01      0.000000E+00    1292
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1293
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1294
+$SUBTITLE=                                                                  1295
+$LABEL   =                                                                  1296
+$SPCF                                                                       1297
+$REAL OUTPUT                                                                1298
+$SUBCASE ID =           1                                                   1299
+$LOAD FACTOR =   7.2500000E-01
+         1       G      8.115439E+05      7.250000E+05      0.000000E+00    1300
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1301
+         2       G     -8.115439E+05      7.250000E+05      0.000000E+00    1302
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1303
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1304
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1305
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1306
+$SUBTITLE=                                                                  1307
+$LABEL   =                                                                  1308
+$ELEMENT STRESSES                                                           1309
+$REAL OUTPUT                                                                1310
+$SUBCASE ID =           1                                                   1311
+$ELEMENT TYPE =          89  RODNL                                          1312
+$LOAD FACTOR =   7.5000000E-01                                              1312
+         1             -1.128630E+04      1.128630E+04     -5.374428E-02    1313
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1314
+         2             -1.128630E+04      1.128630E+04     -5.374428E-02    1315
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1316
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1317
+$SUBTITLE=                                                                  1318
+$LABEL   =                                                                  1319
+$GLOBAL WORKS-ENERGIES                                                      1320
+$REAL OUTPUT                                                                1321
+$SUBCASE ID =           1                                                   1322
+$LOAD FACTOR =   7.5000000E-01                                              1322
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1323
+$ -CONT-                  TotKinEn          TotDampEn                       1324
+      8.577942E+06      8.577942E+06      0.000000E+00      0.000000E+00    1325
+-CONT-                  0.000000E+00      0.000000E+00                      1326
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1327
+$SUBTITLE=                                                                  1328
+$LABEL   =                                                                  1329
+$DISPLACEMENTS                                                              1330
+$REAL OUTPUT                                                                1331
+$SUBCASE ID =           1                                                   1332
+$LOAD FACTOR =   7.5000000E-01                                              1332
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1333
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1334
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1335
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1336
+         3    G         0.000000E+00     -1.107308E+01      0.000000E+00    1337
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1338
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1339
+$SUBTITLE=                                                                  1340
+$LABEL   =                                                                  1341
+$SPCF                                                                       1342
+$REAL OUTPUT                                                                1343
+$SUBCASE ID =           1                                                   1344
+$LOAD FACTOR =   7.5000000E-01
+         1       G      8.433891E+05      7.500000E+05      0.000000E+00    1345
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1346
+         2       G     -8.433891E+05      7.500000E+05      0.000000E+00    1347
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1348
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1349
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1350
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1351
+$SUBTITLE=                                                                  1352
+$LABEL   =                                                                  1353
+$ELEMENT STRESSES                                                           1354
+$REAL OUTPUT                                                                1355
+$SUBCASE ID =           1                                                   1356
+$ELEMENT TYPE =          89  RODNL                                          1357
+$LOAD FACTOR =   7.7500000E-01                                              1357
+         1             -1.169290E+04      1.169290E+04     -5.568045E-02    1358
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1359
+         2             -1.169290E+04      1.169290E+04     -5.568045E-02    1360
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1361
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1362
+$SUBTITLE=                                                                  1363
+$LABEL   =                                                                  1364
+$GLOBAL WORKS-ENERGIES                                                      1365
+$REAL OUTPUT                                                                1366
+$SUBCASE ID =           1                                                   1367
+$LOAD FACTOR =   7.7500000E-01                                              1367
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1368
+$ -CONT-                  TotKinEn          TotDampEn                       1369
+      9.207135E+06      9.207135E+06      0.000000E+00      0.000000E+00    1370
+-CONT-                  0.000000E+00      0.000000E+00                      1371
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1372
+$SUBTITLE=                                                                  1373
+$LABEL   =                                                                  1374
+$DISPLACEMENTS                                                              1375
+$REAL OUTPUT                                                                1376
+$SUBCASE ID =           1                                                   1377
+$LOAD FACTOR =   7.7500000E-01                                              1377
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1378
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1379
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1380
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1381
+         3    G         0.000000E+00     -1.148566E+01      0.000000E+00    1382
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1383
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1384
+$SUBTITLE=                                                                  1385
+$LABEL   =                                                                  1386
+$SPCF                                                                       1387
+$REAL OUTPUT                                                                1388
+$SUBCASE ID =           1                                                   1389
+$LOAD FACTOR =   7.7500000E-01
+         1       G      8.755644E+05      7.750000E+05      0.000000E+00    1390
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1391
+         2       G     -8.755644E+05      7.750000E+05      0.000000E+00    1392
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1393
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1394
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1395
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1396
+$SUBTITLE=                                                                  1397
+$LABEL   =                                                                  1398
+$ELEMENT STRESSES                                                           1399
+$REAL OUTPUT                                                                1400
+$SUBCASE ID =           1                                                   1401
+$ELEMENT TYPE =          89  RODNL                                          1402
+$LOAD FACTOR =   8.0000000E-01                                              1402
+         1             -1.210210E+04      1.210210E+04     -5.762905E-02    1403
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1404
+         2             -1.210210E+04      1.210210E+04     -5.762905E-02    1405
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1406
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1407
+$SUBTITLE=                                                                  1408
+$LABEL   =                                                                  1409
+$GLOBAL WORKS-ENERGIES                                                      1410
+$REAL OUTPUT                                                                1411
+$SUBCASE ID =           1                                                   1412
+$LOAD FACTOR =   8.0000000E-01                                              1412
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1413
+$ -CONT-                  TotKinEn          TotDampEn                       1414
+      9.862846E+06      9.862846E+06      0.000000E+00      0.000000E+00    1415
+-CONT-                  0.000000E+00      0.000000E+00                      1416
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1417
+$SUBTITLE=                                                                  1418
+$LABEL   =                                                                  1419
+$DISPLACEMENTS                                                              1420
+$REAL OUTPUT                                                                1421
+$SUBCASE ID =           1                                                   1422
+$LOAD FACTOR =   8.0000000E-01                                              1422
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1423
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1424
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1425
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1426
+         3    G         0.000000E+00     -1.190199E+01      0.000000E+00    1427
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1428
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1429
+$SUBTITLE=                                                                  1430
+$LABEL   =                                                                  1431
+$SPCF                                                                       1432
+$REAL OUTPUT                                                                1433
+$SUBCASE ID =           1                                                   1434
+$LOAD FACTOR =   8.0000000E-01
+         1       G      9.080795E+05      8.000000E+05      0.000000E+00    1435
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1436
+         2       G     -9.080795E+05      8.000000E+05      0.000000E+00    1437
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1438
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1439
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1440
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1441
+$SUBTITLE=                                                                  1442
+$LABEL   =                                                                  1443
+$ELEMENT STRESSES                                                           1444
+$REAL OUTPUT                                                                1445
+$SUBCASE ID =           1                                                   1446
+$ELEMENT TYPE =          89  RODNL                                          1447
+$LOAD FACTOR =   8.2500000E-01                                              1447
+         1             -1.251400E+04      1.251400E+04     -5.959048E-02    1448
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1449
+         2             -1.251400E+04      1.251400E+04     -5.959048E-02    1450
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1451
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1452
+$SUBTITLE=                                                                  1453
+$LABEL   =                                                                  1454
+$GLOBAL WORKS-ENERGIES                                                      1455
+$REAL OUTPUT                                                                1456
+$SUBCASE ID =           1                                                   1457
+$LOAD FACTOR =   8.2500000E-01                                              1457
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1458
+$ -CONT-                  TotKinEn          TotDampEn                       1459
+      1.054565E+07      1.054565E+07      0.000000E+00      0.000000E+00    1460
+-CONT-                  0.000000E+00      0.000000E+00                      1461
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1462
+$SUBTITLE=                                                                  1463
+$LABEL   =                                                                  1464
+$DISPLACEMENTS                                                              1465
+$REAL OUTPUT                                                                1466
+$SUBCASE ID =           1                                                   1467
+$LOAD FACTOR =   8.2500000E-01                                              1467
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1468
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1469
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1470
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1471
+         3    G         0.000000E+00     -1.232217E+01      0.000000E+00    1472
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1473
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1474
+$SUBTITLE=                                                                  1475
+$LABEL   =                                                                  1476
+$SPCF                                                                       1477
+$REAL OUTPUT                                                                1478
+$SUBCASE ID =           1                                                   1479
+$LOAD FACTOR =   8.2500000E-01
+         1       G      9.409449E+05      8.250000E+05      0.000000E+00    1480
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1481
+         2       G     -9.409449E+05      8.250000E+05      0.000000E+00    1482
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1483
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1484
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1485
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1486
+$SUBTITLE=                                                                  1487
+$LABEL   =                                                                  1488
+$ELEMENT STRESSES                                                           1489
+$REAL OUTPUT                                                                1490
+$SUBCASE ID =           1                                                   1491
+$ELEMENT TYPE =          89  RODNL                                          1492
+$LOAD FACTOR =   8.5000000E-01                                              1492
+         1             -1.292869E+04      1.292869E+04     -6.156518E-02    1493
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1494
+         2             -1.292869E+04      1.292869E+04     -6.156518E-02    1495
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1496
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1497
+$SUBTITLE=                                                                  1498
+$LABEL   =                                                                  1499
+$GLOBAL WORKS-ENERGIES                                                      1500
+$REAL OUTPUT                                                                1501
+$SUBCASE ID =           1                                                   1502
+$LOAD FACTOR =   8.5000000E-01                                              1502
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1503
+$ -CONT-                  TotKinEn          TotDampEn                       1504
+      1.125616E+07      1.125616E+07      0.000000E+00      0.000000E+00    1505
+-CONT-                  0.000000E+00      0.000000E+00                      1506
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1507
+$SUBTITLE=                                                                  1508
+$LABEL   =                                                                  1509
+$DISPLACEMENTS                                                              1510
+$REAL OUTPUT                                                                1511
+$SUBCASE ID =           1                                                   1512
+$LOAD FACTOR =   8.5000000E-01                                              1512
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1513
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1514
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1515
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1516
+         3    G         0.000000E+00     -1.274636E+01      0.000000E+00    1517
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1518
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1519
+$SUBTITLE=                                                                  1520
+$LABEL   =                                                                  1521
+$SPCF                                                                       1522
+$REAL OUTPUT                                                                1523
+$SUBCASE ID =           1                                                   1524
+$LOAD FACTOR =   8.5000000E-01
+         1       G      9.741714E+05      8.500000E+05      0.000000E+00    1525
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1526
+         2       G     -9.741714E+05      8.500000E+05      0.000000E+00    1527
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1528
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1529
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1530
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1531
+$SUBTITLE=                                                                  1532
+$LABEL   =                                                                  1533
+$ELEMENT STRESSES                                                           1534
+$REAL OUTPUT                                                                1535
+$SUBCASE ID =           1                                                   1536
+$ELEMENT TYPE =          89  RODNL                                          1537
+$LOAD FACTOR =   8.7500000E-01                                              1537
+         1             -1.334626E+04      1.334626E+04     -6.355362E-02    1538
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1539
+         2             -1.334626E+04      1.334626E+04     -6.355362E-02    1540
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1541
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1542
+$SUBTITLE=                                                                  1543
+$LABEL   =                                                                  1544
+$GLOBAL WORKS-ENERGIES                                                      1545
+$REAL OUTPUT                                                                1546
+$SUBCASE ID =           1                                                   1547
+$LOAD FACTOR =   8.7500000E-01                                              1547
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1548
+$ -CONT-                  TotKinEn          TotDampEn                       1549
+      1.199501E+07      1.199501E+07      0.000000E+00      0.000000E+00    1550
+-CONT-                  0.000000E+00      0.000000E+00                      1551
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1552
+$SUBTITLE=                                                                  1553
+$LABEL   =                                                                  1554
+$DISPLACEMENTS                                                              1555
+$REAL OUTPUT                                                                1556
+$SUBCASE ID =           1                                                   1557
+$LOAD FACTOR =   8.7500000E-01                                              1557
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1558
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1559
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1560
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1561
+         3    G         0.000000E+00     -1.317468E+01      0.000000E+00    1562
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1563
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1564
+$SUBTITLE=                                                                  1565
+$LABEL   =                                                                  1566
+$SPCF                                                                       1567
+$REAL OUTPUT                                                                1568
+$SUBCASE ID =           1                                                   1569
+$LOAD FACTOR =   8.7500000E-01
+         1       G      1.007771E+06      8.750000E+05      0.000000E+00    1570
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1571
+         2       G     -1.007771E+06      8.750000E+05      0.000000E+00    1572
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1573
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1574
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1575
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1576
+$SUBTITLE=                                                                  1577
+$LABEL   =                                                                  1578
+$ELEMENT STRESSES                                                           1579
+$REAL OUTPUT                                                                1580
+$SUBCASE ID =           1                                                   1581
+$ELEMENT TYPE =          89  RODNL                                          1582
+$LOAD FACTOR =   9.0000000E-01                                              1582
+         1             -1.376682E+04      1.376682E+04     -6.555627E-02    1583
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1584
+         2             -1.376682E+04      1.376682E+04     -6.555627E-02    1585
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1586
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1587
+$SUBTITLE=                                                                  1588
+$LABEL   =                                                                  1589
+$GLOBAL WORKS-ENERGIES                                                      1590
+$REAL OUTPUT                                                                1591
+$SUBCASE ID =           1                                                   1592
+$LOAD FACTOR =   9.0000000E-01                                              1592
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1593
+$ -CONT-                  TotKinEn          TotDampEn                       1594
+      1.276288E+07      1.276288E+07      0.000000E+00      0.000000E+00    1595
+-CONT-                  0.000000E+00      0.000000E+00                      1596
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1597
+$SUBTITLE=                                                                  1598
+$LABEL   =                                                                  1599
+$DISPLACEMENTS                                                              1600
+$REAL OUTPUT                                                                1601
+$SUBCASE ID =           1                                                   1602
+$LOAD FACTOR =   9.0000000E-01                                              1602
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1603
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1604
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1605
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1606
+         3    G         0.000000E+00     -1.360728E+01      0.000000E+00    1607
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1608
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1609
+$SUBTITLE=                                                                  1610
+$LABEL   =                                                                  1611
+$SPCF                                                                       1612
+$REAL OUTPUT                                                                1613
+$SUBCASE ID =           1                                                   1614
+$LOAD FACTOR =   9.0000000E-01
+         1       G      1.041754E+06      9.000000E+05      0.000000E+00    1615
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1616
+         2       G     -1.041754E+06      9.000000E+05      0.000000E+00    1617
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1618
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1619
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1620
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1621
+$SUBTITLE=                                                                  1622
+$LABEL   =                                                                  1623
+$ELEMENT STRESSES                                                           1624
+$REAL OUTPUT                                                                1625
+$SUBCASE ID =           1                                                   1626
+$ELEMENT TYPE =          89  RODNL                                          1627
+$LOAD FACTOR =   9.2500000E-01                                              1627
+         1             -1.419047E+04      1.419047E+04     -6.757366E-02    1628
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1629
+         2             -1.419047E+04      1.419047E+04     -6.757366E-02    1630
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1631
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1632
+$SUBTITLE=                                                                  1633
+$LABEL   =                                                                  1634
+$GLOBAL WORKS-ENERGIES                                                      1635
+$REAL OUTPUT                                                                1636
+$SUBCASE ID =           1                                                   1637
+$LOAD FACTOR =   9.2500000E-01                                              1637
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1638
+$ -CONT-                  TotKinEn          TotDampEn                       1639
+      1.356049E+07      1.356049E+07      0.000000E+00      0.000000E+00    1640
+-CONT-                  0.000000E+00      0.000000E+00                      1641
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1642
+$SUBTITLE=                                                                  1643
+$LABEL   =                                                                  1644
+$DISPLACEMENTS                                                              1645
+$REAL OUTPUT                                                                1646
+$SUBCASE ID =           1                                                   1647
+$LOAD FACTOR =   9.2500000E-01                                              1647
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1648
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1649
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1650
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1651
+         3    G         0.000000E+00     -1.404433E+01      0.000000E+00    1652
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1653
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1654
+$SUBTITLE=                                                                  1655
+$LABEL   =                                                                  1656
+$SPCF                                                                       1657
+$REAL OUTPUT                                                                1658
+$SUBCASE ID =           1                                                   1659
+$LOAD FACTOR =   9.2500000E-01
+         1       G      1.076136E+06      9.250000E+05      0.000000E+00    1660
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1661
+         2       G     -1.076136E+06      9.250000E+05      0.000000E+00    1662
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1663
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1664
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1665
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1666
+$SUBTITLE=                                                                  1667
+$LABEL   =                                                                  1668
+$ELEMENT STRESSES                                                           1669
+$REAL OUTPUT                                                                1670
+$SUBCASE ID =           1                                                   1671
+$ELEMENT TYPE =          89  RODNL                                          1672
+$LOAD FACTOR =   9.5000000E-01                                              1672
+         1             -1.461733E+04      1.461733E+04     -6.960633E-02    1673
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1674
+         2             -1.461733E+04      1.461733E+04     -6.960633E-02    1675
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1676
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1677
+$SUBTITLE=                                                                  1678
+$LABEL   =                                                                  1679
+$GLOBAL WORKS-ENERGIES                                                      1680
+$REAL OUTPUT                                                                1681
+$SUBCASE ID =           1                                                   1682
+$LOAD FACTOR =   9.5000000E-01                                              1682
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1683
+$ -CONT-                  TotKinEn          TotDampEn                       1684
+      1.438859E+07      1.438859E+07      0.000000E+00      0.000000E+00    1685
+-CONT-                  0.000000E+00      0.000000E+00                      1686
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1687
+$SUBTITLE=                                                                  1688
+$LABEL   =                                                                  1689
+$DISPLACEMENTS                                                              1690
+$REAL OUTPUT                                                                1691
+$SUBCASE ID =           1                                                   1692
+$LOAD FACTOR =   9.5000000E-01                                              1692
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1693
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1694
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1695
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1696
+         3    G         0.000000E+00     -1.448598E+01      0.000000E+00    1697
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1698
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1699
+$SUBTITLE=                                                                  1700
+$LABEL   =                                                                  1701
+$SPCF                                                                       1702
+$REAL OUTPUT                                                                1703
+$SUBCASE ID =           1                                                   1704
+$LOAD FACTOR =   9.5000000E-01
+         1       G      1.110929E+06      9.500000E+05      0.000000E+00    1705
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1706
+         2       G     -1.110929E+06      9.500000E+05      0.000000E+00    1707
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1708
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1709
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1710
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1711
+$SUBTITLE=                                                                  1712
+$LABEL   =                                                                  1713
+$ELEMENT STRESSES                                                           1714
+$REAL OUTPUT                                                                1715
+$SUBCASE ID =           1                                                   1716
+$ELEMENT TYPE =          89  RODNL                                          1717
+$LOAD FACTOR =   9.7500000E-01                                              1717
+         1             -1.504752E+04      1.504752E+04     -7.165487E-02    1718
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1719
+         2             -1.504752E+04      1.504752E+04     -7.165487E-02    1720
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1721
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1722
+$SUBTITLE=                                                                  1723
+$LABEL   =                                                                  1724
+$GLOBAL WORKS-ENERGIES                                                      1725
+$REAL OUTPUT                                                                1726
+$SUBCASE ID =           1                                                   1727
+$LOAD FACTOR =   9.7500000E-01                                              1727
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1728
+$ -CONT-                  TotKinEn          TotDampEn                       1729
+      1.524798E+07      1.524798E+07      0.000000E+00      0.000000E+00    1730
+-CONT-                  0.000000E+00      0.000000E+00                      1731
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1732
+$SUBTITLE=                                                                  1733
+$LABEL   =                                                                  1734
+$DISPLACEMENTS                                                              1735
+$REAL OUTPUT                                                                1736
+$SUBCASE ID =           1                                                   1737
+$LOAD FACTOR =   9.7500000E-01                                              1737
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1738
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1739
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1740
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1741
+         3    G         0.000000E+00     -1.493242E+01      0.000000E+00    1742
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1743
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1744
+$SUBTITLE=                                                                  1745
+$LABEL   =                                                                  1746
+$SPCF                                                                       1747
+$REAL OUTPUT                                                                1748
+$SUBCASE ID =           1                                                   1749
+$LOAD FACTOR =   9.7500000E-01
+         1       G      1.146148E+06      9.750000E+05      0.000000E+00    1750
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1751
+         2       G     -1.146148E+06      9.750000E+05      0.000000E+00    1752
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1753
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1754
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1755
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1756
+$SUBTITLE=                                                                  1757
+$LABEL   =                                                                  1758
+$ELEMENT STRESSES                                                           1759
+$REAL OUTPUT                                                                1760
+$SUBCASE ID =           1                                                   1761
+$ELEMENT TYPE =          89  RODNL                                          1762
+$LOAD FACTOR =   1.0000000E+00                                              1762
+         1             -1.548118E+04      1.548118E+04     -7.371989E-02    1763
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1764
+         2             -1.548118E+04      1.548118E+04     -7.371989E-02    1765
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1766
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1767
+$SUBTITLE=                                                                  1768
+$LABEL   =                                                                  1769
+$GLOBAL WORKS-ENERGIES                                                      1770
+$REAL OUTPUT                                                                1771
+$SUBCASE ID =           1                                                   1772
+$LOAD FACTOR =   1.0000000E+00                                              1772
+$       TotStrEn         TotExtWork        TotFricWork       TotContWork    1773
+$ -CONT-                  TotKinEn          TotDampEn                       1774
+      1.613951E+07      1.613951E+07      0.000000E+00      0.000000E+00    1775
+-CONT-                  0.000000E+00      0.000000E+00                      1776
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1777
+$SUBTITLE=                                                                  1778
+$LABEL   =                                                                  1779
+$DISPLACEMENTS                                                              1780
+$REAL OUTPUT                                                                1781
+$SUBCASE ID =           1                                                   1782
+$LOAD FACTOR =   1.0000000E+00                                              1782
+         1    G         0.000000E+00      0.000000E+00      0.000000E+00    1783
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1784
+         2    G         0.000000E+00      0.000000E+00      0.000000E+00    1785
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1786
+         3    G         0.000000E+00     -1.538383E+01      0.000000E+00    1787
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1788
+$TITLE   = CASE 112 - SYMMETRIC V TRUSS MODERATE REFERENCE                  1789
+$SUBTITLE=                                                                  1790
+$LABEL   =                                                                  1791
+$SPCF                                                                       1792
+$REAL OUTPUT                                                                1793
+$SUBCASE ID =           1                                                   1794
+$LOAD FACTOR =   1.0000000E+00
+         1       G      1.181807E+06      1.000000E+06      0.000000E+00    1795
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1796
+         2       G     -1.181807E+06      1.000000E+06      0.000000E+00    1797
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1798
+         3       G      0.000000E+00      0.000000E+00      0.000000E+00    1799
+-CONT-                  0.000000E+00      0.000000E+00      0.000000E+00    1800

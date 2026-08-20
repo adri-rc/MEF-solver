@@ -321,9 +321,9 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # Nastran Internal at End A: 
-            #   Mz=1837, My=13478, Fy=492, Fz=4082, Torque=452, Axial=3618
-            # Solver 'forces_n1' (Reaction at Node 1 on Element) -> Signs Flipped vs Internal.
+            # F06 End A: Mz=1837, My=13478, Fy=492, Fz=4082, torque=452,
+            # axial=3618.  With the local convention, F06 plane 1 maps to
+            # -forces_n1.Mz and plane 2 maps to forces_n1.My.
             101: {
                 "axial_force": 3.618136E+03,
                 "axial_stress": 3.618136E+01, 
@@ -385,15 +385,14 @@ VALIDATION_DATA = [
             101: {
                 # Internal Forces at End A (Node 1) from Nastran:
                 # Axial=2.0, Torque=-3.0, M_Plane1(Mz)=7.0, M_Plane2(My)=-19.0
-                # Solver 'forces_n1' are Nodal Reactions -> Opposite signs to Internal
+                # F06 plane 1 maps to -forces_n1.Mz; plane 2 maps to
+                # forces_n1.My in the local CBAR convention.
                 "axial_force": 2.000000E+00,
                 "axial_stress": 2.000000E-02,
                 "torque": -3.000000E+00,
                 "forces_n1.Mz": -7.000000E+00, 
-                "forces_n1.My": -1.900000E+01, #DEBO CAMBIAR EL SIGNO !?!?!?!?!?
+                "forces_n1.My": -1.900000E+01,
         
-############## NO SE CALCULAN BIEN LOS PUNTOS QUE SE PIDEN EN LAS BARRAS, REVISAR, PARECE QEU ES POR EL LECTOR, mi nastran_reader.py
-############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # Nastran Output Page 14 (STRESSES IN BAR ELEMENTS)
                 # PBAR 401 define puntos C(10,0) y D(0,10)
@@ -417,7 +416,13 @@ VALIDATION_DATA = [
                 
                 # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
                 "max_total_stress":  2.100000E-01, # Matches SA-MAX
-                "min_total_stress": -5.000000E-02  # Matches SA-MIN
+                "min_total_stress": -5.000000E-02, # Matches SA-MIN
+
+                # SB1/SB2 son las tensiones de flexión del extremo B en el F06.
+                "stress_points_end_b.P0.sigma_bending": -5.000000E-02,
+                "stress_points_end_b.P0.sigma_total":   -3.000000E-02,
+                "stress_points_end_b.P1.sigma_bending":  1.100000E-01,
+                "stress_points_end_b.P1.sigma_total":    1.300000E-01,
             },
 
             # --- ELEMENT 102 ---
@@ -429,8 +434,6 @@ VALIDATION_DATA = [
                 "forces_n1.Mz": -5.000000E+00,
                 "forces_n1.My": -1.100000E+01,
  
- ############## NO SE CALCULAN BIEN LOS PUNTOS QUE SE PIDEN EN LAS BARRAS, REVISAR, PARECE QEU ES POR EL LECTOR, mi nastran_reader.py
- ############## POR AHORA LOS MANTENGO FUERA DE LA VALIDACIÓN HASTA IMPLMENTARLO BIEN.             
                 # --- STRESS POINTS VALIDATION ---
                 # PBAR 402 define puntos C(5,5) y D(-5,-5)
                 # SA1 (Point C, End A):  1.50E-01 (Pure bending?)
@@ -446,7 +449,12 @@ VALIDATION_DATA = [
                 "stress_points.P1.sigma_total":   -1.100000E-01, # Point D
 
                 "max_total_stress":  1.900000E-01, # Matches SA-MAX
-                "min_total_stress": -1.100000E-01  # Matches SA-MIN
+                "min_total_stress": -1.100000E-01, # Matches SA-MIN
+
+                "stress_points_end_b.P0.sigma_bending": -7.500000E-02,
+                "stress_points_end_b.P0.sigma_total":   -3.500000E-02,
+                "stress_points_end_b.P1.sigma_bending":  7.500000E-02,
+                "stress_points_end_b.P1.sigma_total":    1.150000E-01,
             }
         },
         "description": "Two CBARs in series (Y-axis). Validates Stress Recovery at specific points (C, D) defined in PBAR."
@@ -615,7 +623,7 @@ VALIDATION_DATA = [
     #              Valida la recuperacion de tensiones en esquinas de secciones CBAR.
     {
         "case_name": "Ej18_Hybrid_Tripod_Stress_Recovery_Points",
-        "folder": "case_18",
+        "folder": "case_22/case_18",
         "filename": "Ej18.dat",
         "description": "Hybrid tripod structure with defined PBAR stress points. Validates detailed stress recovery at cross-section corners (C, D, E, F) and total stress envelopes.",
         "expected_displacements": {
@@ -639,7 +647,8 @@ VALIDATION_DATA = [
             },
             # Node 5 (Top CROD)
             5: {
-                1:  0.0,           # T1
+                0:  0.0,           # T1
+                1:  0.0,           # T2
                 2:  2.023731E-03,  # T3 (Elongacion axial dominante)
                 5:  1.264375E-04   # R3 
             }
@@ -851,6 +860,7 @@ VALIDATION_DATA = [
 
 ]
 
+
 class TestNastranEndToEnd:
     """
     @class TestNastranEndToEnd
@@ -894,8 +904,28 @@ class TestNastranEndToEnd:
         displacements = results["displacements"]
         reactions = results["reactions"]
         elem_stresses = results["stresses"]
+        
+        if case_data['case_name'] in ['Ej21_Multi_CTRIA3_Patch', 'Ej22_Bending_Simple', 'Ej23_Mixed_Materials']:
+            print(f"\nCAPTURING RESULTS FOR {case_data['case_name']}:")
+            print(f"DISPLACEMENTS TYPE: {type(displacements)}")
+            print(f"DISPLACEMENTS: {displacements}")
+            
+            # If it is a dict, iterate. If array, just printed.
+            if isinstance(displacements, dict):
+                for nid, disps in displacements.items():
+                    print(f"Node {nid}: {disps}")
+            
+            print("ELEMENT STRESSES:")
+            # stresses might be a dict of dicts
+            print(elem_stresses)
+
+        # 4. COMPARE RESULTS
+        rel_tol = case_data.get("rel_tol", 1e-3)
+        abs_tol_disp = case_data.get("abs_tol_disp", 1e-9)
+        abs_tol_force = case_data.get("abs_tol_force", 1e-4)
 
         # 4. VERIFY DISPLACEMENTS
+
         expected_disp = case_data.get("expected_displacements", {})
         
         for nid, dofs_dict in expected_disp.items():
@@ -911,9 +941,10 @@ class TestNastranEndToEnd:
                 
                 # Check with tolerance (0.1% relative error is generous but safe for FEM)
                 # Absolute tolerance 1e-9 handles near-zero values.
-                assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-9), \
+                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_disp), \
                     f"Mismatch in {case_data['case_name']}, Node {nid}, DOF {local_dof}. " \
                     f"Expected {val_ref}, Got {val_calc}"
+
         
         # 5. VERIFY REACTIONS
         expected_react = case_data.get("expected_reactions", {})
@@ -930,8 +961,9 @@ class TestNastranEndToEnd:
                 val_calc = reac_vec[local_dof]
                 
                 # Tolerancia: 0.1% o 1e-4 absoluto para valores cercanos a cero
-                assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
+                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
                     f"Reaction Mismatch {case_data['case_name']}, Node {nid}, DOF {local_dof}"
+
         
         # 6. VERIFY ELEMENT STRESSES / FORCES
         expected_forces = case_data.get("expected_element_forces", {})
@@ -960,8 +992,9 @@ class TestNastranEndToEnd:
                     pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {e}")
 
                 # Verificamos que sea un número (float o numpy scalar)
-                assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
+                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
+
                 
 '''                if qty_name not in calc_data:
                     pytest.fail(f"Quantity '{qty_name}' not found for Element {eid}")
@@ -971,4 +1004,3 @@ class TestNastranEndToEnd:
                 assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
                     '''
-

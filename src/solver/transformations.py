@@ -21,6 +21,46 @@ class CoordinateTransformation:
     @class CoordinateTransformation
     @brief Calculation of local coordinate systems and transformations to global ones.
     """
+    
+    @staticmethod
+    def compute_local_axes_triangle(node1_coords: np.ndarray, node2_coords: np.ndarray, node3_coords: np.ndarray):
+        """
+        @brief Computes local axes for a triangular element (CTRIA3).
+        @details
+        Origin at Node 1.
+        X-axis: Along N1->N2.
+        Z-axis: Normal to the plane N1-N2-N3.
+        Y-axis: Complete RHS (in the plane).
+        """
+        # 1. Vector N1->N2 (Local X)
+        v12 = node2_coords - node1_coords
+        L = np.linalg.norm(v12)
+        if L < 1e-12:
+             raise ValueError("Zero length edge N1-N2")
+        x_axis = v12 / L
+
+        # 2. Vector N1->N3 (For Plane definition)
+        v13 = node3_coords - node1_coords
+        
+        # 3. Normal to Plane (Local Z)
+        z_axis = np.cross(x_axis, v13)
+        norm_z = np.linalg.norm(z_axis)
+        if norm_z < 1e-12:
+            raise ValueError("Nodes are collinear, cannot define a triangle plane.")
+        z_axis = z_axis / norm_z
+
+        # 4. Local Y (In Plane, orthogonal to X)
+        y_axis = np.cross(z_axis, x_axis) 
+
+        # Comprobar dirección de v13 proyectada en Y
+        if np.dot(v13, y_axis) < 0:
+             y_axis = -y_axis
+             # Y si invertimos Y, debemos invertir Z para mantener mano derecha
+             z_axis = -z_axis
+
+        
+        return x_axis, y_axis, z_axis
+    
 
     @staticmethod
     def compute_local_axes(node1_coords: np.ndarray, node2_coords: np.ndarray, orientation_vector: np.ndarray = None):
@@ -51,7 +91,11 @@ class CoordinateTransformation:
                 v_aux = np.array([1.0, 0.0, 0.0])
         else:
             # For CBAR: Use the given vector, normalized
-            v_aux = v_aux / np.linalg.norm(v_aux)
+            v_aux = np.asarray(v_aux, dtype=float)
+            norm_aux = np.linalg.norm(v_aux)
+            if not np.isfinite(norm_aux) or norm_aux < 1e-12:
+                raise ValueError("The orientation vector must be finite and non-zero.")
+            v_aux = v_aux / norm_aux
 
         # 3. Local Z axis (Normal to the X-Aux plane)
         # v_z = x CROSS v_aux
