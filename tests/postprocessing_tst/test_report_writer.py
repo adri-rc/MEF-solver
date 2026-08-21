@@ -88,6 +88,12 @@ def test_report_separates_element_families_and_uses_physical_headers(tmp_path):
             },
             20: {
                 "type": "CBAR",
+                "axial_force": 101.0,
+                "torque": 25.0,
+                "axial_stress": 30.0,
+                "torsional_stress": 5.0,
+                "axial_strain": 1.5e-3,
+                "twist_rate": 2.5e-3,
                 "forces_n1": {"Fx": 1.0, "Fy": 2.0, "Fz": 3.0, "Mx": 4.0, "My": 5.0, "Mz": 6.0},
                 "forces_n2": {"Fx": -1.0, "Fy": -2.0, "Fz": -3.0, "Mx": -4.0, "My": -5.0, "Mz": -6.0},
                 "stress_points_end_a": cbar_point_a,
@@ -125,7 +131,9 @@ def test_report_separates_element_families_and_uses_physical_headers(tmp_path):
     assert "M1" in report
     assert "PRIMARY 1" not in report
     assert "FORCES IN CROD ELEMENTS" in report
+    assert "SECTION RESPONSE IN CBAR ELEMENTS" in report
     assert "END FORCES AND MOMENTS IN CBAR ELEMENTS" in report
+    assert "NONLINEAR STATE IN CBAR ELEMENTS" not in report
     assert "FORCE AND MOMENT RESULTANTS IN CTRIA3 ELEMENTS" in report
     assert "TOP AND BOTTOM FIBER STRESSES IN CTRIA3 ELEMENTS" in report
     assert "FORCE AND MOMENT RESULTANTS IN CQUAD4 ELEMENTS" in report
@@ -160,6 +168,105 @@ def test_report_separates_element_families_and_uses_physical_headers(tmp_path):
     fiber_header = lines[fiber_header_index]
     fiber_data = lines[fiber_header_index + 2]
     assert fiber_header.index("FIBER") == fiber_data.index("TOP (+T/2)")
+
+
+def test_nonlinear_cbar_report_includes_section_response_and_converged_state(tmp_path):
+    model = SimpleNamespace(
+        nodes={1: object(), 2: object()},
+        materials={},
+        properties={},
+        elements={},
+        loads=[],
+        constraints=[],
+        analysis=AnalysisConfiguration(
+            solution_sequence=400,
+            analysis_type=AnalysisType.NONLINEAR_STATIC,
+            analysis_keyword="NLSTAT",
+            large_displacement_parameter=1,
+            large_displacements=True,
+            follower_force_stiffness=False,
+        ),
+    )
+    solver = SimpleNamespace(dof_mapper=SequentialDofMapper())
+    results = {
+        "displacements": np.zeros(12),
+        "reactions": {},
+        "stresses": {
+            21: {
+                "type": "CBAR",
+                "axial_force": 1.25e5,
+                "torque": 2.50e4,
+                "axial_stress": 250.0,
+                "torsional_stress": 12.5,
+                "axial_strain": 1.25e-3,
+                "twist_rate": 2.50e-4,
+                "current_length": 1.0025e3,
+                "strain_energy": 3.75e3,
+                "max_element_stress": 310.0,
+                "min_element_stress": -85.0,
+                "forces_n1": {
+                    "Fx": -1.25e5, "Fy": 1.0e4, "Fz": -2.0e4,
+                    "Mx": -2.50e4, "My": 3.0e4, "Mz": -4.0e4,
+                },
+                "forces_n2": {
+                    "Fx": 1.25e5, "Fy": -1.0e4, "Fz": 2.0e4,
+                    "Mx": 2.50e4, "My": -3.0e4, "Mz": 4.0e4,
+                },
+                "stress_points_end_a": {
+                    "P0": {
+                        "y": 10.0, "z": 20.0, "sigma_axial": 250.0,
+                        "sigma_bending": 60.0, "sigma_total": 310.0,
+                        "tau_xy": 12.5,
+                    }
+                },
+                "stress_points_end_b": {
+                    "P0": {
+                        "y": 10.0, "z": 20.0, "sigma_axial": 250.0,
+                        "sigma_bending": -335.0, "sigma_total": -85.0,
+                        "tau_xy": 12.5,
+                    }
+                },
+            }
+        },
+    }
+
+    report_path = tmp_path / "nonlinear_cbar.rpt"
+    write_report(report_path, "nonlinear_cbar", model, results, solver)
+    report = report_path.read_text(encoding="utf-8")
+
+    assert report.startswith("NONLINEAR STATIC ANALYSIS REPORT")
+    assert "SECTION RESPONSE IN CBAR ELEMENTS" in report
+    assert "AXIAL FORCE" in report
+    assert "MAX TORSIONAL STRESS" in report
+    assert "AXIAL STRAIN" in report
+    assert "TWIST RATE" in report
+    assert "1.250000E+05" in report
+    assert "2.500000E-04" in report
+
+    assert "NONLINEAR STATE IN CBAR ELEMENTS" in report
+    assert "CURRENT LENGTH" in report
+    assert "ELEMENT STRAIN ENERGY" in report
+    assert "MAX NORMAL STRESS" in report
+    assert "MIN NORMAL STRESS" in report
+    assert "1.002500E+03" in report
+    assert "3.750000E+03" in report
+    assert "3.100000E+02" in report
+    assert "-8.500000E+01" in report
+
+    assert "END FORCES AND MOMENTS IN CBAR ELEMENTS" in report
+    assert "STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS" in report
+    assert "P0" not in report
+    assert any(
+        line.split()[2] == "C"
+        for line in report.splitlines()
+        if line.strip().startswith("21 A")
+    )
+    assert report.index("SECTION RESPONSE IN CBAR ELEMENTS") < report.index(
+        "NONLINEAR STATE IN CBAR ELEMENTS"
+    )
+    assert report.index("NONLINEAR STATE IN CBAR ELEMENTS") < report.index(
+        "END FORCES AND MOMENTS IN CBAR ELEMENTS"
+    )
 
 
 def test_report_handles_models_without_reactions_or_element_results(tmp_path):

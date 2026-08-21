@@ -2,7 +2,7 @@
 
 MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático y a la comparación con modelos de MSC Nastran. Incluye estática lineal para CROD, CBAR, CTRIA3 y CQUAD4 coplanar, y estática no lineal geométrica `SOL 400` para MAT1 con CROD o CBAR. El proyecto no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
 
-Esta documentación describe el estado verificado en el repositorio el **21 de agosto de 2026**. La colección completa termina con `587 passed, 6 xfailed`.
+Esta documentación describe el estado verificado en el repositorio el **21 de agosto de 2026**. La colección completa termina con `668 passed, 6 xfailed`.
 
 ## Índice
 
@@ -15,7 +15,8 @@ Esta documentación describe el estado verificado en el repositorio el **21 de a
 - [Desarrollo y validación de CQUAD4](cquad4.md): estado detallado del elemento cuadrilateral.
 - [Formulación completa de CQUAD4](cquad4_tesis.md): desarrollo matemático, parámetros, correspondencia con el código, evidencia y limitaciones.
 - [Análisis no lineal de CROD](nonlinear_crod.md): formulación, tarjetas SOL 400, solver incremental y referencias 92--127.
-- [Análisis no lineal de CBAR](nonlinear_cbar.md): formulación corrotacional, límites y campaña 128--153.
+- [Análisis no lineal de CBAR](nonlinear_cbar.md): formulación corrotacional,
+  límites y campaña 128--166, con integración mixta CROD/CBAR 167--176.
 - [Limitaciones y hoja de ruta](roadmap.md): deuda técnica y evolución propuesta hacia elementos 3D.
 
 ## Estado funcional resumido

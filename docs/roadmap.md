@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `667 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `668 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -42,6 +42,9 @@ referencias MSC auditables.
 5. Identificadas y validadas las interpolaciones `INT2=LC` Euler--Bernoulli e
    `INT2=LS` lineal-cortante mediante los diagnósticos 154--160. Queda abierta
    la convención de tensión de fibra bajo rotación 3D combinada.
+6. Integrada la recuperación CBAR en el `.rpt`: respuesta axial/torsional,
+   longitud y energía del estado no lineal, acciones A/B y tensiones C--F, sin
+   alterar las tablas lineales existentes.
 
 ### Cierre externo ejecutado
 
@@ -51,7 +54,8 @@ referencias finales están transcritas: 161--166 amplían el E2E CBAR y 167--176
 usan un módulo E2E mixto independiente. La respuesta global y la tensión axial
 centroidal quedan cerradas; sigue abierta la reproducción estricta de algunas
 fibras casi neutras y del reparto de momentos en los tramos más rotados de
-165/166.
+165/166. El informe presenta esas fibras con los nombres C--F de Nastran y
+documenta qué magnitudes tienen correspondencia directa o reconstruida en F06.
 
 ## Prioridad 1: consolidación
 

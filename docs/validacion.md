@@ -8,11 +8,11 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 21 de agosto de 2026 después de cerrar las
-interpolaciones CBAR `LC/LS` con los decks 154--160:
+Resultado verificado el 21 de agosto de 2026 después de integrar la salida
+CBAR no lineal en el informe:
 
 ```text
-587 passed, 6 xfailed, 2 warnings
+668 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -26,6 +26,14 @@ Las dos advertencias proceden de que pytest no puede escribir su caché.
 4. Matrices DMIG frente a Nastran.
 5. Validación E2E de desplazamientos, cargas, reacciones y resultados de
    elemento con referencias transcritas en los tests.
+
+El contrato del informe se comprueba aparte en
+`tests/postprocessing_tst/test_report_writer.py`. Para CBAR existe un estado
+SOL 400 explícito que exige las tablas de respuesta axial/torsional, longitud y
+energía no lineales, acciones A/B y tensiones en puntos de recuperación. La
+misma prueba comprueba que `P0` se presenta como C y que un CBAR lineal no
+recibe una tabla `NONLINEAR STATE` ficticia. Como comprobación funcional, el
+caso 128 genera las cuatro tablas a partir del resultado real del solver.
 
 El caso 80 añade una comprobación integrada con CBAR, CTRIA3 y CQUAD4 en el
 mismo modelo. Contrasta desplazamientos, cargas, reacciones, resultados de las

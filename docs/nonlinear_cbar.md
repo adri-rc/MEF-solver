@@ -145,6 +145,27 @@ el E2E. La convención exacta de MSC para tensiones de fibra bajo rotación 3D
 combinada no está cerrada todavía; no debe inferirse un esfuerzo centroidal
 promediando C--F si los puntos de recuperación no son simétricos.
 
+### Presentación en el informe `.rpt`
+
+El estado final convergido de cada CBAR se presenta en cuatro bloques:
+
+1. `SECTION RESPONSE`: fuerza y tensión axial, torsor, tensión torsional
+   máxima en los puntos configurados, deformación axial logarítmica y giro por
+   unidad de longitud;
+2. `NONLINEAR STATE`: longitud actual entre extremos con offset, energía
+   elástica elemental y tensiones normales extrema máxima/mínima entre ambos
+   extremos;
+3. `END FORCES AND MOMENTS`: acciones locales `Fx/Fy/Fz/Mx/My/Mz` en A y B;
+4. `STRESSES AT RECOVERY POINTS`: contribuciones axial, de flexión, total y
+   torsional en C--F para los dos extremos.
+
+Las claves del diccionario `P0`--`P3` se convierten únicamente durante la
+presentación a C--F; el resultado numérico no se modifica. La tabla
+`NONLINEAR STATE` se activa por la presencia conjunta de `current_length` y
+`strain_energy`, de modo que un CBAR lineal conserva las otras tres tablas sin
+mostrar un estado no lineal ficticio. La correspondencia detallada con el F06
+está en [`result_report.md`](result_report.md).
+
 Los decks 161--166 aíslan esa convención de forma escalonada y solicitan los
 resultados C--F en estados finales e intermedios. Sus F06/PCH terminan sin
 `FATAL`, alcanzan factor 1.0 y ya forman parte del E2E CBAR. La tensión axial

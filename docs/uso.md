@@ -194,7 +194,9 @@ El bloque `FINAL CONVERGED STATE RESULTS` contiene el estado final. Sus
 resultados se organizan por familia:
 
 - CROD: fuerzas y torsor; tensiones, deformación y giro unitario;
-- CBAR: fuerzas y momentos en los extremos A/B; tensiones en los puntos PBAR;
+- CBAR: respuesta axial y torsional; fuerzas y momentos en los extremos A/B;
+  tensiones en los puntos PBAR C--F; y, para SOL 400, longitud actual, energía
+  elemental y tensiones normales extrema máxima/mínima sobre ambos extremos;
 - CTRIA3 y CQUAD4: una tabla de resultantes `Nx`, `Ny`, `Nxy`, `Mx`, `My`,
   `Mxy`, `Qx`, `Qy` y otra de tensiones en las fibras `TOP` y `BOTTOM`;
 - desplazamientos y reacciones conservan tablas nodales independientes.
@@ -203,6 +205,10 @@ Todas las componentes se identifican por su nombre físico; ya no se utilizan
 cabeceras genéricas `PRIMARY 1`, `PRIMARY 2`, etc. Las magnitudes se expresan
 en el sistema coherente de unidades elegido en el deck de entrada. Para placas,
 `TOP` corresponde a `z=+t/2` y `BOTTOM` a `z=-t/2` en los ejes locales.
+En CBAR, las claves numéricas `P0`--`P3` se presentan en el informe como los
+puntos Nastran C--F. La tabla `NONLINEAR STATE IN CBAR ELEMENTS` sólo aparece
+cuando la recuperación contiene el estado convergido no lineal; no se rellena
+con ceros en análisis lineales.
 El significado de las tablas, las razones por las que cambia el número de
 iteraciones y su correspondencia con el F06 están en
 [`result_report.md`](result_report.md).

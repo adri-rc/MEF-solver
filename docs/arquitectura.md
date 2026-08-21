@@ -168,7 +168,9 @@ K_global = Tᵀ K_local T
 La recuperación numérica sigue delegada en cada solver de elemento:
 
 - CROD: deformación/tensión axial, fuerza, giro por unidad de longitud, torsor y tensión torsional.
-- CBAR: fuerzas de extremo, tensión axial, torsión y tensiones normales en puntos PBAR.
+- CBAR: respuesta axial/torsional, fuerzas y momentos de extremo y tensiones
+  normales/torsionales en puntos PBAR. El estado no lineal añade longitud
+  actual, energía elemental y extremos de tensión normal sobre ambos extremos.
 - CTRIA3: tensiones y resultantes de membrana, momentos, cortantes y fibras superior/inferior.
 - CQUAD4: membrana, momentos, cortantes, fibras superior/inferior e invariantes; compartido por las formulaciones Nastran y Reissner-Mindlin.
 
@@ -183,9 +185,14 @@ iteración, residuos absoluto/relativo y norma de la corrección; la tabla de
 incrementos añade tamaño de paso, recortes y energía elástica.
 
 Las tablas finales contienen desplazamientos, reacciones y resultados
-específicos para cada familia de elemento. En placas separa las resultantes
-internas `N/M/Q` de las tensiones en las fibras `TOP/BOTTOM`, siguiendo una
-organización análoga a F06. De este modo `main.py` se limita a coordinar
-lectura, ensamblaje, solución y escritura.
+específicos para cada familia de elemento. Para CBAR separan la respuesta de
+sección axial/torsional, el estado geométrico no lineal, las acciones de los
+extremos A/B y las tensiones de los puntos C--F. La tabla de estado geométrico
+sólo aparece cuando la recuperación incluye `current_length` y
+`strain_energy`, por lo que la ruta lineal no recibe ceros artificiales. Las
+claves internas `P0`--`P3` se presentan como C--F. En placas se separan las
+resultantes internas `N/M/Q` de las tensiones en las fibras `TOP/BOTTOM`,
+siguiendo una organización análoga a F06. De este modo `main.py` se limita a
+coordinar lectura, ensamblaje, solución y escritura.
 La interpretación de cada columna y su correspondencia con F06 se documenta
 en [`result_report.md`](result_report.md).

@@ -46,7 +46,7 @@ Comando de referencia:
 Resultado observado el 21 de agosto de 2026:
 
 ```text
-667 passed, 6 xfailed, 2 warnings
+668 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -90,8 +90,10 @@ independientes (`SNORM,0`) y pasan.
 - El informe `.rpt` distingue análisis lineal/no lineal y contiene resumen del
   modelo, configuración, desplazamientos, reacciones y tablas físicas
   específicas para CROD, CBAR, CTRIA3 y CQUAD4. En SOL 400 incluye además los
-  historiales de incrementos convergidos y correcciones de Newton al final. La
-  correspondencia con F06 está en `docs/result_report.md`.
+  historiales de incrementos convergidos y correcciones de Newton al final.
+  Para CBAR separa respuesta axial/torsional, longitud/energía del estado
+  convergido, acciones A/B y tensiones C--F. La correspondencia con F06 está
+  en `docs/result_report.md`.
 - El preproceso distingue `SOL 101` y estática no lineal `SOL 400`; para esta
   última lee `ANALYSIS=NLSTAT`, `NLSTEP`/`NLPARM`, `LGDISP` y `FOLLOWK`.
 - La campaña CROD comprende 36 referencias, casos 92--127, ejecutadas con MSC
@@ -135,7 +137,9 @@ alabeado ni suavizado `SNORM`.
   `PBARN1 LC/LS`, acciones, tangente numérica y recuperación del CBAR.
 - `src/solver/elements/`: formulaciones de CROD, CBAR, CTRIA3 y CQUAD4.
 - `src/postprocessing/report_writer.py`: presentación del informe; ya no vive
-  dentro de `main.py`.
+  dentro de `main.py`. La tabla `NONLINEAR STATE IN CBAR ELEMENTS` se activa
+  sólo cuando existen `current_length` y `strain_energy`; `P0`--`P3` se
+  presentan como C--F sin modificar el resultado numérico.
 - `tests/solver_tst/validation_cases/`: DAT, F06, PCH y CSV de referencia.
 
 El flujo es:
@@ -235,7 +239,8 @@ controles extremadamente mal condicionados.
 - El caso 80 de ese último módulo mezcla CBAR, CTRIA3 y CQUAD4 y comprueba
   desplazamientos, cargas, reacciones y resultados de las tres familias.
 - `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT,
-  incluida configuración, convergencia iterativa y estado final no lineal.
+  incluida configuración, convergencia iterativa, estado final no lineal y
+  las cuatro tablas de recuperación CBAR.
 - `tests/preprocessing_tst/test_nonlinear_analysis_control.py`: normalización
   SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 36
   decks CROD; también comprueba estructura, campos avanzados y cabeceros de

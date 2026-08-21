@@ -61,8 +61,70 @@ para comparar el estado final hay que localizar su última aparición bajo el
 | `NODAL DISPLACEMENTS` | `D I S P L A C E M E N T  V E C T O R`. |
 | `SPC REACTION FORCES AND MOMENTS` | `F O R C E S  O F  S I N G L E - P O I N T  C O N S T R A I N T`. |
 | tensión/deformación CROD | `N O N L I N E A R  S T R E S S E S  I N  R O D  E L E M E N T S (CROD)`. |
+| `SECTION RESPONSE IN CBAR ELEMENTS` | La tensión y deformación axiales centroidales se relacionan con `N O N L I N E A R  S T R E S S E S  I N  B A R  E L E M E N T S (CBAR)`. En flexión, el F06 imprime la combinación en C--F y no separa el valor centroidal. Fuerza axial, torsor, giro unitario y tensión torsional no tienen una columna equivalente en los F06 SOL 400 conservados. |
+| `NONLINEAR STATE IN CBAR ELEMENTS` | `CURRENT LENGTH` se reconstruye con la geometría desplazada y los offsets; MSC no la imprime directamente en estos listados. `ELEMENT STRAIN ENERGY` es la contribución elástica del elemento, mientras `GLOBAL WORKS & ENERGIES` sólo muestra el total del modelo. |
+| `END FORCES AND MOMENTS IN CBAR ELEMENTS` | No aparece una tabla OEF textual en los F06 SOL 400 de referencia. Se comprueba por equilibrio con `OLOAD`, `SPCFORCES` y, cuando existe, PCH/OP2. |
+| `STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS` | `N O N L I N E A R  S T R E S S E S  I N  B A R  E L E M E N T S (CBAR)`, identificando extremo mediante `GRID` y punto mediante C, D, E o F. |
 | `STRAIN ENERGY` | `GLOBAL WORKS & ENERGIES`, campo `TOT STRAIN ENERGY`; en saltos de rama MSC puede acumular trabajo y no representar la energía elástica instantánea usada por el proyecto. |
 | fuerza axial y par CROD | No siempre aparece una tabla OEF legible en los F06 de referencia SOL 400. Se contrasta con tensión, cargas `OLOAD`, reacciones `SPCFORCES` y, cuando está disponible, PCH/OP2. |
+
+## Resultados CBAR lineales y no lineales
+
+El informe distribuye la respuesta CBAR en cuatro tablas. Tres existen tanto
+en SOL 101 como en SOL 400; `NONLINEAR STATE IN CBAR ELEMENTS` sólo se escribe
+cuando el diccionario del elemento contiene el estado geométrico convergido.
+
+### `SECTION RESPONSE IN CBAR ELEMENTS`
+
+| Columna | Significado |
+|---|---|
+| `AXIAL FORCE` | Resultante axial de la sección. Positiva a tracción según el eje local convergido. |
+| `TORQUE` | Resultante torsional alrededor del eje local del elemento. |
+| `AXIAL STRESS` | Tensión axial uniforme. En SOL 400 vale $E\log(L/L_0)$ y no incluye flexión. |
+| `MAX TORSIONAL STRESS` | Mayor valor absoluto de la aproximación torsional en los puntos de recuperación configurados. Se imprime con signo no negativo. |
+| `AXIAL STRAIN` | Deformación axial centroidal: lineal en SOL 101 y logarítmica en SOL 400 con grandes desplazamientos. |
+| `TWIST RATE` | Giro relativo de las secciones por unidad de longitud de referencia. |
+
+En un caso puramente axial, `AXIAL STRESS` y `AXIAL STRAIN` pueden localizarse
+en la tabla CBAR no lineal del F06 porque todos los puntos C--F reciben la
+misma contribución. Cuando existe flexión, MSC imprime en cada punto la suma de
+axil y flexión; por tanto, el valor axial centroidal debe deducirse de la ley de
+sección o de la combinación de puntos y no compararse con una única fila C--F.
+
+### `NONLINEAR STATE IN CBAR ELEMENTS`
+
+| Columna | Significado |
+|---|---|
+| `CURRENT LENGTH` | Distancia entre los extremos actuales, incluidos los offsets `WA/WB` que rotan con sus nodos. |
+| `ELEMENT STRAIN ENERGY` | Energía elástica instantánea del CBAR en el último estado convergido. La suma sobre CROD y CBAR forma la energía global del proyecto. |
+| `MAX NORMAL STRESS` | Máxima tensión normal total entre todos los puntos C--F y ambos extremos. |
+| `MIN NORMAL STRESS` | Mínima tensión normal total entre todos los puntos C--F y ambos extremos. |
+
+Esta tabla no se muestra para un CBAR lineal porque su diccionario no contiene
+`current_length` ni energía individual. Su ausencia no indica que falten
+fuerzas o tensiones lineales; evita completar con ceros magnitudes que sólo se
+recuperan expresamente en la ruta no lineal.
+
+### Fuerzas de extremo y puntos C--F
+
+`END FORCES AND MOMENTS IN CBAR ELEMENTS` muestra las acciones nodales locales
+`Fx`, `Fy`, `Fz`, `Mx`, `My` y `Mz` para los extremos A y B. Son fuerzas que el
+elemento ejerce en sus nodos, de modo que sus signos no deben interpretarse
+como dos cortes de sección con la misma normal exterior. Los offsets pueden
+añadir el momento $\mathbf{r}\times\mathbf{f}$.
+
+`STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS` separa en cada extremo:
+
+- `AXIAL`: contribución uniforme;
+- `BENDING`: contribución debida a `My`, `Mz`, `I1`, `I2` e `I12`;
+- `TOTAL`: suma de `AXIAL + BENDING`;
+- `TORSIONAL`: aproximación $T r/J$, presentada separadamente de la tensión
+  normal.
+
+El diccionario numérico usa las claves internas `P0`, `P1`, `P2` y `P3`. El
+`.rpt` las presenta como C, D, E y F, respectivamente, siguiendo el orden de
+los puntos de tensión definidos en `PBAR`. Los casos 161--166 son la referencia
+principal para localizar estas filas en el último `LOAD STEP` del F06.
 
 ## `CONVERGED INCREMENT HISTORY`
 
