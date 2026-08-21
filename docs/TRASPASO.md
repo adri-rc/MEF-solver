@@ -5,8 +5,10 @@ punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
 El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
 La fase actual se desarrolla en `feat/non-linear-CBAR`. El commit `df88ee4`
 contiene la campaña 128--153 y la primera implementación CBAR no lineal. El
-cierre `LC/LS` basado en 154--160 permanece como cambio local. Los 33 casos
-alcanzan carga completa en MSC y coinciden con el solver, incluido 142.
+commit `bf0042d` cierra `LC/LS` con los diagnósticos 154--160. Los 33 casos
+alcanzan carga completa en MSC y coinciden con el solver, incluido 142. Los
+casos 161--176 tienen resultados MSC auditados y referencias E2E: 161--166
+amplían CBAR y 167--176 se validan en un módulo mixto independiente.
 
 ## 1. Incorporación rápida para una IA
 
@@ -44,7 +46,7 @@ Comando de referencia:
 Resultado observado el 21 de agosto de 2026:
 
 ```text
-587 passed, 6 xfailed, 2 warnings
+667 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -100,11 +102,16 @@ independientes (`SNORM,0`) y pasan.
   nodales conservativas, `FIXED`/`ADAPT`, Newton completo y recortes.
 - `CBARNonlinear` implementa una formulación corrotacional con deformación
   axial logarítmica, rotaciones finitas, `I12`, `K1/K2`, offsets y releases.
-- La campaña CBAR comprende 33 decks, casos 128--160, todos con soluciones MSC
-  y referencias E2E explícitas. Los 33 pasan.
+- La campaña CBAR comprende 39 decks, casos 128--166, todos con soluciones MSC
+  y referencias E2E explícitas. Los 39 pasan.
 - Los casos 154--160 identifican que `LC` es Euler--Bernoulli e ignora
   `K1/K2`, mientras `LS` usa interpolación lineal-cortante de un punto y un
   factor unitario si `K1/K2=0`. El antiguo `xfail` 142 queda cerrado.
+- Los DAT 161--166 aíslan la tensión de fibra CBAR C--F con rotación 3D, `I12`,
+  `G0`, `CID`, offsets y SPC impuesto. Los 167--176 mezclan CROD/CBAR en modelos
+  de 2--30 elementos. Todos alcanzan factor 1.0 sin `FATAL`; el E2E mixto
+  comprueba desplazamientos, reacciones, incrementos y tensión axial de ambos
+  tipos. Quedan como diagnóstico algunas fibras de los tramos severos 165/166.
 
 No existe todavía solución dinámica, no linealidad material, contacto, cargas
 seguidoras, cargas distribuidas, MPC/RBE, sólidos, CQUAD4
@@ -232,7 +239,7 @@ controles extremadamente mal condicionados.
 - `tests/preprocessing_tst/test_nonlinear_analysis_control.py`: normalización
   SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 36
   decks CROD; también comprueba estructura, campos avanzados y cabeceros de
-  los 33 decks CBAR.
+  los 39 decks CBAR y los diez mixtos.
 - `tests/solver_tst/elements/test_crod_non_linear.py`: cinemática, fuerzas,
   torsión, objetividad y derivada numérica de la tangente.
 - `tests/solver_tst/test_nonlinear_intermediate_validation.py`: estados de 112
@@ -240,6 +247,10 @@ controles extremadamente mal condicionados.
 - `tests/solver_tst/test_nonlinear_validation_end_to_end.py`: diccionarios
   explícitos de los 35 casos convergidos; 123--127 documentan además metadatos,
   tolerancias y descripciones legibles por caso.
+- `tests/solver_tst/test_nonlinear_CBAR_validation_E2E_.py`: 39 referencias
+  CBAR explícitas, incluidas tensiones C--F seleccionadas de 161--166.
+- `tests/solver_tst/test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: diez
+  referencias mixtas 167--176, separadas de las campañas puras.
 - `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
   ejecución y resultados de MSC que deben conservarse.
 - `docs/nonlinear_cbar.md`: formulación corrotacional implementada, validación
@@ -271,7 +282,7 @@ postproceso.
 
 Prioridad recomendada:
 
-1. investigar la recuperación de tensión de fibra CBAR bajo rotación 3D;
+1. cerrar el reparto de momentos de fibra CBAR en los tramos severos 165/166;
 2. integración continua y entorno bloqueado/reproducible;
 3. estudio de convergencia, ensamblaje COO y benchmark de escalabilidad;
 4. política de errores del modo por lotes.

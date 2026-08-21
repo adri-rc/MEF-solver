@@ -5,7 +5,7 @@
 `NonlinearStaticSolver` admite modelos `MAT1/PBAR/PBARN1/CBAR` con grandes
 desplazamientos y rotaciones. La implementación vive en
 `src/solver/elements/cbar_non_linear.py` y no modifica la ruta lineal de
-`BarElementSolver`. La campaña externa comprende los casos 128--160 de MSC
+`BarElementSolver`. La campaña externa CBAR comprende los casos 128--166 de MSC
 Nastran SOL 400.
 
 La referencia funcional principal es la documentación oficial de
@@ -145,6 +145,19 @@ el E2E. La convención exacta de MSC para tensiones de fibra bajo rotación 3D
 combinada no está cerrada todavía; no debe inferirse un esfuerzo centroidal
 promediando C--F si los puntos de recuperación no son simétricos.
 
+Los decks 161--166 aíslan esa convención de forma escalonada y solicitan los
+resultados C--F en estados finales e intermedios. Sus F06/PCH terminan sin
+`FATAL`, alcanzan factor 1.0 y ya forman parte del E2E CBAR. La tensión axial
+centroidal ajustada sobre C--F coincide aproximadamente entre 0.01 % y 1.7 %;
+se comparan además fibras alejadas del eje neutro. Algunas fibras casi neutras
+y el reparto de momentos del segundo tramo de 165/tercer tramo de 166 siguen
+siendo diagnósticos: no se han ocultado con tolerancias amplias ni `xfail`.
+
+Los modelos mixtos 167--176 comprueban que la recuperación y el ensamblaje de
+CBAR conviven con la respuesta axial corrotacional de CROD. Sus diez referencias
+se mantienen en un E2E separado y alcanzan carga completa. Véase
+[`NONLINEAR_FINAL_CLOSURE_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_FINAL_CLOSURE_CASES.md).
+
 ## Validación
 
 Las pruebas se reparten en tres niveles:
@@ -155,13 +168,17 @@ Las pruebas se reparten en tres niveles:
 - `test_nonlinear_CBAR_intermediate_validation.py`: trayectorias de los casos
   132/137, flexibilidad tangente de 138/139 y estados 0.2/0.5/0.8 de los
   diagnósticos `LC/LS` 155--159;
-- `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 33
+- `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 39
   casos con desplazamientos, reacciones, esfuerzos axiales, torsor y controles
-  de incremento seleccionados.
+  de incremento seleccionados, incluidas fibras C--F de 161--166;
+- `test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: diez referencias
+  integradas 167--176 con desplazamientos, reacciones y tensión axial de un
+  CBAR y un CROD por modelo.
 
 La flexibilidad `dT2/dFy` del caso 137 difiere de la sonda MSC entre 0.1 % y
-0.8 % en factores 0.2--1.0. Los 33 E2E alcanzan carga completa. Las
-tolerancias reflejan la complejidad: los casos básicos quedan por debajo de
+0.8 % en factores 0.2--1.0. Los 39 E2E CBAR y los diez E2E mixtos alcanzan
+carga completa. Las tolerancias reflejan la complejidad: los casos básicos
+quedan por debajo de
 0.1 %, los ensamblajes grandes se comparan entre 0.3 % y 4 %, y el marco con
 release 147 usa 7 % por una reacción transversal secundaria.
 

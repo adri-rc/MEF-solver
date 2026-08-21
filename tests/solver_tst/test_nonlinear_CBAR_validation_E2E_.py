@@ -29,7 +29,9 @@ Claves del diccionario de cada caso:
     ``twist_rate``, ``max_element_stress`` y ``min_element_stress``. Para una
     sección simétrica, ``axial_stress`` es la media de C/D/E/F de una estación;
     con puntos no simétricos debe obtenerse como la ordenada en el centroide
-    del plano de tensiones, no como la media aritmética.
+    del plano de tensiones, no como la media aritmética. Las claves con puntos,
+    por ejemplo ``stress_points_end_a.P0.sigma_total``, recorren diccionarios
+    anidados; P0/P1/P2/P3 corresponden respectivamente a C/D/E/F.
 ``expected_strain_energy`` y ``expected_increments``
     Referencias opcionales de energía y número de incrementos convergidos.
 
@@ -460,6 +462,168 @@ NONLINEAR_CBAR_VALIDATION_DATA = [
         "expected_strain_energy": 2.538174e6,
         "expected_increments": 30,
     },
+    {
+        "case_name": "case_161_symmetric_fibers_combined_3d",
+        "folder": "case_161",
+        "filename": "ej161_cbar_fiber_symmetric_combined_3d.dat",
+        "description": "Symmetric C-F recovery under finite axial, biaxial and torsional loading.",
+        "note": "Fiber assertions use points away from the neutral axis; C-A/E-A remain diagnostic frame-sensitive values.",
+        "rel_tol": 5.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {1: 32.23970, 2: -20.58407, 3: 0.08805611, 5: 0.06409807},
+        },
+        "expected_reactions": {
+            1: {0: -2.0e5, 1: -2.5e5, 2: 1.8e5, 4: -1.098412e8, 5: -2.334938e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": 178.7213,
+                "stress_points_end_a.P1.sigma_total": 2038.839,
+                "stress_points_end_a.P3.sigma_total": -1681.396,
+                "stress_points_end_b.P0.sigma_total": -249.8122,
+                "stress_points_end_b.P2.sigma_total": 607.2547,
+            },
+        },
+        "expected_increments": 30,
+    },
+    {
+        "case_name": "case_162_inclined_symmetric_fibers_3d",
+        "folder": "case_162",
+        "filename": "ej162_cbar_fiber_inclined_symmetric_3d.dat",
+        "description": "Symmetric C-F recovery for an inclined finite-rotation CBAR.",
+        "rel_tol": 1.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {0: 25.25542, 1: -47.07510, 2: 13.70698, 3: 0.1015694, 5: -0.05651220},
+        },
+        "expected_reactions": {
+            1: {0: -1.2e5, 1: 1.8e5, 2: -1.5e5, 3: -1.448060e8, 5: 2.048970e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": 45.86450,
+                "stress_points_end_a.P0.sigma_total": -2135.188,
+                "stress_points_end_a.P2.sigma_total": 2226.917,
+                "stress_points_end_b.P1.sigma_total": -222.4929,
+                "stress_points_end_b.P3.sigma_total": 314.2219,
+            },
+        },
+        "expected_increments": 36,
+    },
+    {
+        "case_name": "case_163_asymmetric_fibers_i12_3d",
+        "folder": "case_163",
+        "filename": "ej163_cbar_fiber_asymmetric_i12_3d.dat",
+        "description": "Asymmetric C-F coordinates and I12 coupling under finite 3D rotation.",
+        "rel_tol": 3.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {0: 11.81729, 1: 39.52793, 2: -72.89896, 4: 0.1376217, 5: 0.08332155},
+        },
+        "expected_reactions": {
+            1: {0: -1.6e5, 1: -1.4e5, 2: 1.1e5, 3: 8.354222e7, 4: -1.109361e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": 165.2741,
+                "stress_points_end_a.P0.sigma_total": 1613.519,
+                "stress_points_end_a.P1.sigma_total": 1750.072,
+                "stress_points_end_a.P3.sigma_total": -1335.864,
+                "stress_points_end_b.P2.sigma_total": 304.7386,
+            },
+        },
+        "expected_increments": 40,
+    },
+    {
+        "case_name": "case_164_fibers_g0_rotated_cid",
+        "folder": "case_164",
+        "filename": "ej164_cbar_fiber_g0_rotated_cid.dat",
+        "description": "C-F recovery with G0 orientation and loads transformed from CORD2R.",
+        "rel_tol": 5.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {0: -14.11941, 1: 43.36367, 2: -8.601598, 3: 0.05700035, 5: 0.1380167},
+        },
+        "expected_reactions": {
+            1: {0: 62225.40, 1: -248901.6, 2: 154000.0, 3: 1.553889e8, 5: -2.270827e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": -24.90124,
+                "stress_points_end_a.P0.sigma_total": 2115.280,
+                "stress_points_end_a.P2.sigma_total": -1466.619,
+                "stress_points_end_b.P0.sigma_total": 123.4732,
+                "stress_points_end_b.P1.sigma_total": 125.0081,
+                "stress_points_end_b.P2.sigma_total": -104.0780,
+                "stress_points_end_b.P3.sigma_total": -120.9657,
+            },
+        },
+        "expected_increments": 40,
+    },
+    {
+        "case_name": "case_165_two_member_spatial_fibers",
+        "folder": "case_165",
+        "filename": "ej165_cbar_fiber_two_member_spatial_elbow.dat",
+        "description": "Two-material spatial elbow with end-A/end-B fiber recovery.",
+        "note": "Element 2 centroidal stress is validated; its large-rotation fiber moment split remains a documented diagnostic.",
+        "rel_tol": 7.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {0: 8.620900, 1: -3.213924, 2: -32.23106, 3: -0.3058750},
+            3: {0: 149.2350, 1: 7.786293, 2: -304.7437, 4: 0.6718341},
+        },
+        "expected_reactions": {
+            1: {0: -142000.0, 1: -26000.0, 2: 212000.0, 3: 1.009764e8, 4: -2.668248e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": 59.48175,
+                "stress_points_end_a.P0.sigma_total": 1977.559,
+                "stress_points_end_a.P2.sigma_total": -1858.595,
+                "stress_points_end_b.P0.sigma_total": 828.9991,
+                "stress_points_end_b.P2.sigma_total": -710.0353,
+            },
+            2: {"axial_stress": 6.769074},
+        },
+        "expected_increments": 42,
+    },
+    {
+        "case_name": "case_166_offsets_enforced_rotation_fibers",
+        "folder": "case_166",
+        "filename": "ej166_cbar_fiber_offsets_enforced_rotation.dat",
+        "description": "Three CBARs with offsets, asymmetric I12 section and prescribed rotation.",
+        "note": "Element 3 centroidal stress is validated; its individual C-F values remain frame-sensitive diagnostics.",
+        "rel_tol": 2.0e-2,
+        "abs_tol": 1.0e-5,
+        "expected_displacements": {
+            2: {0: 1.392294, 1: 5.886907, 2: -19.62144, 3: 0.09731732},
+            3: {0: 51.11525, 1: 25.41761, 2: -96.48213, 4: 0.3001116},
+            4: {0: 81.45042, 1: 68.78590, 2: -266.8302, 5: 0.08000006},
+        },
+        "expected_reactions": {
+            1: {0: -72000.0, 1: -11999.99, 2: 195000.0, 4: -2.854397e8},
+            4: {5: 1.582454e8},
+        },
+        "expected_element_results": {
+            1: {
+                "axial_stress": 25.92650,
+                "stress_points_end_a.P1.sigma_total": 2083.903,
+                "stress_points_end_a.P3.sigma_total": -2032.050,
+                "stress_points_end_b.P1.sigma_total": 1385.038,
+                "stress_points_end_b.P3.sigma_total": -1333.185,
+            },
+            2: {
+                "axial_stress": -5.517251,
+                "stress_points_end_a.P0.sigma_total": 1758.796,
+                "stress_points_end_a.P2.sigma_total": -1141.630,
+                "stress_points_end_b.P0.sigma_total": 1295.375,
+                "stress_points_end_b.P2.sigma_total": -657.5824,
+            },
+            3: {"axial_stress": -9.507075},
+        },
+        "expected_increments": 50,
+    },
 ]
 
 
@@ -471,6 +635,13 @@ def _validation_parameter(reference):
             reason=reference["expected_failure"],
         )
     return pytest.param(reference, id=reference["case_name"], marks=mark)
+
+
+def _nested_result_value(result, path):
+    value = result
+    for key in path.split("."):
+        value = value[key]
+    return value
 
 
 @pytest.mark.parametrize(
@@ -509,7 +680,7 @@ def test_nonlinear_cbar_final_results(reference):
     ).items():
         computed = result["stresses"][element_id]
         for result_name, expected in expected_results.items():
-            assert computed[result_name] == pytest.approx(
+            assert _nested_result_value(computed, result_name) == pytest.approx(
                 expected, rel=rel_tol, abs=abs_tol
             )
 

@@ -9,6 +9,7 @@ from src.preprocessing.data_model import (
     BarElement,
     BarProperty,
     RodElement,
+    RodProperty,
 )
 from src.preprocessing.nastran_reader_v2 import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
@@ -227,6 +228,30 @@ NONLINEAR_CBAR_CAMPAIGN_COUNTS = {
 }
 
 
+NONLINEAR_CBAR_FIBER_CAMPAIGN_COUNTS = {
+    161: {"nodes": 2, "elements": 1, "properties": 1, "materials": 1, "loads": 2},
+    162: {"nodes": 2, "elements": 1, "properties": 1, "materials": 1, "loads": 2},
+    163: {"nodes": 2, "elements": 1, "properties": 1, "materials": 1, "loads": 2},
+    164: {"nodes": 3, "elements": 1, "properties": 1, "materials": 1, "loads": 2},
+    165: {"nodes": 3, "elements": 2, "properties": 2, "materials": 2, "loads": 3},
+    166: {"nodes": 4, "elements": 3, "properties": 2, "materials": 2, "loads": 3},
+}
+
+
+NONLINEAR_MIXED_CAMPAIGN_COUNTS = {
+    167: {"nodes": 3, "bars": 1, "rods": 1, "bar_props": 1, "rod_props": 1, "materials": 1, "loads": 2},
+    168: {"nodes": 4, "bars": 3, "rods": 1, "bar_props": 1, "rod_props": 1, "materials": 2, "loads": 3},
+    169: {"nodes": 6, "bars": 2, "rods": 3, "bar_props": 1, "rod_props": 2, "materials": 2, "loads": 2},
+    170: {"nodes": 6, "bars": 5, "rods": 4, "bar_props": 2, "rod_props": 2, "materials": 2, "loads": 4},
+    171: {"nodes": 8, "bars": 8, "rods": 6, "bar_props": 2, "rod_props": 2, "materials": 2, "loads": 5},
+    172: {"nodes": 9, "bars": 10, "rods": 8, "bar_props": 2, "rod_props": 2, "materials": 3, "loads": 6},
+    173: {"nodes": 9, "bars": 12, "rods": 10, "bar_props": 2, "rod_props": 2, "materials": 2, "loads": 6},
+    174: {"nodes": 12, "bars": 16, "rods": 8, "bar_props": 3, "rod_props": 2, "materials": 3, "loads": 8},
+    175: {"nodes": 10, "bars": 13, "rods": 15, "bar_props": 3, "rod_props": 3, "materials": 3, "loads": 8},
+    176: {"nodes": 12, "bars": 20, "rods": 10, "bar_props": 3, "rod_props": 3, "materials": 3, "loads": 8},
+}
+
+
 @pytest.mark.parametrize("case_id", range(128, 161))
 def test_nonlinear_cbar_campaign_decks_are_parseable(case_id):
     validation_root = (
@@ -253,6 +278,58 @@ def test_nonlinear_cbar_campaign_decks_are_parseable(case_id):
     assert all(isinstance(prop, BarProperty) for prop in model.properties.values())
 
 
+@pytest.mark.parametrize("case_id", range(161, 167))
+def test_nonlinear_cbar_fiber_campaign_decks_are_parseable(case_id):
+    validation_root = Path(__file__).parents[1] / "solver_tst" / "validation_cases"
+    paths = list((validation_root / f"case_{case_id}").glob("*.dat"))
+    assert len(paths) == 1
+
+    model = parse_nastran_input(str(paths[0]))
+    expected = NONLINEAR_CBAR_FIBER_CAMPAIGN_COUNTS[case_id]
+
+    assert model.analysis.solution_sequence == 400
+    assert model.analysis.analysis_type is AnalysisType.NONLINEAR_STATIC
+    assert model.analysis.large_displacements is True
+    assert model.analysis.follower_force_stiffness is False
+    assert model.analysis.nonlinear_step.sid == case_id
+    assert model.active_spc_sid == case_id
+    assert model.active_load_sid == case_id
+    assert len(model.nodes) == expected["nodes"]
+    assert len(model.elements) == expected["elements"]
+    assert len(model.properties) == expected["properties"]
+    assert len(model.materials) == expected["materials"]
+    assert len(model.loads) == expected["loads"]
+    assert all(isinstance(element, BarElement) for element in model.elements.values())
+    assert all(isinstance(prop, BarProperty) for prop in model.properties.values())
+
+
+@pytest.mark.parametrize("case_id", range(167, 177))
+def test_nonlinear_mixed_cbar_crod_campaign_decks_are_parseable(case_id):
+    validation_root = Path(__file__).parents[1] / "solver_tst" / "validation_cases"
+    paths = list((validation_root / f"case_{case_id}").glob("*.dat"))
+    assert len(paths) == 1
+
+    model = parse_nastran_input(str(paths[0]))
+    expected = NONLINEAR_MIXED_CAMPAIGN_COUNTS[case_id]
+    elements = list(model.elements.values())
+    properties = list(model.properties.values())
+
+    assert model.analysis.solution_sequence == 400
+    assert model.analysis.analysis_type is AnalysisType.NONLINEAR_STATIC
+    assert model.analysis.large_displacements is True
+    assert model.analysis.follower_force_stiffness is False
+    assert model.analysis.nonlinear_step.sid == case_id
+    assert model.active_spc_sid == case_id
+    assert model.active_load_sid == case_id
+    assert len(model.nodes) == expected["nodes"]
+    assert sum(isinstance(element, BarElement) for element in elements) == expected["bars"]
+    assert sum(isinstance(element, RodElement) for element in elements) == expected["rods"]
+    assert sum(isinstance(prop, BarProperty) for prop in properties) == expected["bar_props"]
+    assert sum(isinstance(prop, RodProperty) for prop in properties) == expected["rod_props"]
+    assert len(model.materials) == expected["materials"]
+    assert len(model.loads) == expected["loads"]
+
+
 @pytest.mark.parametrize("case_id", range(128, 161))
 def test_nonlinear_cbar_campaign_activates_sol400_bar_output(case_id):
     validation_root = (
@@ -269,11 +346,37 @@ def test_nonlinear_cbar_campaign_activates_sol400_bar_output(case_id):
     assert "STRAIN(SORT1,REAL,PRINT,PUNCH) = ALL" in deck_text
 
 
+@pytest.mark.parametrize("case_id", range(161, 177))
+def test_nonlinear_final_campaign_activates_diagnostic_output(case_id):
+    validation_root = Path(__file__).parents[1] / "solver_tst" / "validation_cases"
+    path = next((validation_root / f"case_{case_id}").glob("*.dat"))
+    deck_text = path.read_text()
+
+    assert deck_text.count("\nPBARN1,") == deck_text.count("\nPBAR,")
+    assert "NLOPRM OUTCTRL = (SOLUTION,INTERM) NLDBG = ADVDBG" in deck_text
+    assert "NLSTRESS(SORT1) = ALL" in deck_text
+    assert "BOUTPUT(SORT1,REAL) = ALL" in deck_text
+    assert "ELFORCE(SORT1,REAL,PRINT,PUNCH) = ALL" in deck_text
+    assert "STRAIN(SORT1,REAL,PRINT,PUNCH) = ALL" in deck_text
+
+
 @pytest.mark.parametrize("case_id", range(149, 154))
 def test_large_nonlinear_cbar_campaign_has_no_initial_linear_mechanism(case_id):
     validation_root = (
         Path(__file__).parents[1] / "solver_tst" / "validation_cases"
     )
+    path = next((validation_root / f"case_{case_id}").glob("*.dat"))
+    solver = LinearStaticSolver(parse_nastran_input(str(path)))
+    solver.build_stiffness_matrix()
+    free_dofs, _, _ = solver._get_dof_partition()
+    free_stiffness = solver.K_global.tocsr()[free_dofs, :][:, free_dofs].toarray()
+
+    assert np.linalg.matrix_rank(free_stiffness) == len(free_dofs)
+
+
+@pytest.mark.parametrize("case_id", range(161, 177))
+def test_nonlinear_final_campaign_has_no_initial_linear_mechanism(case_id):
+    validation_root = Path(__file__).parents[1] / "solver_tst" / "validation_cases"
     path = next((validation_root / f"case_{case_id}").glob("*.dat"))
     solver = LinearStaticSolver(parse_nastran_input(str(path)))
     solver.build_stiffness_matrix()
@@ -344,6 +447,22 @@ def test_nonlinear_cbar_campaign_documents_each_bulk_card_header(case_id):
     validation_root = (
         Path(__file__).parents[1] / "solver_tst" / "validation_cases"
     )
+    path = next((validation_root / f"case_{case_id}").glob("*.dat"))
+    text = path.read_text()
+    bulk_text = text.split("BEGIN BULK", maxsplit=1)[1].split("ENDDATA", maxsplit=1)[0]
+    documented_cards = {
+        line.split(",", maxsplit=1)[0]
+        for line in (raw_line.strip() for raw_line in bulk_text.splitlines())
+        if line and not line.startswith(("$", ",", "+"))
+    }
+
+    for card_name in documented_cards:
+        assert f"$ {card_name}:" in text, f"Missing {card_name} field header in {path.name}"
+
+
+@pytest.mark.parametrize("case_id", range(161, 177))
+def test_nonlinear_final_campaign_documents_each_bulk_card_header(case_id):
+    validation_root = Path(__file__).parents[1] / "solver_tst" / "validation_cases"
     path = next((validation_root / f"case_{case_id}").glob("*.dat"))
     text = path.read_text()
     bulk_text = text.split("BEGIN BULK", maxsplit=1)[1].split("ENDDATA", maxsplit=1)[0]

@@ -191,14 +191,15 @@ Véanse
 
 ## Campaña CBAR no lineal
 
-La campaña comprende 33 decks, casos 128--160. Cubre límite lineal, axial,
+La campaña CBAR comprende 39 decks, casos 128--166. Cubre límite lineal, axial,
 flexión biaxial, momentos, torsión, carga combinada, una sonda tangente
 central, orientación `G0`, cargas en `CID`, `I12`, `K1/K2`, SPC no nulos, varios
 materiales/elementos, refinamiento, release y offsets con `LROFF`. Los casos
 149--153 añaden estructuras de 15 o 20 CBAR con geometrías planas, espaciales y
 curvas, varias propiedades y materiales, fuerzas, momentos y desplazamientos o
 giros impuestos. Los casos 154--160 aíslan `PBARN1,INT2=LC/LS`, los dos planos
-de cortante y la semántica de `K1/K2`.
+de cortante y la semántica de `K1/K2`; 161--166 añaden recuperación C--F bajo
+rotación 3D, `I12`, `G0`, `CID`, offsets y giro impuesto.
 
 La ejecución original de 128--148 se descartó porque faltaba `PBARN1`. Tras
 corregir los decks y relanzar 140, 148 y 150, los 26 F06/PCH alcanzan factor de
@@ -210,8 +211,8 @@ tangente en cada estado convergido; los demás historiales aportan
 desplazamientos, reacciones, energía y `NLSTRESS/BOUTPUT` por incremento.
 
 `test_nonlinear_analysis_control.py` comprueba que cada carpeta contiene un
-único DAT, que los 26 decks originales y los siete diagnósticos se leen
-como SOL 400/CBAR, que los campos avanzados
+único DAT, que los 39 decks CBAR y los diez mixtos se leen como SOL 400, que
+los campos avanzados
 llegan al modelo interno y que toda tarjeta Bulk Data usada tiene un cabecero
 de campos comentado. También comprueba que existe una extensión `PBARN1` por
 cada `PBAR` y que las salidas específicas de SOL 400 están solicitadas. La
@@ -227,8 +228,9 @@ La implementación se valida mediante:
   objetividad y derivada central de la tangente;
 - siete pruebas intermedias con las trayectorias 132/137, las sondas 138/139 y
   estados convergidos de 155--159;
-- 33 entradas E2E con referencias explícitas de desplazamiento, reacción,
-  energía y esfuerzos seleccionados. Todas pasan, incluido el caso 142.
+- 39 entradas E2E CBAR con referencias explícitas de desplazamiento, reacción,
+  energía y esfuerzos seleccionados. Todas pasan, incluido el caso 142;
+- diez entradas E2E mixtas con una tensión axial CBAR y otra CROD por modelo.
 
 Los decks 154--160 terminan sin `FATAL`. Los máximos errores vectoriales de la
 implementación frente a esos resultados son `8.04e-5` en desplazamientos,
@@ -241,3 +243,23 @@ flexibilidad tangente de 137 difiere menos de 0.85 % a lo largo de cinco
 estados. Los modelos 149--153 quedan dentro de 0.3--4 % en las magnitudes
 seleccionadas. La tensión axial centroidal está validada; la convención de
 tensión de fibra bajo rotación 3D combinada sigue siendo una mejora abierta.
+
+Para estudiar esa mejora se ejecutaron los casos 161--166: comienzan por una
+sección simétrica y añaden inclinación 3D, puntos C--F asimétricos con `I12`,
+orientación `G0`, cargas en `CID`, varios elementos/materiales, offsets y giro
+impuesto. Los casos 167--176 forman una segunda campaña de integración con 2 a
+30 elementos y combinan CROD y CBAR, propiedades/materiales distintos,
+`FORCE`, `MOMENT`, `LOAD`, empotramientos y SPC no nulos. Los 16 DAT pasan el
+preprocesado, tienen rigidez inicial de rango completo y alcanzan carga completa
+en MSC y con el solver local. Los F06 no contienen `FATAL`.
+
+La solución mixta global queda cerrada por un módulo E2E independiente con
+tolerancia relativa del 3 %. Los errores vectoriales observados antes de
+seleccionar componentes son menores de 0.04 % en desplazamientos, 0.03 % en
+reacciones, 2.2 % en fibras CBAR y 1.3 % en CROD. En 161--166 la tensión axial
+centroidal ajustada al plano C--F coincide entre aproximadamente 0.01 % y 1.7 %.
+Las fibras alejadas del eje neutro seleccionadas pasan entre 1 % y 7 %; las
+fibras casi neutras y los tramos más severos de 165/166 se conservan como
+diagnóstico abierto de reparto de momentos, sin `xfail` ni tolerancias laxas.
+La matriz de casos y la auditoría requerida están en la
+[guía de cierre](../tests/solver_tst/validation_cases/NONLINEAR_FINAL_CLOSURE_CASES.md).

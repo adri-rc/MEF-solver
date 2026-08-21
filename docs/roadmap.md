@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `587 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `667 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -17,8 +17,9 @@ dependencias mínimas, aunque todavía falta un bloqueo reproducible.
 El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
 `NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.
 `NonlinearStaticSolver` resuelve MAT1 con CROD o CBAR mediante Newton completo,
-stepping fijo/adaptativo y recortes. CROD dispone de 36 casos (92--127) y CBAR
-de 33 (128--160), todos con referencias MSC auditables.
+stepping fijo/adaptativo y recortes. CROD dispone de 36 casos (92--127), CBAR
+de 39 (128--166) y la integración mixta de diez (167--176), todos con
+referencias MSC auditables.
 
 ## Prioridad 0 completada: no linealidad geométrica CROD
 
@@ -37,10 +38,20 @@ de 33 (128--160), todos con referencias MSC auditables.
    SPC impuestos.
 3. Identificada la deformación axial logarítmica con 130/131 y validada la
    tangente mediante las sondas 137--139.
-4. Transcritos 33 E2E explícitos; todos pasan, incluido 142.
+4. Transcritos 39 E2E explícitos; todos pasan, incluido 142.
 5. Identificadas y validadas las interpolaciones `INT2=LC` Euler--Bernoulli e
    `INT2=LS` lineal-cortante mediante los diagnósticos 154--160. Queda abierta
    la convención de tensión de fibra bajo rotación 3D combinada.
+
+### Cierre externo ejecutado
+
+Los seis diagnósticos 161--166 y los diez modelos mixtos CROD/CBAR 167--176, de
+2 a 30 elementos, terminan sin `FATAL` y alcanzan factor 1.0 en MSC. Las
+referencias finales están transcritas: 161--166 amplían el E2E CBAR y 167--176
+usan un módulo E2E mixto independiente. La respuesta global y la tensión axial
+centroidal quedan cerradas; sigue abierta la reproducción estricta de algunas
+fibras casi neutras y del reparto de momentos en los tramos más rotados de
+165/166.
 
 ## Prioridad 1: consolidación
 

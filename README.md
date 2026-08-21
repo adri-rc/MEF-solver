@@ -11,13 +11,14 @@ El solver activo implementa estática lineal para CROD, CBAR, CTRIA3 y CQUAD4
 coplanar, además de estática no lineal geométrica `SOL 400` para modelos
 `MAT1` con CROD o CBAR. La ruta no lineal usa incrementos fijos o adaptativos
 y Newton-Raphson completo. CROD se valida con los casos 92--127 y CBAR con la
-campaña 128--160 de MSC Nastran. El alcance y sus límites están en
+campaña 128--166 de MSC Nastran; los casos mixtos CROD/CBAR 167--176 tienen un
+E2E independiente. El alcance y sus límites están en
 [docs/nonlinear_crod.md](docs/nonlinear_crod.md) y
 [docs/nonlinear_cbar.md](docs/nonlinear_cbar.md); el detalle de CQUAD4 está en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`587 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`667 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
 
 El CBAR no lineal valida las dos variantes `PBARN1,SECT=S,BEH2=BAR`:
