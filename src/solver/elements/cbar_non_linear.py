@@ -1,13 +1,14 @@
 """Corotational CBAR for geometrically nonlinear static analysis.
 
-The cross-section law is the already validated linear ``MAT1/PBAR`` law.  A
+``PBARN1`` selects a linear/cubic Euler law (``LC``) or a one-point
+linear-shear law (``LS``) over the elastic ``MAT1/PBAR`` section.  A
 continuously rotating element frame removes rigid translation and rotation;
 only the logarithmic axial stretch and the relative end rotations enter the
 section law.  This is the SOL 400 ``PBARN1,SECT=S,BEH2=BAR`` scope: large
 displacements and rotations with small elastic section strains.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -73,7 +74,7 @@ class CBARNonlinear:
 
     Nodal rotations are total rotation vectors in basic axes.  The nodal
     triads are obtained with the exponential map and compared with an element
-    frame whose first axis is the current chord.  The reference linear CBAR
+    frame whose first axis is the current chord.  The PBARN1-selected section
     stiffness then acts on six deformational measures embedded in a 12-DOF
     local vector.  The tangent is the numerical differential of the complete
     spatial internal-force mapping, including frame and geometric-force terms.
@@ -132,27 +133,123 @@ class CBARNonlinear:
         )
         self.reference_axes = np.column_stack((ex, ey, ez))
 
+        # PBARN1 selects the interpolation used by the SOL 400 element.  LC
+        # is the linear/cubic (Euler--Bernoulli) variant and deliberately
+        # ignores the PBAR shear-area factors.  LS is a one-point
+        # linear-shear element; it is not the closed-form Timoshenko matrix
+        # used by the conventional linear CBAR path.
+        euler_property = replace(prop, K1=0.0, K2=0.0)
         linear_solver = BarElementSolver(
             node1,
             node2,
-            prop,
+            euler_property,
             mat,
             orientation=orientation,
             pa=self.pa,
             pb=self.pb,
         )
-        self.local_stiffness = linear_solver.get_local_stiffness_matrix()
-        self._linear_global_stiffness = BarElementSolver(
-            node1,
-            node2,
-            prop,
-            mat,
-            orientation=orientation,
-            wa=self.wa,
-            wb=self.wb,
-            pa=self.pa,
-            pb=self.pb,
-        ).get_stiffness_matrix()
+        if prop.nonlinear_integration == "LS":
+            self.local_stiffness = self._linear_shear_local_stiffness()
+        else:
+            self.local_stiffness = linear_solver.get_local_stiffness_matrix()
+        self._linear_global_stiffness = self._global_stiffness_from_local(
+            self.local_stiffness
+        )
+
+    @staticmethod
+    def _add_block(stiffness: np.ndarray, block: np.ndarray, indices) -> None:
+        stiffness[np.ix_(indices, indices)] += block
+
+    def _apply_end_releases(self, stiffness: np.ndarray) -> np.ndarray:
+        released = []
+        for flag, offset in ((self.pa, 0), (self.pb, 6)):
+            for component in str(flag):
+                if component in "123456":
+                    released.append(offset + int(component) - 1)
+        released = sorted(set(released))
+        if not released:
+            return stiffness
+        retained = [index for index in range(12) if index not in released]
+        k_rr = stiffness[np.ix_(retained, retained)]
+        k_rq = stiffness[np.ix_(retained, released)]
+        k_qq = stiffness[np.ix_(released, released)]
+        condensed = k_rr - k_rq @ np.linalg.pinv(k_qq, rcond=1.0e-12) @ k_rq.T
+        result = np.zeros_like(stiffness)
+        result[np.ix_(retained, retained)] = condensed
+        return 0.5 * (result + result.T)
+
+    def _linear_shear_local_stiffness(self) -> np.ndarray:
+        """Return MSC's PBARN1 ``INT2=LS`` one-point element matrix.
+
+        Transverse displacement and section rotation are linear.  Curvature
+        is therefore constant and the shear strain is evaluated at the
+        element midpoint.  A zero/blank PBAR shear factor is interpreted as
+        the SOL 400 unit default, as isolated by validation cases 159/160.
+        """
+        length = self.reference_length
+        stiffness = np.zeros((12, 12))
+        pair = np.array([[1.0, -1.0], [-1.0, 1.0]]) / length
+        self._add_block(
+            stiffness,
+            self.mat.E * self.prop.A * pair,
+            BarElementSolver.IDX_AXIAL,
+        )
+        self._add_block(
+            stiffness,
+            self.mat.G * self.prop.J * pair,
+            BarElementSolver.IDX_TORSION,
+        )
+
+        curvature_xy = np.array([0.0, -1.0 / length, 0.0, 1.0 / length])
+        shear_xy = np.array([-1.0 / length, -0.5, 1.0 / length, -0.5])
+        rotation_signs = np.array([1.0, -1.0, 1.0, -1.0])
+        curvature_xz = rotation_signs * curvature_xy
+        shear_xz = rotation_signs * shear_xy
+        shear_factor_1 = self.prop.K1 if self.prop.K1 > 0.0 else 1.0
+        shear_factor_2 = self.prop.K2 if self.prop.K2 > 0.0 else 1.0
+
+        bending_xy = length * (
+            self.mat.E * self.prop.I1 * np.outer(curvature_xy, curvature_xy)
+            + shear_factor_1
+            * self.prop.A
+            * self.mat.G
+            * np.outer(shear_xy, shear_xy)
+        )
+        bending_xz = length * (
+            self.mat.E * self.prop.I2 * np.outer(curvature_xz, curvature_xz)
+            + shear_factor_2
+            * self.prop.A
+            * self.mat.G
+            * np.outer(shear_xz, shear_xz)
+        )
+        self._add_block(
+            stiffness, bending_xy, BarElementSolver.IDX_BEND_XY
+        )
+        self._add_block(
+            stiffness, bending_xz, BarElementSolver.IDX_BEND_XZ
+        )
+
+        if self.prop.I12 != 0.0:
+            coupling = (
+                self.mat.E
+                * self.prop.I12
+                * length
+                * np.outer(curvature_xy, curvature_xz)
+            )
+            xy = BarElementSolver.IDX_BEND_XY
+            xz = BarElementSolver.IDX_BEND_XZ
+            stiffness[np.ix_(xy, xz)] += coupling
+            stiffness[np.ix_(xz, xy)] += coupling.T
+
+        return self._apply_end_releases(stiffness)
+
+    def _global_stiffness_from_local(self, local_stiffness: np.ndarray) -> np.ndarray:
+        local_transform = self._block_rotation(self.reference_axes).T
+        offset_transform = np.eye(12)
+        offset_transform[0:3, 3:6] = -self._skew(self.wa)
+        offset_transform[6:9, 9:12] = -self._skew(self.wb)
+        k_reference_ends = local_transform.T @ local_stiffness @ local_transform
+        return offset_transform.T @ k_reference_ends @ offset_transform
 
     @staticmethod
     def _block_rotation(axes: np.ndarray) -> np.ndarray:

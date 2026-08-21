@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Los decks 128--153 generan las referencias externas necesarias antes de
-implementar el CBAR corrotacional. La campaña contiene 26 casos: los 21 casos
-iniciales 128--148 y cinco modelos mayores 149--153.
+Los decks 128--160 generan las referencias externas del CBAR corrotacional.
+La campaña contiene 33 casos: los 21 casos iniciales 128--148, cinco modelos
+mayores 149--153 y siete diagnósticos de interpolación 154--160.
 
 Cada carpeta contiene un único `.dat`. Todas las tarjetas Bulk Data presentes
 van precedidas por comentarios con sus campos para que el deck pueda auditarse
@@ -28,7 +28,7 @@ sin consultar otro archivo. Los modelos usan unidades coherentes N-mm-MPa.
 | 139 | base más sonda `-100 N` en Y | diferencia central de flexibilidad tangente |
 | 140 | CBAR 3D inclinado, `G0`, cargas en `CID` | objetividad, orientación y transformación de cargas |
 | 141 | sección asimétrica, `I12 != 0` | acoplamiento de los dos planos de flexión |
-| 142 | viga corta, `K1/K2` | flexibilidad de cortante Timoshenko |
+| 142 | viga corta, `K1/K2`, `INT2=LS` | interpolación lineal-cortante de un punto |
 | 143 | desplazamiento transversal impuesto | SPC no nulo, reacción sin carga externa |
 | 144 | desplazamiento/giro impuestos y FORCE | varios SPC no nulos combinados con carga |
 | 145 | dos elementos, MAT1/PBAR distintos | ensamblaje e interfaz entre propiedades |
@@ -41,11 +41,11 @@ sin consultar otro archivo. Los modelos usan unidades coherentes N-mm-MPa.
 | 152 | nave espacial arriostrada, 20 CBAR | offsets `LROFF`, carga combinada y desplazamiento impuesto |
 | 153 | brazo 3D en zigzag, 15 CBAR | cinco secciones, tres materiales, `I12`, cortante y giro impuesto |
 
-## Diagnóstico pendiente de INT2=LS: casos 154--160
+## Cierre de INT2=LC/LS: casos 154--160
 
-La implementación reveló que el caso 142 no puede reproducirse sustituyendo
-la integración `LS` de MSC por la matriz Timoshenko de `PBAR`. Se añaden siete
-decks mínimos, aún pendientes de ejecución con Nastran:
+La implementación inicial reveló que el caso 142 no podía reproducirse
+sustituyendo la integración `LS` de MSC por la matriz Timoshenko cerrada de
+`PBAR`. Los siete decks mínimos aíslan la ley correcta:
 
 | Caso | INT2 | K1/K2 | Carga | Comparación |
 |---:|---|---|---|---|
@@ -57,9 +57,16 @@ decks mínimos, aún pendientes de ejecución con Nastran:
 | 159 | LS | 0/0 | Y + 0.5 Z | efecto LS sin factores PBAR |
 | 160 | LC | 0/0 | Y + 0.5 Z | pareja de 159 |
 
-Todos conservan 30 incrementos comunes y `OUTCTRL=(SOLUTION,INTERM)`. Al
-devolver resultados se necesitan al menos DAT, F06 y PCH; los OP2 sólo son
-útiles si se quiere automatizar la extracción de toda la trayectoria.
+Todos conservan 30 incrementos comunes y `OUTCTRL=(SOLUTION,INTERM)`. Sus F06
+terminan sin `FATAL` y alcanzan factor de carga 1.0. Los casos 154/160 prueban
+que `LC` ignora `K1/K2`; 155/157 identifican la ley lineal-cortante, y 159
+identifica el factor unitario usado por `LS` cuando `K1/K2=0`.
+
+Las referencias finales están transcritas en
+`test_nonlinear_CBAR_validation_E2E_.py`. Los estados 0.2, 0.5 y 0.8 de
+155--159 se conservan además en
+`test_nonlinear_CBAR_intermediate_validation.py`. Ninguna prueba lee los
+resultados Nastran durante su ejecución.
 
 ## Auditoría de la primera ejecución (2026-08-20)
 
@@ -120,8 +127,9 @@ de toda la trayectoria, no sólo al final. El F06 no imprime la matriz tangente
 global completa ni, con `PBARN1`, la tabla clásica `FORCES IN BAR ELEMENTS`;
 para depurar se combinarán esta sonda, las reacciones nodales y las tablas
 `NLSTRESS/BOUTPUT`. La implementación usa esas sondas en el test intermedio.
-Para investigar la discrepancia `INT2=LS`, conviene añadir una pareja `+/-`
-mínima sobre cada plano de cortante antes de ampliar los modelos grandes.
+Los diagnósticos 155--159 aportan también referencias intermedias específicas
+para detectar una regresión en la interpolación `LC/LS` sin depender sólo del
+estado final.
 
 ## Qué conservar de la ejecución
 

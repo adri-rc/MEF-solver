@@ -140,7 +140,6 @@ class NonlinearStaticSolver:
                 "convergence (P in the MECH flags)."
             )
 
-        warned_ls_properties = set()
         for eid, element in self.model.elements.items():
             if not isinstance(element, (RodElement, BarElement)):
                 raise NotImplementedError(
@@ -167,19 +166,6 @@ class NonlinearStaticSolver:
                     raise NotImplementedError(
                         f"CBAR {eid} uses unsupported PBARN1 INT2="
                         f"{prop.nonlinear_integration}."
-                    )
-                if (
-                    prop.nonlinear_integration == "LS"
-                    and prop.pid not in warned_ls_properties
-                ):
-                    warned_ls_properties.add(prop.pid)
-                    warnings.warn(
-                        f"PBARN1 {prop.pid} uses INT2=LS; the nonlinear CBAR "
-                        "currently approximates its shear response with the "
-                        "PBAR K1/K2 Timoshenko law. MSC's advanced LS section "
-                        "interpolation is not yet reproduced exactly.",
-                        RuntimeWarning,
-                        stacklevel=2,
                     )
             mat = self.model.materials[prop.mat_id]
             if not isinstance(mat, IsotropicMaterial):

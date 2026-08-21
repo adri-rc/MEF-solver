@@ -3,7 +3,8 @@
 The test deliberately does not read PCH/OP2 files.  Displacements come from
 the converged ``DISPLACEMENTS`` blocks at the stated ``LOAD FACTOR``.  The
 tangent reference is the central probe formed by cases 138 and 139 around
-case 137: ``(T2(+100)-T2(-100))/(200*load_factor)``.
+case 137: ``(T2(+100)-T2(-100))/(200*load_factor)``.  Cases 155--159 add
+three converged states in each LC/LS diagnostic path.
 """
 
 from pathlib import Path
@@ -39,6 +40,34 @@ CASE_137_TANGENT_COMPLIANCE_T2 = {
     0.6: 1.8688837687174480e-4,
     0.8: 1.8343925476074218e-4,
     1.0: 1.8007278442382812e-4,
+}
+
+SHEAR_INTERPOLATION_INTERMEDIATE_DISPLACEMENTS = {
+    155: {
+        0.2: [-0.002240929, 1.026018, 0.0, 0.0, 0.0, 0.007618967],
+        0.5: [-0.01400403, 2.564859, 0.0, 0.0, 0.0, 0.01904635],
+        0.8: [-0.03584192, 4.103230, 0.0, 0.0, 0.0, 0.03047104],
+    },
+    156: {
+        0.2: [-0.002192947, 1.015860, 0.0, 0.0, 0.0, 0.007618968],
+        0.5: [-0.01370433, 2.539481, 0.0, 0.0, 0.0, 0.01904639],
+        0.8: [-0.03507551, 4.062667, 0.0, 0.0, 0.0, 0.03047116],
+    },
+    157: {
+        0.2: [-0.0007279397, 0.0, 0.5790450, 0.0, -0.003809511, 0.0],
+        0.5: [-0.004549432, 0.0, 1.447578, 0.0, -0.009523602, 0.0],
+        0.8: [-0.01164564, 0.0, 2.316021, 0.0, -0.01523725, 0.0],
+    },
+    158: {
+        0.2: [-0.0005482459, 0.0, 0.5079349, 0.0, -0.003809514, 0.0],
+        0.5: [-0.003426437, 0.0, 1.269816, 0.0, -0.009523656, 0.0],
+        0.8: [-0.008771206, 0.0, 2.031643, 0.0, -0.01523747, 0.0],
+    },
+    159: {
+        0.2: [-0.002422794, 0.9599862, 0.4799927, 0.0, -0.003809478, 0.007618962],
+        0.5: [-0.01514041, 2.399782, 1.199889, 0.0, -0.009523114, 0.01904626],
+        0.8: [-0.03874979, 3.839112, 1.919550, 0.0, -0.01523529, 0.03047067],
+    },
 }
 
 
@@ -79,3 +108,18 @@ def test_cbar_spatial_combined_path_and_tangent_match_nastran_probes():
             rel=8.5e-3,
             abs=2.0e-9,
         )
+
+
+@pytest.mark.parametrize(
+    "case_id", SHEAR_INTERPOLATION_INTERMEDIATE_DISPLACEMENTS
+)
+def test_cbar_lc_ls_converged_paths_match_nastran(case_id):
+    """Compare both bending planes and the LS unit-factor default."""
+    solver, increments = _solve(case_id)
+    node_dofs = solver.dof_mapper.get_dof_indices(2)
+
+    for load_factor, expected in (
+        SHEAR_INTERPOLATION_INTERMEDIATE_DISPLACEMENTS[case_id].items()
+    ):
+        computed = increments[load_factor].displacements[node_dofs]
+        assert computed == pytest.approx(expected, rel=5.0e-4, abs=2.0e-5)

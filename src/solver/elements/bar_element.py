@@ -282,12 +282,12 @@ class BarElementSolver:
         return offset_transform.T @ k_offset_ends @ offset_transform
 
     def get_local_stiffness_matrix(self) -> np.ndarray:
-        """Return the validated reference-axis CBAR stiffness.
+        """Return the conventional reference-axis CBAR stiffness.
 
-        The nonlinear CBAR reuses this constitutive matrix inside its
-        corotated frame.  Keeping one implementation of PBAR bending,
-        ``I12``, shear flexibility and releases prevents the linear and
-        nonlinear element laws from drifting apart.
+        ``CBARNonlinear`` calls this with zeroed shear factors for the
+        PBARN1 ``LC`` Euler branch.  Its ``LS`` branch has a distinct
+        one-point interpolation and is intentionally assembled in the
+        nonlinear element rather than changing this linear formulation.
         """
         return self._build_local_stiffness().copy()
 

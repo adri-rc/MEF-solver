@@ -4,8 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `570 passed, 7 xfailed`; seis límites corresponden a CQUAD4 y el séptimo a
-`PBARN1,INT2=LS`.
+con `587 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -19,7 +18,7 @@ El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
 `NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.
 `NonlinearStaticSolver` resuelve MAT1 con CROD o CBAR mediante Newton completo,
 stepping fijo/adaptativo y recortes. CROD dispone de 36 casos (92--127) y CBAR
-de 26 (128--153), todos con referencias MSC auditables.
+de 33 (128--160), todos con referencias MSC auditables.
 
 ## Prioridad 0 completada: no linealidad geométrica CROD
 
@@ -38,10 +37,10 @@ de 26 (128--153), todos con referencias MSC auditables.
    SPC impuestos.
 3. Identificada la deformación axial logarítmica con 130/131 y validada la
    tangente mediante las sondas 137--139.
-4. Transcritos 26 E2E explícitos: 25 pasan y 142 es `xfail` estricto.
-5. Limitación abierta: reproducir la interpolación propietaria
-   `PBARN1,INT2=LS` mediante los diagnósticos 154--160 y cerrar tensiones de
-   fibra bajo rotación 3D combinada.
+4. Transcritos 33 E2E explícitos; todos pasan, incluido 142.
+5. Identificadas y validadas las interpolaciones `INT2=LC` Euler--Bernoulli e
+   `INT2=LS` lineal-cortante mediante los diagnósticos 154--160. Queda abierta
+   la convención de tensión de fibra bajo rotación 3D combinada.
 
 ## Prioridad 1: consolidación
 

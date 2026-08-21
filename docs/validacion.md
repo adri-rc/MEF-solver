@@ -8,15 +8,14 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 21 de agosto de 2026 después de implementar la ruta no
-lineal CBAR y validar los decks 128--153:
+Resultado verificado el 21 de agosto de 2026 después de cerrar las
+interpolaciones CBAR `LC/LS` con los decks 154--160:
 
 ```text
-570 passed, 7 xfailed, 4 warnings
+587 passed, 6 xfailed, 2 warnings
 ```
 
-Dos advertencias proceden de que pytest no puede escribir su caché. Las otras
-dos declaran el uso aproximado de `INT2=LS` en 142/153.
+Las dos advertencias proceden de que pytest no puede escribir su caché.
 
 ## Capas de comprobación
 
@@ -102,17 +101,17 @@ o momentos.
 - **59:** geometría alabeada, fuera de alcance. El test es `xfail` estricto y
   espera que el solver la rechace.
 
-## Significado de los siete xfail
+## Significado de los seis xfail
 
 | Casos | Motivo | Interpretación |
 |---|---|---|
 | 54, 59, 62, 63, 64 | CQUAD4 alabeados | Fuera del alcance plano; rechazo esperado |
 | 78 | suavizado `SNORM` por defecto | No implementado; usar la variante `SNORM,0` |
-| 142 | `PBARN1,INT2=LS` | La interpolación avanzada de MSC no equivale a PBAR Timoshenko |
 
 Son límites declarados, no errores pendientes del CQUAD4 plano. Los casos 82 y
-88 confirman ensamblajes facetados con normales independientes; el 142 queda
-como mejora específica del CBAR no lineal.
+88 confirman ensamblajes facetados con normales independientes. El antiguo
+`xfail` 142 se cerró con la interpolación lineal-cortante validada por
+154--160.
 
 ## Criterio de cierre
 
@@ -192,13 +191,14 @@ Véanse
 
 ## Campaña CBAR no lineal
 
-La campaña comprende 26 decks, casos 128--153. Cubre límite lineal, axial,
+La campaña comprende 33 decks, casos 128--160. Cubre límite lineal, axial,
 flexión biaxial, momentos, torsión, carga combinada, una sonda tangente
 central, orientación `G0`, cargas en `CID`, `I12`, `K1/K2`, SPC no nulos, varios
 materiales/elementos, refinamiento, release y offsets con `LROFF`. Los casos
 149--153 añaden estructuras de 15 o 20 CBAR con geometrías planas, espaciales y
 curvas, varias propiedades y materiales, fuerzas, momentos y desplazamientos o
-giros impuestos.
+giros impuestos. Los casos 154--160 aíslan `PBARN1,INT2=LC/LS`, los dos planos
+de cortante y la semántica de `K1/K2`.
 
 La ejecución original de 128--148 se descartó porque faltaba `PBARN1`. Tras
 corregir los decks y relanzar 140, 148 y 150, los 26 F06/PCH alcanzan factor de
@@ -210,7 +210,7 @@ tangente en cada estado convergido; los demás historiales aportan
 desplazamientos, reacciones, energía y `NLSTRESS/BOUTPUT` por incremento.
 
 `test_nonlinear_analysis_control.py` comprueba que cada carpeta contiene un
-único DAT, que los 26 decks con referencia y los siete diagnósticos se leen
+único DAT, que los 26 decks originales y los siete diagnósticos se leen
 como SOL 400/CBAR, que los campos avanzados
 llegan al modelo interno y que toda tarjeta Bulk Data usada tiene un cabecero
 de campos comentado. También comprueba que existe una extensión `PBARN1` por
@@ -223,15 +223,18 @@ casos están en [`nonlinear_cbar.md`](nonlinear_cbar.md) y en la
 
 La implementación se valida mediante:
 
-- siete pruebas unitarias de `CBARNonlinear`, incluida objetividad y derivada
-  central de la tangente;
-- dos pruebas intermedias con la trayectoria 132/137 y las sondas 138/139;
-- 26 entradas E2E con referencias explícitas de desplazamiento, reacción y
-esfuerzo. Veinticinco pasan y el 142 es `xfail` estricto por la integración
-avanzada `PBARN1,INT2=LS`.
+- once pruebas unitarias de `CBARNonlinear`, incluidas las matrices `LC/LS`,
+  objetividad y derivada central de la tangente;
+- siete pruebas intermedias con las trayectorias 132/137, las sondas 138/139 y
+  estados convergidos de 155--159;
+- 33 entradas E2E con referencias explícitas de desplazamiento, reacción,
+  energía y esfuerzos seleccionados. Todas pasan, incluido el caso 142.
 
-Los decks 154--160 quedan preparados, sin referencias todavía, para separar
-`LC/LS`, los planos K1/K2 y la respuesta sin factores de cortante PBAR.
+Los decks 154--160 terminan sin `FATAL`. Los máximos errores vectoriales de la
+implementación frente a esos resultados son `8.04e-5` en desplazamientos,
+`6.03e-5` en reacciones y `1.52e-4` en energía. `LC` coincide con
+Euler--Bernoulli e ignora `K1/K2`; `LS` usa interpolación lineal con un punto
+de cortante y toma `K=1` cuando el factor PBAR es cero.
 
 Los casos axiales 130/131 identifican la deformación logarítmica de MSC. La
 flexibilidad tangente de 137 difiere menos de 0.85 % a lo largo de cinco

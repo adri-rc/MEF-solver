@@ -5,7 +5,7 @@
 `NonlinearStaticSolver` admite modelos `MAT1/PBAR/PBARN1/CBAR` con grandes
 desplazamientos y rotaciones. La implementación vive en
 `src/solver/elements/cbar_non_linear.py` y no modifica la ruta lineal de
-`BarElementSolver`. La campaña externa comprende los casos 128--153 de MSC
+`BarElementSolver`. La campaña externa comprende los casos 128--160 de MSC
 Nastran SOL 400.
 
 La referencia funcional principal es la documentación oficial de
@@ -17,19 +17,18 @@ a ejes que corrotan con el elemento.
 El alcance implementado es:
 
 - `MAT1` elástico isótropo y sección `PBAR` constante;
-- `PBARN1,SECT=S,BEH2=BAR`, con `INT2=LC` como variante validada;
+- `PBARN1,SECT=S,BEH2=BAR`, con `INT2=LC` e `INT2=LS` validados;
 - axial, torsión y flexión en ambos planos, incluido `I12`;
-- flexibilidad de cortante `K1/K2` mediante la ley Timoshenko ya usada por el
-  CBAR lineal;
+- interpolación lineal/cúbica Euler--Bernoulli para `LC` e interpolación
+  lineal-cortante de un punto para `LS`;
+- factores de área transversal `K1/K2` en `LS`, incluido el valor unitario
+  que SOL 400 aplica cuando el campo es cero;
 - offsets `WA/WB`, releases `PA/PB`, orientación por vector o `G0`;
 - `FORCE`, `MOMENT`, `SPC`, `SPC1`, `SPCADD` y valores impuestos;
 - cargas conservativas (`FOLLOWK=NO`) y Newton completo (`PFNT`).
 
 Quedan fuera plasticidad, grandes deformaciones de sección, alabeo, cargas
-distribuidas o seguidoras, PBEAM, CBARAO y control por longitud de arco. La
-interpolación avanzada `PBARN1,INT2=LS` se aproxima con `PBAR K1/K2`, pero no
-coincide todavía con MSC en el caso corto 142; el solver emite una advertencia
-y el E2E lo conserva como `xfail` estricto.
+distribuidas o seguidoras, PBEAM, CBARAO y control por longitud de arco.
 
 ## Cinemática corrotacional
 
@@ -63,12 +62,51 @@ referencia. Los casos axiales 130/131 la identifican directamente: para una
 tensión `sigma`, Nastran devuelve `l/L0=exp(sigma/E)`. `LGDISP=-1` conserva,
 en cambio, la formulación lineal exacta de referencia.
 
+## Interpolación PBARN1
+
+La documentación oficial de SOL 400 distingue dos elementos CBAR de dos
+nodos. `INT2=LC` usa interpolación lineal a lo largo del eje y cúbica para el
+desplazamiento transversal, con tres puntos de integración. Es la rama
+Euler--Bernoulli: los factores `PBAR K1/K2` no cambian su rigidez. Los casos
+154 y 160, idénticos salvo por esos factores, producen exactamente el mismo
+resultado MSC.
+
+`INT2=LS` usa desplazamiento transversal y giro de sección lineales y un punto
+de integración. En el plano local XY, para los GDL
+`[vA, theta_zA, vB, theta_zB]`, se emplean:
+
+```text
+B_curvature = [0, -1/L, 0, 1/L]
+B_shear     = [-1/L, -1/2, 1/L, -1/2]
+
+K_LS = E*I*L*(B_curvature outer B_curvature)
+     + K*A*G*L*(B_shear outer B_shear)
+```
+
+El segundo plano aplica el cambio de signo de `theta_y` propio del CBAR. El
+acoplamiento `I12` actúa entre las dos curvaturas constantes. Releases y
+offsets se aplican después con las mismas convenciones que en `LC`.
+
+Para un voladizo con fuerza transversal en el extremo, las dos interpolaciones
+dan, en su límite lineal:
+
+```text
+delta_LC = F*L^3/(3*E*I)
+delta_LS = F*L^3/(4*E*I) + F*L/(K*A*G)
+theta    = F*L^2/(2*E*I)
+```
+
+La diferencia `1/4` frente a `1/3` explica por qué sustituir `LS` por la matriz
+Timoshenko cerrada del CBAR lineal no reproducía el caso 142. Los pares
+155/156 y 157/158 aíslan ambos planos. El caso 159 demuestra que SOL 400 usa
+`K=1` cuando `K1/K2` valen cero en `LS`; en `LC` esos campos se ignoran.
+
 ## Ley de sección, fuerza interna y tangente
 
-La matriz local `MAT1/PBAR` se reutiliza desde `BarElementSolver`; así no se
-duplican las convenciones de `I1/I2/I12`, `K1/K2` ni la condensación de
-releases. Las seis medidas básicas se embeben en un vector local de 12 GDL y
-se calculan las acciones:
+La rama `LC` reutiliza desde `BarElementSolver` la matriz Euler con `K1/K2`
+anulados expresamente. La rama `LS` construye la matriz anterior dentro de
+`CBARNonlinear`. Las seis medidas básicas se embeben en un vector local de 12
+GDL y se calculan las acciones:
 
 ```text
 q_local = K_local d_local
@@ -111,24 +149,27 @@ promediando C--F si los puntos de recuperación no son simétricos.
 
 Las pruebas se reparten en tres niveles:
 
-- `test_cbar_non_linear.py`: límite lineal, objetividad ante rotación rígida,
-  deformación logarítmica, torsión, releases, offsets y derivada de tangente;
+- `test_cbar_non_linear.py`: once pruebas de límite lineal, matrices `LC/LS`,
+  valor unitario de cortante, objetividad ante rotación rígida, deformación
+  logarítmica, torsión, releases, offsets y derivada de tangente;
 - `test_nonlinear_CBAR_intermediate_validation.py`: trayectorias de los casos
-  132/137 y flexibilidad tangente de las sondas 138/139;
-- `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 26
+  132/137, flexibilidad tangente de 138/139 y estados 0.2/0.5/0.8 de los
+  diagnósticos `LC/LS` 155--159;
+- `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 33
   casos con desplazamientos, reacciones, esfuerzos axiales, torsor y controles
   de incremento seleccionados.
 
 La flexibilidad `dT2/dFy` del caso 137 difiere de la sonda MSC entre 0.1 % y
-0.8 % en factores 0.2--1.0. Veinticinco E2E alcanzan carga completa. Las
+0.8 % en factores 0.2--1.0. Los 33 E2E alcanzan carga completa. Las
 tolerancias reflejan la complejidad: los casos básicos quedan por debajo de
 0.1 %, los ensamblajes grandes se comparan entre 0.3 % y 4 %, y el marco con
-release 147 usa 7 % por una reacción transversal secundaria. El caso 142
-documenta la única discrepancia física abierta de `INT2=LS`.
+release 147 usa 7 % por una reacción transversal secundaria.
 
 Los casos diagnósticos 154--160 aíslan `LC/LS`, cada plano de cortante y la
-presencia o ausencia de `K1/K2`. Están preparados pero requieren ejecución MSC
-antes de proponer una nueva ley; no forman todavía parte del E2E final.
+presencia o ausencia de `K1/K2`. Todos convergen sin `FATAL` y forman parte del
+E2E final. Frente a MSC, los máximos errores vectoriales entre esos siete casos
+son `8.04e-5` en desplazamientos, `6.03e-5` en reacciones y `1.52e-4` en
+energía. El caso 142 pasa con `rtol=5e-4` y deja de ser `xfail`.
 
 Los DAT y la lectura de sus salidas se describen en
 [`NONLINEAR_CBAR_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CBAR_CASES.md)

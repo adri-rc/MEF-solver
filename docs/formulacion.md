@@ -124,10 +124,12 @@ añaden `r x f`. La tangente se obtiene como derivada central de esta fuerza
 espacial completa. Puede ser no simétrica al parametrizar Newton mediante
 vectores de rotación totales.
 
-`LGDISP=-1` usa exactamente la rigidez CBAR lineal; `LGDISP=1/2` activa la
-cinemática anterior. `INT2=LC` es la variante validada. `INT2=LS` se aproxima
-con la flexibilidad Timoshenko `K1/K2` y conserva una discrepancia documentada
-en el caso 142. La derivación, recuperación y validación están en
+`LGDISP=-1` conserva la cinemática de referencia; `LGDISP=1/2` activa la
+cinemática anterior. `INT2=LC` usa interpolación axial lineal y transversal
+cúbica Euler--Bernoulli, independientemente de `K1/K2`. `INT2=LS` usa
+desplazamiento y giro lineales, curvatura constante y cortante en el punto
+medio; sus factores de rigidez transversal son `K1*A*G` y `K2*A*G`. La
+derivación, recuperación y validación están en
 [`nonlinear_cbar.md`](nonlinear_cbar.md).
 
 ## CTRIA3

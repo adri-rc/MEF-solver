@@ -121,9 +121,10 @@ El significado de las tarjetas está desarrollado en
 [`nonlinear_crod.md`](nonlinear_crod.md).
 
 Para CBAR, la combinación validada es `PBAR` más
-`PBARN1,SECT=S,BEH2=BAR,INT2=LC`. Se admiten `I12`, `K1/K2`, offsets,
-releases y SPC no nulos. `INT2=LS` emite una advertencia porque sólo se
-aproxima mediante la ley Timoshenko de PBAR. Los casos 128--153 y sus
+`PBARN1,SECT=S,BEH2=BAR`, con `INT2=LC` o `INT2=LS`. Se admiten `I12`,
+`K1/K2`, offsets, releases y SPC no nulos. `LC` selecciona flexión
+Euler--Bernoulli lineal/cúbica y no usa `K1/K2`; `LS` selecciona el elemento
+lineal-cortante de un punto y sí usa esos factores. Los casos 128--160 y sus
 referencias se documentan en [`nonlinear_cbar.md`](nonlinear_cbar.md).
 
 ### Convención de unidades

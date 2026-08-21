@@ -24,7 +24,17 @@ def _node(nid, xyz):
     )
 
 
-def _element(*, pa=0, pb=0, wa=None, wb=None, large_displacements=True):
+def _element(
+    *,
+    pa=0,
+    pb=0,
+    wa=None,
+    wb=None,
+    large_displacements=True,
+    nonlinear_integration=None,
+    k1=0.0,
+    k2=0.0,
+):
     node_a = _node(1, (0.0, 0.0, 0.0))
     node_b = _node(2, (1000.0, 0.0, 0.0))
     prop = BarProperty(
@@ -34,7 +44,10 @@ def _element(*, pa=0, pb=0, wa=None, wb=None, large_displacements=True):
         I1=8.0e6,
         I2=2.0e6,
         J=1.5e6,
+        K1=k1,
+        K2=k2,
         stress_points=[(25.0, 40.0), (-25.0, 40.0), (-25.0, -40.0), (25.0, -40.0)],
+        nonlinear_integration=nonlinear_integration,
     )
     material = IsotropicMaterial(mid=1, E=210000.0, nu=0.3)
     element = CBARNonlinear(
@@ -50,6 +63,76 @@ def _element(*, pa=0, pb=0, wa=None, wb=None, large_displacements=True):
         large_displacements=large_displacements,
     )
     return element, node_a, node_b, prop, material
+
+
+def test_lc_uses_euler_bernoulli_bending_even_with_pbar_shear_factors():
+    element, node_a, node_b, prop, material = _element(
+        nonlinear_integration="LC", k1=0.75, k2=0.50
+    )
+    euler_property = BarProperty(
+        **{
+            **prop.__dict__,
+            "K1": 0.0,
+            "K2": 0.0,
+        }
+    )
+    expected = BarElementSolver(
+        node_a,
+        node_b,
+        euler_property,
+        material,
+        orientation=[0.0, 1.0, 0.0],
+    ).get_local_stiffness_matrix()
+
+    assert element.local_stiffness == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    ("force_dof", "rotation_dof", "inertia", "shear_factor"),
+    [(7, 11, 8.0e6, 0.75), (8, 10, 2.0e6, 0.50)],
+)
+def test_ls_uses_one_point_linear_shear_interpolation(
+    force_dof, rotation_dof, inertia, shear_factor
+):
+    element, *_ = _element(
+        nonlinear_integration="LS", k1=0.75, k2=0.50
+    )
+    free = np.arange(6, 12)
+    force = np.zeros(6)
+    force[force_dof - 6] = 8.0e5
+    displacement = np.linalg.solve(
+        element.local_stiffness[np.ix_(free, free)], force
+    )
+    length = element.reference_length
+    expected_translation = (
+        force[force_dof - 6] * length**3 / (4.0 * element.mat.E * inertia)
+        + force[force_dof - 6]
+        * length
+        / (shear_factor * element.prop.A * element.mat.G)
+    )
+    expected_rotation = (
+        force[force_dof - 6] * length**2 / (2.0 * element.mat.E * inertia)
+    )
+
+    assert displacement[force_dof - 6] == pytest.approx(expected_translation)
+    assert abs(displacement[rotation_dof - 6]) == pytest.approx(expected_rotation)
+
+
+def test_ls_zero_pbar_shear_factor_uses_nastran_unit_default():
+    element, *_ = _element(nonlinear_integration="LS", k1=0.0, k2=0.0)
+    free = np.arange(6, 12)
+    force = np.zeros(6)
+    force[1] = 8.0e5
+    displacement = np.linalg.solve(
+        element.local_stiffness[np.ix_(free, free)], force
+    )
+    length = element.reference_length
+    expected = (
+        force[1] * length**3 / (4.0 * element.mat.E * element.prop.I1)
+        + force[1] * length / (element.prop.A * element.mat.G)
+    )
+
+    assert displacement[1] == pytest.approx(expected)
 
 
 def test_undeformed_tangent_matches_the_established_linear_cbar():
