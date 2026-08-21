@@ -46,7 +46,7 @@ Comando de referencia:
 Resultado observado el 21 de agosto de 2026:
 
 ```text
-668 passed, 6 xfailed, 2 warnings
+671 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -238,6 +238,13 @@ controles extremadamente mal condicionados.
   escritas directamente; no lee F06 durante el test.
 - El caso 80 de ese último módulo mezcla CBAR, CTRIA3 y CQUAD4 y comprueba
   desplazamientos, cargas, reacciones y resultados de las tres familias.
+- `test_linear_final_validation_case.py` controla el modelo de defensa
+  `case_linear_test_final`: 377 GRID, 256 CQUAD4, 128 CTRIA3, 76 CBAR y 4
+  CROD bajo FORCE, MOMENT y SPC impuesto. El mismo DAT terminó sin `FATAL` con
+  MSC Nastran Student Edition 2026.1 el 2026-08-21; el F06 queda junto al caso
+  y el test transcribe referencias de todas las familias. Los errores relativos
+  L2 del OP2 completo son `1.052e-6` en desplazamientos, `1.450e-5` en
+  reacciones y menores de `1.1e-5` en resultados de elemento.
 - `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT,
   incluida configuración, convergencia iterativa, estado final no lineal y
   las cuatro tablas de recuperación CBAR.

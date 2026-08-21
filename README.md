@@ -18,8 +18,16 @@ E2E independiente. El alcance y sus límites están en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`668 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`671 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
+
+El caso lineal de integración para la defensa está en
+[`case_linear_test_final`](tests/solver_tst/validation_cases/case_linear_test_final/README.md):
+combina 384 shells, 76 CBAR, 4 CROD, fuerzas, momento, empotramientos y un
+desplazamiento impuesto. El mismo DAT terminó sin `FATAL` en MSC Nastran
+2026.1; la referencia F06 está transcrita en el E2E y los errores relativos
+globales de desplazamientos, reacciones y resultados de elemento son menores
+de `1.5e-5`.
 
 El CBAR no lineal valida las dos variantes `PBARN1,SECT=S,BEH2=BAR`:
 `INT2=LC` usa interpolación lineal/cúbica Euler--Bernoulli y `INT2=LS` usa

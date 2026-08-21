@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `668 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `671 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -13,6 +13,14 @@ Desde ese cierre se separó la escritura del informe en
 `src/postprocessing/report_writer.py`, se añadieron sus pruebas y se verificó
 el caso mixto 80 con CBAR, CTRIA3 y CQUAD4. `requirements.txt` declara
 dependencias mínimas, aunque todavía falta un bloqueo reproducible.
+
+El modelo `case_linear_test_final` añade una demostración lineal a escala de
+integración para la defensa: 384 shells, 76 CBAR, 4 CROD, FORCE/MOMENT, seis
+empotramientos nodales y un SPC impuesto. Su control automatizado cubre
+integridad, solución y equilibrio. La validación cruzada quedó cerrada con una
+ejecución sin `FATAL` de MSC Nastran 2026.1 y referencias transcritas de todas
+las familias; el mayor error relativo L2 de los campos completos es `1.450e-5`
+en las reacciones SPC.
 
 El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
 `NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.

@@ -12,7 +12,7 @@ Resultado verificado el 21 de agosto de 2026 después de integrar la salida
 CBAR no lineal en el informe:
 
 ```text
-668 passed, 6 xfailed, 2 warnings
+671 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -39,6 +39,31 @@ El caso 80 añade una comprobación integrada con CBAR, CTRIA3 y CQUAD4 en el
 mismo modelo. Contrasta desplazamientos, cargas, reacciones, resultados de las
 dos familias de lámina y esfuerzos de CBAR. Es la referencia más directa para
 detectar regresiones de ensamblaje o recuperación entre tipos de elemento.
+
+## Modelo lineal final para la defensa
+
+`case_linear_test_final` es un cupón plano de frame/web de `1200 x 600 mm`
+con dos huecos circulares. Su malla reproducible contiene 256 CQUAD4, 128
+CTRIA3 alrededor de los huecos, 76 CBAR de cap/nervio y 4 CROD de introducción
+de carga. En un único subcaso combina dos FORCE, un MOMENT, seis estaciones
+empotradas y un desplazamiento impuesto de `0.8 mm`.
+
+`test_linear_final_validation_case.py` comprueba el recuento y subconjunto de
+tarjetas, la solución finita, el valor impuesto, el equilibrio global de
+fuerzas/momentos y referencias MSC explícitas de desplazamientos, reacciones,
+CROD, CBAR, CTRIA3 y CQUAD4. El CTRIA3 se usa en membrana: el útil fija
+`T3/R1/R2` y su MID3 casi nulo declara la limitación de cortante transversal
+sin estabilización silenciosa.
+
+El DAT sin modificar terminó normalmente con MSC Nastran Student Edition
+2026.1 el 21 de agosto de 2026. El F06 se conserva con el caso y sus valores
+seleccionados están transcritos en el test, que no lee F06/OP2 en tiempo de
+ejecución. La comparación de los arrays completos del OP2 dio errores relativos
+L2 de `1.052e-6` en desplazamientos, `1.450e-5` en reacciones, inferiores a
+`5.4e-6` en CROD/CBAR y a `1.1e-5` en resultados CTRIA3/CQUAD4. Es una
+validación cruzada numérica del deck, no una correlación experimental ni una
+validación general de Nastran. El dimensionado, tablas y flujo Patran están en el
+[`README` del caso](../tests/solver_tst/validation_cases/case_linear_test_final/README.md).
 
 Las validaciones E2E de CBAR transcriben las tablas F06, sin leerlas durante la
 prueba. Los casos 13--17 cubren voladizo, orientación 3D, vigas en serie,
