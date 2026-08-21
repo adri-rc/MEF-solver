@@ -33,11 +33,11 @@ MEF-solver/
 │   │   └── deprecated/             lector manual y pruebas antiguas
 │   ├── solver/
 │   │   ├── linear_static_solver.py ensamblaje, contorno, solución y resultados
-│   │   ├── nonlinear_analysis.py    incrementos, Newton, tangente y residuo CROD
+│   │   ├── nonlinear_analysis.py    incrementos, Newton, tangente y residuo CROD/CBAR
 │   │   ├── transformations.py      sistemas locales y matrices T
 │   │   ├── quadrature.py           reglas de Gauss-Legendre 1D
 │   │   ├── utilities.py            mapeo nodo/GDL
-│   │   └── elements/               CROD lineal/no lineal, CBAR, CTRIA3 y CQUAD4
+│   │   └── elements/               CROD/CBAR lineal y no lineal, CTRIA3 y CQUAD4
 │   └── postprocessing/
 │       └── report_writer.py        escritor del informe de resultados
 └── tests/
@@ -94,6 +94,8 @@ subconjunto mecánico `GENERAL`, `FIXED`/`ADAPT` y `MECH`. El resultado queda en
 `FEMModel.analysis`; una continuación no soportada produce error. Como
 pyNastran puede agrupar con la tarjeta un comentario inmediatamente anterior,
 el adaptador elimina comentarios antes de identificar el nombre de la entrada.
+La misma ruta recupera las extensiones `PBARN1` rechazadas y conserva en
+`BarProperty` sus campos `SECT`, `BEH2` e `INT2`.
 
 ## Numeración de grados de libertad
 
@@ -143,11 +145,12 @@ K_T(u) Delta_u = r
 u <- u + Delta_u
 ```
 
-`CRODNonlinear` devuelve fuerza interna, tangente consistente y estado físico
-en coordenadas básicas. El ensamblador transforma después vectores y matrices
-al sistema `GRID.CD`, igual que la ruta lineal. Los estados convergidos se
-guardan en `NonlinearIncrementResult`; los residuos y correcciones de Newton,
-en `NonlinearIterationResult`.
+`CRODNonlinear` y `CBARNonlinear` devuelven fuerza interna, tangente y estado
+físico en coordenadas básicas bajo un contrato común. La fábrica selecciona la
+clase por tipo de elemento. El ensamblador transforma después vectores y
+matrices al sistema `GRID.CD`, igual que la ruta lineal. Los estados
+convergidos se guardan en `NonlinearIncrementResult`; los residuos y
+correcciones de Newton, en `NonlinearIterationResult`.
 
 ## Transformaciones
 

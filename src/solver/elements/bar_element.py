@@ -281,6 +281,16 @@ class BarElementSolver:
         offset_transform = self._offset_transform_global()
         return offset_transform.T @ k_offset_ends @ offset_transform
 
+    def get_local_stiffness_matrix(self) -> np.ndarray:
+        """Return the validated reference-axis CBAR stiffness.
+
+        The nonlinear CBAR reuses this constitutive matrix inside its
+        corotated frame.  Keeping one implementation of PBAR bending,
+        ``I12``, shear flexibility and releases prevents the linear and
+        nonlinear element laws from drifting apart.
+        """
+        return self._build_local_stiffness().copy()
+
     def _add_to_block(self, K_full: np.ndarray, K_sub: np.ndarray, indices: list[int]):
         """
         @brief Helper to scatter small matrix values into the 12x12 matrix.

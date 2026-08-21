@@ -142,7 +142,7 @@ en `R1`, el momento aplicado en `OLOAD` y la reacción torsional en
 La capacidad tiene un límite deliberado: la torsión es elástica, lineal y
 desacoplada del axil; se mide alrededor del eje de referencia `n_0`, y una
 extensión axial no modifica `GJ/L_0`. No implementa cinemática general de
-rotaciones finitas ni acoplamiento flexión-torsión; eso corresponde al futuro
+rotaciones finitas ni acoplamiento flexión-torsión; esa cinemática pertenece al
 CBAR no lineal. Si `J = 0`, el CROD no aporta rigidez torsional y sus rotaciones
 axiales deben quedar restringidas para evitar un mecanismo.
 

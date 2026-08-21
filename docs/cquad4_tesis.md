@@ -814,7 +814,7 @@ alcance.
 La colección completa observada termina con:
 
 ```text
-430 passed, 6 xfailed
+570 passed, 7 xfailed
 ```
 
 ## 14. Limitaciones explícitas

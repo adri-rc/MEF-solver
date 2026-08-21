@@ -13,9 +13,10 @@ comprueba la distancia de los cuatro nodos al plano local y genera
 longitud de lado. No se proyecta la geometría ni se aplica una corrección de
 alabeo.
 
-La colección actual arroja `430 passed, 6 xfailed`. Los seis `xfail` son límites
-conocidos: casos 54, 59 y 62–64 alabeados, y caso 78 con suavizado `SNORM`
-predeterminado. Los casos facetados equivalentes con `SNORM,0` sí pasan.
+La colección global actual arroja `570 passed, 7 xfailed`. Seis `xfail`
+pertenecen a esta formulación: casos 54, 59 y 62–64 alabeados, y caso 78 con
+suavizado `SNORM` predeterminado. El séptimo pertenece a CBAR no lineal. Los
+casos facetados equivalentes con `SNORM,0` sí pasan.
 
 ## Clases
 

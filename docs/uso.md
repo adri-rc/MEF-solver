@@ -62,7 +62,8 @@ Para modelos lineales, el flujo de `main.py` es:
 
 Un deck `SOL 400` con `ANALYSIS=NLSTAT` se dirige a
 `NonlinearStaticSolver`. Esta ruta está separada de `LinearStaticSolver` y se
-limita a MAT1/PROD/CROD, cargas nodales conservativas y Newton-Raphson completo.
+limita a MAT1 con PROD/CROD o PBAR/CBAR, cargas nodales conservativas y
+Newton-Raphson completo.
 El diccionario de resultados añade historial de incrementos/iteraciones,
 factor de carga, energía elástica y número de recortes.
 
@@ -77,12 +78,12 @@ lote.
 |---|---|---|
 | Nodos | `GRID` | pyNastran transforma `CP` a coordenadas cartesianas globales. |
 | Materiales | `MAT1` | Se necesitan al menos dos valores de `E`, `G` y `NU`; el tercero se calcula. |
-| Propiedades | `PROD`, `PBAR`, `PSHELL` | Solo se mapea un subconjunto de los campos Nastran. |
+| Propiedades | `PROD`, `PBAR`, `PBARN1`, `PSHELL` | PBARN1 conserva `SECT`, `BEH2` e `INT2` para SOL 400. |
 | Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 usa por defecto la reconstrucción Nastran y completa el postproceso. |
 | Cargas | `FORCE`, `MOMENT`, `LOAD` | Los vectores se transforman desde su `CID`; se reducen combinaciones. |
 | Restricciones | `SPC`, `SPC1`, `SPCADD`, `GRID.PS` | Se admiten desplazamientos impuestos no nulos. |
-| Parámetros | `PARAM,K6ROT`, `PARAM,LGDISP`, `PARAM,FOLLOWK` | `K6ROT` se utiliza en láminas; `LGDISP=-1/1/2` controla CROD y `FOLLOWK` debe ser `NO` en la ruta no lineal actual. |
-| Control de análisis | `SOL 101`; `SOL 400`, `ANALYSIS=NLSTAT`, `NLSTEP` y `NLPARM` | SOL 400 se resuelve para el subconjunto MAT1/PROD/CROD. |
+| Parámetros | `PARAM,K6ROT`, `PARAM,LGDISP`, `PARAM,FOLLOWK` | `K6ROT` se utiliza en láminas; `LGDISP=-1/1/2` controla CROD/CBAR y `FOLLOWK` debe ser `NO`. |
+| Control de análisis | `SOL 101`; `SOL 400`, `ANALYSIS=NLSTAT`, `NLSTEP` y `NLPARM` | SOL 400 se resuelve para el subconjunto MAT1 con CROD/CBAR. |
 
 El lector falla de forma explícita si encuentra elementos, cargas o restricciones no soportados. En particular, rechaza MPC, RBE y elementos rígidos.
 
@@ -95,7 +96,7 @@ fichero Bulk Data sin Case Control se mapean las tarjetas base disponibles.
 
 Las restricciones permanentes del campo `PS` de `GRID` también se aplican.
 
-### Entrada no lineal CROD
+### Entrada no lineal CROD/CBAR
 
 El lector normaliza `NLSTEP` con continuaciones `GENERAL`, `FIXED` o `ADAPT`
 y `MECH`. Admite también `NLPARM` heredado. Guarda el resultado en
@@ -118,6 +119,12 @@ la campaña a estructuras de 10--30 CROD. La guía está en
 [`NONLINEAR_CROD_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).
 El significado de las tarjetas está desarrollado en
 [`nonlinear_crod.md`](nonlinear_crod.md).
+
+Para CBAR, la combinación validada es `PBAR` más
+`PBARN1,SECT=S,BEH2=BAR,INT2=LC`. Se admiten `I12`, `K1/K2`, offsets,
+releases y SPC no nulos. `INT2=LS` emite una advertencia porque sólo se
+aproxima mediante la ley Timoshenko de PBAR. Los casos 128--153 y sus
+referencias se documentan en [`nonlinear_cbar.md`](nonlinear_cbar.md).
 
 ### Convención de unidades
 

@@ -1,12 +1,12 @@
 # Traspaso técnico del proyecto
 
-Actualizado y verificado el **20 de agosto de 2026**. Este documento es el
+Actualizado el **21 de agosto de 2026**. Este documento es el
 punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
 El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
-Al iniciar esta fase la rama estaba un commit por delante de
-`origin/feat/ctria3`; los cambios de preproceso, solver no lineal, decks y
-validación descritos aquí siguen sin commit mientras el usuario revisa la
-implementación.
+La fase actual se desarrolla en `feat/non-linear-CBAR`. La campaña CBAR
+128--153, la implementación CBAR no lineal y su documentación siguen sin
+commit. Los 26 casos alcanzan carga completa en MSC; 25 coinciden con el solver
+y 142 conserva una discrepancia declarada de `PBARN1,INT2=LS`.
 
 ## 1. Incorporación rápida para una IA
 
@@ -41,18 +41,19 @@ Comando de referencia:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado observado el 20 de agosto de 2026:
+Resultado observado el 21 de agosto de 2026:
 
 ```text
-430 passed, 6 xfailed, 2 warnings
+570 passed, 7 xfailed, 4 warnings
 ```
 
-Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`
-en el entorno actual; no afectan al cálculo. Los seis `xfail` son estrictos y
-deliberados:
+Dos advertencias se deben a que pytest no puede escribir `.pytest_cache`; las
+otras dos declaran la aproximación `INT2=LS` usada por 142/153. Los siete
+`xfail` son estrictos y deliberados:
 
 - 54, 59, 62, 63 y 64: uno o varios CQUAD4 alabeados;
 - 78: ensamblaje facetado con suavizado `SNORM` predeterminado.
+- 142: integración avanzada `PBARN1,INT2=LS` no reproducida exactamente.
 
 No hay fallos activos de CQUAD4 plano. Los casos facetados 82/88 usan normales
 independientes (`SNORM,0`) y pasan.
@@ -97,11 +98,18 @@ independientes (`SNORM,0`) y pasan.
   Nastran 2026.1/NLPERF. Treinta y cinco alcanzan carga completa y el 120
   documenta un punto límite bajo control de fuerza. Los modelos 123--127
   validan estructuras de 10--30 barras, propiedades mixtas y SPC no nulos.
-- `NonlinearStaticSolver` resuelve SOL 400 para MAT1/PROD/CROD, cargas nodales
-  conservativas, `FIXED`/`ADAPT`, Newton completo y recortes.
+- `NonlinearStaticSolver` resuelve SOL 400 para MAT1 con CROD o CBAR, cargas
+  nodales conservativas, `FIXED`/`ADAPT`, Newton completo y recortes.
+- `CBARNonlinear` implementa una formulación corrotacional con deformación
+  axial logarítmica, rotaciones finitas, `I12`, `K1/K2`, offsets y releases.
+- La campaña CBAR comprende 26 decks, casos 128--153, todos con soluciones MSC.
+  El caso 142 es `xfail` estricto porque `INT2=LS` no coincide con la
+  aproximación Timoshenko; los otros 25 E2E pasan.
+- Los casos 154--160 son diagnósticos `LC/LS` pendientes de ejecutar con MSC;
+  no tienen todavía referencias E2E.
 
 No existe todavía solución dinámica, no linealidad material, contacto, cargas
-seguidoras, CBAR no lineal, cargas distribuidas, MPC/RBE, sólidos, CQUAD4
+seguidoras, cargas distribuidas, MPC/RBE, sólidos, CQUAD4
 alabeado ni suavizado `SNORM`.
 
 ## 4. Arquitectura y flujo activo
@@ -115,9 +123,11 @@ alabeado ni suavizado `SNORM`.
 - `src/solver/linear_static_solver.py`: ensamblaje LIL, partición, `spsolve`,
   reacciones y recuperación numérica.
 - `src/solver/nonlinear_analysis.py`: incrementos, Newton-Raphson, residuo,
-  tangente global, recortes e historial CROD.
+  tangente global, recortes e historial CROD/CBAR.
 - `src/solver/elements/crod_non_linear.py`: fuerza interna, energía y tangente
   material/geométrica consistente del CROD.
+- `src/solver/elements/cbar_non_linear.py`: cinemática corrotacional, acciones,
+  tangente numérica y recuperación del CBAR.
 - `src/solver/elements/`: formulaciones de CROD, CBAR, CTRIA3 y CQUAD4.
 - `src/postprocessing/report_writer.py`: presentación del informe; ya no vive
   dentro de `main.py`.
@@ -223,7 +233,8 @@ controles extremadamente mal condicionados.
   incluida configuración, convergencia iterativa y estado final no lineal.
 - `tests/preprocessing_tst/test_nonlinear_analysis_control.py`: normalización
   SOL 400, `NLSTEP`/`NLPARM`, enrutado al solver no lineal y lectura de los 36
-  decks CROD.
+  decks CROD; también comprueba estructura, campos avanzados y cabeceros de
+  los 26 decks CBAR pendientes de una referencia MSC no lineal válida.
 - `tests/solver_tst/elements/test_crod_non_linear.py`: cinemática, fuerzas,
   torsión, objetividad y derivada numérica de la tangente.
 - `tests/solver_tst/test_nonlinear_intermediate_validation.py`: estados de 112
@@ -233,6 +244,10 @@ controles extremadamente mal condicionados.
   tolerancias y descripciones legibles por caso.
 - `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
   ejecución y resultados de MSC que deben conservarse.
+- `docs/nonlinear_cbar.md`: formulación corrotacional implementada, validación
+  y límites conocidos.
+- `tests/solver_tst/validation_cases/NONLINEAR_CBAR_CASES.md`: matriz y orden
+  de ejecución de los casos 128--153 y auditoría de la primera tanda.
 
 Los parámetros `debug_export` y `output_k_file` controlan la escritura de la
 matriz calculada en CSV. Los ficheros `draft_*` están ignorados por Git.
@@ -258,12 +273,11 @@ postproceso.
 
 Prioridad recomendada:
 
-1. preparar la campaña y formulación no lineal de CBAR sin ampliar el alcance
-   CROD de forma implícita;
-2. integración continua y entorno bloqueado/reproducible;
-3. estudio de convergencia, ensamblaje COO y benchmark de escalabilidad;
-4. política de errores del modo por lotes;
-5. investigar la impresión centroidal Qx/Qy sólo si existe necesidad real.
+1. ejecutar 154--160 y usar sus parejas `LC/LS` para cerrar el caso 142;
+2. investigar la recuperación de tensión de fibra CBAR bajo rotación 3D;
+3. integración continua y entorno bloqueado/reproducible;
+4. estudio de convergencia, ensamblaje COO y benchmark de escalabilidad;
+5. política de errores del modo por lotes.
 
 No es necesario crear más casos CQUAD4 de rigidez plana para cerrar la
 implementación actual. Cualquier ampliación debe comenzar con un deck mínimo,

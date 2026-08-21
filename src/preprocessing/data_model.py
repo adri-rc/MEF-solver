@@ -223,8 +223,23 @@ class BarProperty(Property):
     # List of tuples [(y_c, z_c), (y_d, z_d), (y_e, z_e), (y_f, z_f)]
     # If the list is empty, it will be calculated only at the centroid (0,0) or default endpoints.
     stress_points: List[tuple] = field(default_factory=list)
+    # Optional SOL 400 PBARN1 extension associated with this PBAR.  Keeping
+    # these fields on the format-independent property lets the nonlinear
+    # solver distinguish advanced beam behavior without coupling it to
+    # pyNastran (which rejects PBARN1 in the supported version).
+    nonlinear_section: Optional[str] = None
+    nonlinear_behavior: Optional[str] = None
+    nonlinear_integration: Optional[str] = None
     
     def __post_init__(self):
+        for attribute in (
+            "nonlinear_section",
+            "nonlinear_behavior",
+            "nonlinear_integration",
+        ):
+            value = getattr(self, attribute)
+            if value is not None:
+                setattr(self, attribute, str(value).upper())
         values = (self.A, self.I1, self.I2, self.J, self.I12, self.K1, self.K2, self.NSM)
         if not all(np.isfinite(value) for value in values):
             raise ValueError(f"BarProperty {self.pid} contains non-finite values.")

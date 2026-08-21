@@ -8,15 +8,15 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 20 de agosto de 2026 después de implementar la ruta no
-lineal CROD y validar los decks 92--127:
+Resultado verificado el 21 de agosto de 2026 después de implementar la ruta no
+lineal CBAR y validar los decks 128--153:
 
 ```text
-430 passed, 6 xfailed
+570 passed, 7 xfailed, 4 warnings
 ```
 
-Las advertencias visibles proceden de que pytest no puede escribir su caché en
-el entorno de ejecución; no afectan a los resultados.
+Dos advertencias proceden de que pytest no puede escribir su caché. Las otras
+dos declaran el uso aproximado de `INT2=LS` en 142/153.
 
 ## Capas de comprobación
 
@@ -102,15 +102,17 @@ o momentos.
 - **59:** geometría alabeada, fuera de alcance. El test es `xfail` estricto y
   espera que el solver la rechace.
 
-## Significado de los seis xfail
+## Significado de los siete xfail
 
 | Casos | Motivo | Interpretación |
 |---|---|---|
 | 54, 59, 62, 63, 64 | CQUAD4 alabeados | Fuera del alcance plano; rechazo esperado |
 | 78 | suavizado `SNORM` por defecto | No implementado; usar la variante `SNORM,0` |
+| 142 | `PBARN1,INT2=LS` | La interpolación avanzada de MSC no equivale a PBAR Timoshenko |
 
 Son límites declarados, no errores pendientes del CQUAD4 plano. Los casos 82 y
-88 confirman ensamblajes facetados con normales independientes.
+88 confirman ensamblajes facetados con normales independientes; el 142 queda
+como mejora específica del CBAR no lineal.
 
 ## Criterio de cierre
 
@@ -187,3 +189,52 @@ elástica del estado final y no se usa como aserción.
 Véanse
 [`nonlinear_crod.md`](nonlinear_crod.md) y la
 [guía de campaña](../tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md).
+
+## Campaña CBAR no lineal
+
+La campaña comprende 26 decks, casos 128--153. Cubre límite lineal, axial,
+flexión biaxial, momentos, torsión, carga combinada, una sonda tangente
+central, orientación `G0`, cargas en `CID`, `I12`, `K1/K2`, SPC no nulos, varios
+materiales/elementos, refinamiento, release y offsets con `LROFF`. Los casos
+149--153 añaden estructuras de 15 o 20 CBAR con geometrías planas, espaciales y
+curvas, varias propiedades y materiales, fuerzas, momentos y desplazamientos o
+giros impuestos.
+
+La ejecución original de 128--148 se descartó porque faltaba `PBARN1`. Tras
+corregir los decks y relanzar 140, 148 y 150, los 26 F06/PCH alcanzan factor de
+carga 1.0 y contienen resultados no lineales auditables.
+
+Todos los decks solicitan resultados intermedios. El triplete 137--139 comparte
+40 factores de carga y permite calcular por diferencia central la flexibilidad
+tangente en cada estado convergido; los demás historiales aportan
+desplazamientos, reacciones, energía y `NLSTRESS/BOUTPUT` por incremento.
+
+`test_nonlinear_analysis_control.py` comprueba que cada carpeta contiene un
+único DAT, que los 26 decks con referencia y los siete diagnósticos se leen
+como SOL 400/CBAR, que los campos avanzados
+llegan al modelo interno y que toda tarjeta Bulk Data usada tiene un cabecero
+de campos comentado. También comprueba que existe una extensión `PBARN1` por
+cada `PBAR` y que las salidas específicas de SOL 400 están solicitadas. La
+rigidez lineal inicial de los cinco modelos nuevos tiene rango completo.
+
+El plan de implementación, el orden de cierre y la correspondencia entre
+casos están en [`nonlinear_cbar.md`](nonlinear_cbar.md) y en la
+[guía de campaña](../tests/solver_tst/validation_cases/NONLINEAR_CBAR_CASES.md).
+
+La implementación se valida mediante:
+
+- siete pruebas unitarias de `CBARNonlinear`, incluida objetividad y derivada
+  central de la tangente;
+- dos pruebas intermedias con la trayectoria 132/137 y las sondas 138/139;
+- 26 entradas E2E con referencias explícitas de desplazamiento, reacción y
+esfuerzo. Veinticinco pasan y el 142 es `xfail` estricto por la integración
+avanzada `PBARN1,INT2=LS`.
+
+Los decks 154--160 quedan preparados, sin referencias todavía, para separar
+`LC/LS`, los planos K1/K2 y la respuesta sin factores de cortante PBAR.
+
+Los casos axiales 130/131 identifican la deformación logarítmica de MSC. La
+flexibilidad tangente de 137 difiere menos de 0.85 % a lo largo de cinco
+estados. Los modelos 149--153 quedan dentro de 0.3--4 % en las magnitudes
+seleccionadas. La tensión axial centroidal está validada; la convención de
+tensión de fibra bajo rotación 3D combinada sigue siendo una mejora abierta.

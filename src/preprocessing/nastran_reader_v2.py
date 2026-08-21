@@ -641,6 +641,61 @@ def _parse_nlstep_cards(bdf: BDF) -> dict[int, NonlinearStepControl]:
     return controls
 
 
+def _map_pbarn1_extensions(bdf: BDF, model: FEMModel) -> None:
+    """Attach the SOL 400 PBARN1 options rejected by pyNastran 1.4.1.
+
+    PBARN1 supplements, rather than replaces, the PBAR with the same PID.  Its
+    fields are retained in the project model so that unsupported nonlinear
+    section/integration variants cannot be mistaken for an ordinary PBAR.
+    """
+    for rejected_card in bdf.reject_lines:
+        rows = _rejected_card_rows(rejected_card)
+        if not rows:
+            continue
+        first_raw = next(
+            (
+                content
+                for raw_line in rejected_card
+                if (content := raw_line.split("$", 1)[0].strip())
+            ),
+            "",
+        )
+        card_name = first_raw.split(",", 1)[0].strip().split()[0].upper()
+        if card_name != "PBARN1":
+            continue
+
+        header = rows[0]
+        pid_value = _field(header, 0)
+        if pid_value is None:
+            raise ValueError("PBARN1 requires the PID of its associated PBAR.")
+        pid = int(pid_value)
+        prop = model.properties.get(pid)
+        if not isinstance(prop, BarProperty):
+            raise ValueError(f"PBARN1 {pid} does not reference a mapped PBAR {pid}.")
+
+        prop.nonlinear_section = _field(header, 3)
+        for row in rows[1:]:
+            if not row:
+                continue
+            keyword = row[0].upper()
+            if keyword != "C2":
+                raise ValueError(
+                    f"PBARN1 {pid} uses unsupported continuation keyword {keyword}; "
+                    "only C2 is currently mapped."
+                )
+            prop.nonlinear_behavior = _field(row, 1)
+            prop.nonlinear_integration = _field(row, 2)
+
+        for attribute in (
+            "nonlinear_section",
+            "nonlinear_behavior",
+            "nonlinear_integration",
+        ):
+            value = getattr(prop, attribute)
+            if value is not None:
+                setattr(prop, attribute, str(value).upper())
+
+
 def _legacy_nlparm_control(nlparm) -> NonlinearStepControl:
     output_intervals = -1 if nlparm.int_out == "NO" else 0
     return NonlinearStepControl(
@@ -804,6 +859,7 @@ def parse_nastran_input(entry_file_path: str, subcase_id: Optional[int] = None) 
     try:
         _map_materials(bdf, model)
         _map_properties(bdf, model)
+        _map_pbarn1_extensions(bdf, model)
         _map_nodes(bdf, model)
         _map_elements(bdf, model)
         bulk_only = selected_subcase is None

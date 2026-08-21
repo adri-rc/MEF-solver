@@ -34,6 +34,17 @@ def test_large_axial_extension_converges_incrementally():
     assert result["stresses"][1]["axial_stress"] == pytest.approx(42000.0)
 
 
+def test_cbar_small_displacement_baseline_uses_nonlinear_element_factory():
+    solver = _solver(128)
+    result = solver.solve()
+
+    node_2 = _node_result(solver, result["displacements"], 2)
+    assert node_2[0] == pytest.approx(100.0 / 210.0)
+    assert result["reactions"][1][0] == pytest.approx(-100000.0)
+    assert result["stresses"][1]["type"] == "CBAR"
+    assert result["stresses"][1]["axial_stress"] == pytest.approx(100.0)
+
+
 def test_adaptive_control_changes_step_without_changing_final_equilibrium():
     solver = _solver(95)
     result = solver.solve()

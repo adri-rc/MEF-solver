@@ -87,9 +87,9 @@ K_T(u) Delta_u = r(u, lambda)
 
 La tangente se actualiza en cada iteración mediante Newton completo. La torsión
 permanece desacoplada y usa `T=G*J*(theta2-theta1).n0/L0`, tal como confirman
-116/117 incluso con extensión axial. Esta primera implementación proyecta el
-giro sobre el eje de referencia; una cinemática general de sección con
-rotaciones finitas pertenece al futuro CBAR no lineal.
+116/117 incluso con extensión axial. CROD proyecta el giro sobre el eje de
+referencia; la cinemática general de sección con rotaciones finitas se reserva
+al CBAR no lineal descrito más abajo.
 
 Con `LGDISP=-1` se conserva la dirección y rigidez de referencia; `LGDISP=1`
 y `2` activan la cuerda actual. Como las cargas soportadas son conservativas y
@@ -99,10 +99,36 @@ las tarjetas y límites están en [`nonlinear_crod.md`](nonlinear_crod.md).
 ## CBAR
 
 CBAR usa una formulación de viga espacial con extensión axial, torsión y
-flexión en los dos planos principales. El triedro local se define con el eje
-entre nodos y el vector de orientación resuelto por pyNastran. La propiedad
-PBAR aporta `A`, `I1`, `I2`, `I12` y `J`. Se incluyen los campos de
-excentricidad y liberación implementados en el solver.
+flexión en los dos planos. El triedro de referencia se define con la cuerda y
+el vector de orientación o `G0`. `PBAR` aporta `A`, `I1`, `I2`, `I12`, `J` y
+`K1/K2`; se incluyen offsets y releases.
+
+### CBAR no lineal geométrico
+
+`CBARNonlinear` separa el movimiento rígido mediante una terna corrotada. Las
+rotaciones nodales se calculan con el mapa exponencial. La terna sigue la
+cuerda mediante la rotación más corta y añade el giro medio de las secciones
+alrededor de ella. Los offsets giran con sus nodos.
+
+La medida axial identificada con los casos 130/131 es logarítmica:
+
+```text
+epsilon_log = log(l/L0)
+sigma       = E*epsilon_log
+N           = A*sigma
+```
+
+Los giros relativos de extremo y `L0*epsilon_log` se introducen en la matriz
+local PBAR ya validada. Las acciones locales se rotan a la base y los offsets
+añaden `r x f`. La tangente se obtiene como derivada central de esta fuerza
+espacial completa. Puede ser no simétrica al parametrizar Newton mediante
+vectores de rotación totales.
+
+`LGDISP=-1` usa exactamente la rigidez CBAR lineal; `LGDISP=1/2` activa la
+cinemática anterior. `INT2=LC` es la variante validada. `INT2=LS` se aproxima
+con la flexibilidad Timoshenko `K1/K2` y conserva una discrepancia documentada
+en el caso 142. La derivación, recuperación y validación están en
+[`nonlinear_cbar.md`](nonlinear_cbar.md).
 
 ## CTRIA3
 
