@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `671 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `675 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -21,6 +21,15 @@ integridad, solución y equilibrio. La validación cruzada quedó cerrada con un
 ejecución sin `FATAL` de MSC Nastran 2026.1 y referencias transcritas de todas
 las familias; el mayor error relativo L2 de los campos completos es `1.450e-5`
 en las reacciones SPC.
+
+El modelo `case_nonlinear_test_final` aporta la demostración equivalente para
+`SOL 400`: un puente espacial de 48 CBAR y 30 CROD sometido a 15 fuerzas, 3
+momentos y asientos diferenciales. La regresión local converge en 50
+incrementos sin recortes y muestra una diferencia del `1.97 %` frente a
+`LGDISP=-1`. MSC Nastran 2026.1 reproduce el estado completo con errores L2
+`8.238e-5` en desplazamientos y `1.619e-4` en reacciones; la referencia ya
+forma parte del E2E mixto con una envolvente del `2 %` gobernada por una fibra
+CBAR al `1.36 %`.
 
 El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
 `NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.
@@ -56,10 +65,11 @@ referencias MSC auditables.
 
 ### Cierre externo ejecutado
 
-Los seis diagnósticos 161--166 y los diez modelos mixtos CROD/CBAR 167--176, de
-2 a 30 elementos, terminan sin `FATAL` y alcanzan factor 1.0 en MSC. Las
-referencias finales están transcritas: 161--166 amplían el E2E CBAR y 167--176
-usan un módulo E2E mixto independiente. La respuesta global y la tensión axial
+Los seis diagnósticos 161--166, los diez modelos mixtos CROD/CBAR 167--176
+(de 2 a 30 elementos) y el puente final de 78 elementos terminan sin `FATAL`
+y alcanzan factor 1.0 en MSC. Las referencias finales están transcritas:
+161--166 amplían el E2E CBAR; 167--176 y el puente usan un módulo E2E mixto
+independiente. La respuesta global y la tensión axial
 centroidal quedan cerradas; sigue abierta la reproducción estricta de algunas
 fibras casi neutras y del reparto de momentos en los tramos más rotados de
 165/166. El informe presenta esas fibras con los nombres C--F de Nastran y

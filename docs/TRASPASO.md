@@ -46,7 +46,7 @@ Comando de referencia:
 Resultado observado el 21 de agosto de 2026:
 
 ```text
-671 passed, 6 xfailed, 2 warnings
+675 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -245,6 +245,13 @@ controles extremadamente mal condicionados.
   y el test transcribe referencias de todas las familias. Los errores relativos
   L2 del OP2 completo son `1.052e-6` en desplazamientos, `1.450e-5` en
   reacciones y menores de `1.1e-5` en resultados de elemento.
+- `test_nonlinear_final_validation_case.py` controla el puente mixto de
+  defensa `case_nonlinear_test_final`: 32 GRID, 48 CBAR, 30 CROD, 15 FORCE,
+  3 MOMENT, dos empotramientos y asiento diferencial impuesto. MSC Nastran
+  2026.1 y el solver alcanzan factor uno en 50 incrementos sin recortes. Sus
+  referencias están en el E2E mixto: errores L2 `8.238e-5` en desplazamientos
+  y `1.619e-4` en reacciones; la fibra CBAR seleccionada más discrepante da
+  `1.36 %` y fija una envolvente explícita del `2 %`.
 - `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT,
   incluida configuración, convergencia iterativa, estado final no lineal y
   las cuatro tablas de recuperación CBAR.
@@ -261,8 +268,8 @@ controles extremadamente mal condicionados.
   tolerancias y descripciones legibles por caso.
 - `tests/solver_tst/test_nonlinear_CBAR_validation_E2E_.py`: 39 referencias
   CBAR explícitas, incluidas tensiones C--F seleccionadas de 161--166.
-- `tests/solver_tst/test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: diez
-  referencias mixtas 167--176, separadas de las campañas puras.
+- `tests/solver_tst/test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: once
+  referencias mixtas, los casos 167--176 más el puente final de defensa.
 - `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
   ejecución y resultados de MSC que deben conservarse.
 - `docs/nonlinear_cbar.md`: formulación corrotacional implementada, validación

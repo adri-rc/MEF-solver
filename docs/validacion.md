@@ -12,7 +12,7 @@ Resultado verificado el 21 de agosto de 2026 después de integrar la salida
 CBAR no lineal en el informe:
 
 ```text
-671 passed, 6 xfailed, 2 warnings
+675 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -64,6 +64,32 @@ L2 de `1.052e-6` en desplazamientos, `1.450e-5` en reacciones, inferiores a
 validación cruzada numérica del deck, no una correlación experimental ni una
 validación general de Nastran. El dimensionado, tablas y flujo Patran están en el
 [`README` del caso](../tests/solver_tst/validation_cases/case_linear_test_final/README.md).
+
+## Modelo no lineal final para la defensa
+
+`case_nonlinear_test_final` es un puente arco atirantado espacial de
+`12 000 x 2 400 mm`, con 32 GRID, 48 CBAR y 30 CROD. Los CBAR representan dos
+vigas de tablero, vigas transversales, dos arcos parabólicos y sus riostras;
+los CROD representan 14 péndolas y 16 diagonales espaciales. El único subcaso
+`SOL 400` combina 15 FORCE, 3 MOMENT, dos empotramientos nodales y asientos
+diferenciales impuestos de `-12/-6 mm` en el estribo derecho.
+
+`test_nonlinear_final_validation_case.py` comprueba el inventario, el alcance
+`MAT1/PBAR/PBARN1/PROD`, el control `NLSTEP,FIXED,50`, la convergencia a factor
+uno sin recortes, los valores impuestos y el residuo de equilibrio en todos
+los GDL libres. Un control con `LGDISP=-1` da en GRID 105 una respuesta
+longitudinal un `1.97 %` distinta, por lo que el modelo ejercita de forma
+medible la cinemática no lineal sin aproximarse a un punto límite. Las
+referencias MSC pertenecen al módulo E2E mixto común.
+
+El DAT sin modificar terminó sin `FATAL` con MSC Nastran Student Edition
+2026.1/NLPERF y alcanzó los mismos 50 incrementos. Los errores relativos L2
+son `8.238e-5` en desplazamientos y `1.619e-4` en reacciones; la energía
+difiere `5.11e-5`, los estados axiales seleccionados menos de `3e-4` y la
+mayor diferencia de fibra CBAR seleccionada es `1.36e-2`. El E2E conserva una
+envolvente del `2 %` debido a esa fibra, sin ampliar la tolerancia de las
+campañas puras. El diseño, hashes, puntos GRID/EID y flujo Patran están en el
+[`README` del caso](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md).
 
 Las validaciones E2E de CBAR transcriben las tablas F06, sin leerlas durante la
 prueba. Los casos 13--17 cubren voladizo, orientación 3D, vigas en serie,
@@ -263,7 +289,8 @@ La implementación se valida mediante:
   estados convergidos de 155--159;
 - 39 entradas E2E CBAR con referencias explícitas de desplazamiento, reacción,
   energía y esfuerzos seleccionados. Todas pasan, incluido el caso 142;
-- diez entradas E2E mixtas con una tensión axial CBAR y otra CROD por modelo.
+- once entradas E2E mixtas: los diez casos 167--176 y el puente final, con
+  referencias explícitas CBAR/CROD y de respuesta global.
 
 Los decks 154--160 terminan sin `FATAL`. Los máximos errores vectoriales de la
 implementación frente a esos resultados son `8.04e-5` en desplazamientos,

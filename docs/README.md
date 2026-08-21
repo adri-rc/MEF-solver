@@ -2,7 +2,7 @@
 
 MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático y a la comparación con modelos de MSC Nastran. Incluye estática lineal para CROD, CBAR, CTRIA3 y CQUAD4 coplanar, y estática no lineal geométrica `SOL 400` para MAT1 con CROD o CBAR. El proyecto no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
 
-Esta documentación describe el estado verificado en el repositorio el **21 de agosto de 2026**. La colección completa termina con `671 passed, 6 xfailed`.
+Esta documentación describe el estado verificado en el repositorio el **21 de agosto de 2026**. La colección completa termina con `675 passed, 6 xfailed`.
 
 ## Índice
 
@@ -17,6 +17,8 @@ Esta documentación describe el estado verificado en el repositorio el **21 de a
 - [Análisis no lineal de CROD](nonlinear_crod.md): formulación, tarjetas SOL 400, solver incremental y referencias 92--127.
 - [Análisis no lineal de CBAR](nonlinear_cbar.md): formulación corrotacional,
   límites y campaña 128--166, con integración mixta CROD/CBAR 167--176.
+- [Puente no lineal final](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md):
+  modelo mixto de defensa correlacionado con MSC Nastran 2026.1.
 - [Limitaciones y hoja de ruta](roadmap.md): deuda técnica y evolución propuesta hacia elementos 3D.
 
 ## Estado funcional resumido
@@ -27,7 +29,7 @@ Esta documentación describe el estado verificado en el repositorio el **21 de a
 | CBAR + PBAR + MAT1 | Sí | Sí | Sí | Fuerzas de extremo y tensiones simplificadas | Unitaria y casos Nastran de extremo a extremo |
 | CTRIA3 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Amplia comparación de extremo a extremo y de `K_global` |
 | CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión, cortante y fibras | DMIG hasta alta oblicuidad y E2E; sólo coplanar |
-| SOL 400 + NLSTEP/NLPARM | Sí | Sí, tangente CROD/CBAR | Sí | Historial incremental y resultados CROD/CBAR | Campañas 92--160 de MSC |
+| SOL 400 + NLSTEP/NLPARM | Sí | Sí, tangente CROD/CBAR | Sí | Historial incremental y resultados CROD/CBAR | Campañas MSC 92--176 y puente final E2E |
 | FORCE / MOMENT / LOAD | Sí | Sí | Sí | Sistemas de entrada transformados | Cubierto por pruebas |
 | SPC / SPC1 / SPCADD | Sí | Sí | Sí | Reacciones y valores impuestos | Cubierto por pruebas |
 | Sólidos 3D | No | No | No | No | Trabajo futuro |
