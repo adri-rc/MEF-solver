@@ -18,7 +18,7 @@ E2E independiente. El alcance y sus límites están en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`675 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`680 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
 
 El caso lineal de integración para la defensa está en
@@ -28,6 +28,16 @@ desplazamiento impuesto. El mismo DAT terminó sin `FATAL` en MSC Nastran
 2026.1; la referencia F06 está transcrita en el E2E y los errores relativos
 globales de desplazamientos, reacciones y resultados de elemento son menores
 de `1.5e-5`.
+
+La evolución tridimensional está en
+[`case_linear_test_final_T`](tests/solver_tst/validation_cases/case_linear_test_final_T/README.md):
+forma una sección de frame en T con 417 GRID, 288 CQUAD4, 128 CTRIA3, 88
+CBAR y 2 CROD, cuatro uniones puntuales tipo remache, dos fuerzas, un momento
+y movimiento diferencial impuesto. El E2E transcribe el F06 de MSC Nastran
+2026.1 para ambos CROD y 15 elementos de cada familia restante. La respuesta
+global, la membrana de láminas y las tensiones de fibra correlacionan; los
+momentos y cortantes centroidales CTRIA3 quedan documentados como límite de
+recuperación, no como resultado validado.
 
 El caso no lineal final está en
 [`case_nonlinear_test_final`](tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md):

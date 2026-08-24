@@ -1,6 +1,6 @@
 # Traspaso técnico del proyecto
 
-Actualizado el **21 de agosto de 2026**. Este documento es el
+Actualizado el **24 de agosto de 2026**. Este documento es el
 punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
 El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
 La fase actual se desarrolla en `feat/non-linear-CBAR`. El commit `df88ee4`
@@ -43,10 +43,10 @@ Comando de referencia:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado observado el 21 de agosto de 2026:
+Resultado observado el 24 de agosto de 2026:
 
 ```text
-675 passed, 6 xfailed, 2 warnings
+680 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -74,6 +74,10 @@ independientes (`SNORM,0`) y pasan.
 - Las modificaciones documentales de este traspaso tampoco llegarán a otra
   máquina hasta que el usuario las confirme, haga commit y push, o copie el
   directorio de trabajo completo.
+- A petición expresa del usuario existe en `docs/TFM/` una guía local para
+  capturar en Patran el nuevo `case_linear_test_final_T`. La carpeta sigue
+  ignorada por Git y la guía debe transferirse por separado si se necesita en
+  otro clon.
 
 ## 3. Alcance funcional
 
@@ -245,6 +249,13 @@ controles extremadamente mal condicionados.
   y el test transcribe referencias de todas las familias. Los errores relativos
   L2 del OP2 completo son `1.052e-6` en desplazamientos, `1.450e-5` en
   reacciones y menores de `1.1e-5` en resultados de elemento.
+- `test_linear_final_t_validation_case.py` controla la evolución espacial
+  `case_linear_test_final_T`: 417 GRID, 288 CQUAD4, 128 CTRIA3, 88 CBAR y 2
+  CROD, con cuatro uniones puntuales tipo remache. El E2E transcribe ambos
+  CROD y 15 CBAR/CTRIA3/CQUAD4 del F06 de MSC 2026.1. La respuesta global,
+  membrana y tensiones de fibra forman parte de la aceptación; la recuperación
+  CTRIA3 centroidal de momentos/cortantes queda diagnosticada, con errores L2
+  `0.682/17.30`, y no se anuncia como validada.
 - `test_nonlinear_final_validation_case.py` controla el puente mixto de
   defensa `case_nonlinear_test_final`: 32 GRID, 48 CBAR, 30 CROD, 15 FORCE,
   3 MOMENT, dos empotramientos y asiento diferencial impuesto. MSC Nastran

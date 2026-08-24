@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `675 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `680 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -21,6 +21,15 @@ integridad, solución y equilibrio. La validación cruzada quedó cerrada con un
 ejecución sin `FATAL` de MSC Nastran 2026.1 y referencias transcritas de todas
 las familias; el mayor error relativo L2 de los campos completos es `1.450e-5`
 en las reacciones SPC.
+
+`case_linear_test_final_T` extiende esa demostración a una sección espacial de
+frame en T: 417 GRID y 506 elementos, incluidos un ala CQUAD4 perpendicular,
+tres nervios simétricos formados por 12 CBAR y cuatro apoyos puntuales que
+idealizan remaches. MSC Nastran 2026.1 termina el deck con `AUTOSPC=NO`; el E2E
+compara ambos CROD y 15 elementos de cada otra familia. La respuesta global,
+la membrana y las tensiones de fibra se aceptan. Los momentos/cortantes
+centroidales CTRIA3 quedan abiertos como discrepancia de recuperación
+(`0.682/17.30` L2), sin alterar la rigidez para forzar el ajuste.
 
 El modelo `case_nonlinear_test_final` aporta la demostración equivalente para
 `SOL 400`: un puente espacial de 48 CBAR y 30 CROD sometido a 15 fuerzas, 3
@@ -84,6 +93,9 @@ documenta qué magnitudes tienen correspondencia directa o reconstruida en F06.
    acumular errores por modelo.
 5. Revisar y aislar los módulos y scripts antiguos o exploratorios antes de
    ampliar el alcance físico.
+6. Investigar la recuperación centroidal 3D de momentos y cortantes CTRIA3
+   expuesta por `case_linear_test_final_T`, conservando por separado la
+   rigidez, la membrana y las tensiones de fibra ya correlacionadas.
 
 ## Prioridad 2: rendimiento
 

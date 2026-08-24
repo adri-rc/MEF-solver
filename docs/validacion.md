@@ -8,11 +8,11 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 21 de agosto de 2026 después de integrar la salida
-CBAR no lineal en el informe:
+Resultado verificado el 24 de agosto de 2026 después de incorporar el frame
+lineal tridimensional en T:
 
 ```text
-675 passed, 6 xfailed, 2 warnings
+680 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -64,6 +64,35 @@ L2 de `1.052e-6` en desplazamientos, `1.450e-5` en reacciones, inferiores a
 validación cruzada numérica del deck, no una correlación experimental ni una
 validación general de Nastran. El dimensionado, tablas y flujo Patran están en el
 [`README` del caso](../tests/solver_tst/validation_cases/case_linear_test_final/README.md).
+
+## Modelo lineal final tridimensional en T
+
+`case_linear_test_final_T` conserva el web perforado de `1200 x 600 mm` y
+añade un ala CQUAD4 de `1200 x 300 mm` en el plano perpendicular. Seis
+diagonales, partidas en doce CBAR, forman tres nervios simétricos; la mitad
+próxima al ala duplica `A`, `I1`, `I2` y `J`. El inventario completo es 417
+GRID, 288 CQUAD4, 128 CTRIA3, 88 CBAR y 2 CROD. Cuatro nodos del ala idealizan
+uniones remachadas discretas: dos están empotrados y dos reciben `T2=0.2 mm`.
+Dos fuerzas axiales de `6000 N` actúan en los CROD y un momento de
+`250000 Nmm` en el punto medio superior. El deck declara `AUTOSPC=NO`.
+
+`test_linear_final_t_validation_case.py` añade cinco controles de inventario,
+geometría, acciones/contorno, equilibrio y referencia MSC. Los literales del
+F06 cubren 15 GRID, seis reacciones, ambos CROD y 15 CBAR, 15 CTRIA3 y 15
+CQUAD4; el test no lee resultados externos durante pytest. Frente al OP2
+completo, los errores L2 son `8.206e-3` en traslaciones, `2.547e-2` en
+rotaciones, `1.705e-4` en reacciones de fuerza, `3.553e-4` en reacciones de
+momento y `3.930e-3` en tensiones normales CBAR. La membrana CQUAD4/CTRIA3
+queda en `3.268e-5/7.218e-6` y las tensiones de fibra en
+`6.582e-3/1.020e-2`.
+
+La recuperación CTRIA3 centroidal de momentos y cortantes no se acepta como
+correlacionada: sus errores L2 son `0.682` y `17.30`. Se conserva como límite
+explícito y no se cubre con una tolerancia amplia ni motiva una recalibración
+de rigidez. El F06 de MSC Nastran Student Edition 2026.1 acaba en `END OF JOB`
+con `AUTOSPC=NO`. Diseño, propiedades, selección de EID, hashes, discrepancias
+y capturas Patran están en el
+[`README` del caso](../tests/solver_tst/validation_cases/case_linear_test_final_T/README.md).
 
 ## Modelo no lineal final para la defensa
 
