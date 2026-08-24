@@ -1,14 +1,15 @@
-"""Structural and MSC checks for the final three-dimensional T-frame model.
+"""Structural and MSC checks for the final three-dimensional T-frame models.
 
-The external values below are transcribed from
-``tfm_final_airframe_frame_T.f06``, generated with MSC Nastran Student
-Edition 2026.1 on 2026-08-24.  This test deliberately does not read F06/OP2
-at runtime, so the reference remains explicit and auditable in source.
+The external values below are transcribed from the physical-MID3 and
+near-zero-MID3 F06 files generated with MSC Nastran Student Edition 2026.1
+on 2026-08-24.  This test deliberately does not read F06/OP2 at runtime, so
+both references remain explicit and auditable in source.
 
-Shell acceptance covers membrane resultants and the positive-fibre stress
-row.  CTRIA3 centroidal bending moments and transverse shears are excluded:
-their recovery does not correlate in this model and is documented in the
-case README instead of being hidden behind a loose tolerance.
+Shell acceptance covers force resultants and the positive-fibre stress row.
+The physical-MID3 model keeps the known CTRIA3 moment/shear mismatch explicit.
+The diagnostic model makes CTRIA3 MID3 numerically null: its stable response
+and complete element recovery correlate, while its ill-conditioned T3 field
+is deliberately asserted as a non-correlation rather than hidden.
 """
 
 from collections import Counter
@@ -34,6 +35,13 @@ CASE_FILE = (
     / "validation_cases"
     / "case_linear_test_final_T"
     / "tfm_final_airframe_frame_T.dat"
+)
+
+CASE_FILE_NO_CTRIA_MID3 = (
+    Path(__file__).parent
+    / "validation_cases"
+    / "case_linear_test_final_T_no_CTRIA_MID3"
+    / "tfm_final_airframe_frame_T_no_CTRIA_MID3.dat"
 )
 
 
@@ -146,6 +154,183 @@ MSC_CTRIA3_RESULTS = {
 }
 
 
+MSC_NO_MID3_DISPLACEMENTS = {
+    9: (-4.409887e-01, 3.083221e+00, -3.508777e-01, -7.737180e-04, -8.661652e-07, 7.442750e-04),
+    27: (-1.468139e-01, 3.048432e+00, -1.779255e-01, -1.151833e-03, -2.361184e-04, 1.064546e-03),
+    51: (-1.752734e-01, 2.893065e+00, -1.878317e-01, -7.210399e-04, 1.260682e-04, 8.427706e-04),
+    165: (-5.612553e-01, 3.304615e+00, -4.669758e-01, -7.800973e-04, 3.755463e-08, 3.458345e-03),
+    376: (3.019772e+00, 0.0, 0.0, 0.0, 0.0, 0.0),
+    377: (2.911066e+00, 0.0, 0.0, 0.0, 0.0, 0.0),
+    405: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    407: (-3.296872e-04, 1.217367e+00, 1.815643e-05, -4.001883e-03, 9.940644e-06, 1.525516e-02),
+    413: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    415: (6.036439e-04, 1.367567e+00, 2.850972e-04, -6.980079e-03, 7.439376e-06, 1.679558e-02),
+    418: (-1.440233e-03, 2.882043e+00, -7.406587e-04, -6.017968e-03, 6.225375e-03, -3.447009e-03),
+    422: (0.0, 2.000000e-01, 0.0, 0.0, 0.0, 0.0),
+    430: (0.0, 2.000000e-01, 0.0, 0.0, 0.0, 0.0),
+    434: (1.757986e-03, 3.982957e+00, -7.845597e-04, -7.009458e-03, -7.628652e-03, 6.278947e-03),
+    440: (-1.525103e-01, 3.788696e+00, -3.197519e-01, 4.027069e-04, -5.187142e-03, 4.343261e-03),
+}
+
+MSC_NO_MID3_SPC_REACTIONS = {
+    376: (0.0, 0.0, 0.0, -1.369652e+00, 0.0, 0.0),
+    377: (0.0, -1.665335e-12, 0.0, 1.369575e+00, -3.801334e-16, 0.0),
+    405: (8.905509e+01, -2.097280e+03, -1.753117e+02, 1.495529e+05, 3.685973e-02, -8.427536e+02),
+    413: (-8.905516e+01, -2.509099e+03, -2.242665e+02, 1.788709e+05, 6.265849e-02, -6.113898e+02),
+    422: (8.901264e+01, -2.089114e+03, 1.753116e+02, -1.483289e+05, -3.693475e-02, -8.437125e+02),
+    430: (-8.901258e+01, -2.500934e+03, 2.242665e+02, -1.776469e+05, -6.258592e-02, -6.104806e+02),
+}
+
+MSC_NO_MID3_CROD_RESULTS = {
+    8001: (6.000000e+03, -1.369652e+00, 1.200000e+02, -1.712065e-01),
+    8002: (6.000000e+03, 1.369575e+00, 1.200000e+02, 1.711969e-01),
+}
+
+MSC_NO_MID3_CBAR_FORCES = {
+    7001: (2.920149e+00, 2.984130e+02, -1.619245e+00, -6.833267e+02, 4.560078e-02, 9.862131e+00, -5.995633e+00, 6.654802e+00),
+    7025: (8.824572e-01, 8.152888e+04, 8.148580e-01, -1.769260e+04, 6.790722e-04, 9.967359e+02, 8.462374e+02, 5.803371e-01),
+    7026: (8.347304e-01, -1.767426e+04, 9.359219e-01, -2.277374e+03, -1.328155e-03, -2.020867e+02, 8.162088e+02, 6.662672e-01),
+    7030: (1.192735e+00, -8.907751e+03, 1.015757e+00, 2.869711e+04, 2.740013e-03, -5.822054e+02, 3.456869e+03, -1.858780e-02),
+    7056: (1.568758e+00, 1.856010e+04, 1.359199e+00, -8.445209e+04, 2.105139e-03, 1.034816e+03, 5.163453e+00, 1.034990e-02),
+    7066: (1.288300e+02, 3.374462e+01, 1.983025e+02, -2.799158e+02, -2.315748e+00, 1.045535e+01, 1.526256e+03, -7.353775e-02),
+    7072: (-4.678164e+00, 1.263707e+00, -4.678164e+00, -1.744475e+02, 7.275958e-12, 5.857040e+00, 3.472674e+02, 4.058106e-01),
+    7076: (1.288248e+02, -4.251286e+01, 1.982956e+02, 3.034604e+02, -2.315691e+00, -1.153244e+01, 1.825175e+03, 4.410548e-02),
+    7101: (3.235091e+02, 1.175597e+04, -1.052555e+03, -8.750505e+03, 9.714668e+00, 1.447705e+02, 4.184078e+02, 3.365808e+02),
+    7102: (-1.052555e+03, -8.750505e+03, -2.428619e+03, -2.925698e+04, 9.714668e+00, 1.447705e+02, 4.184078e+02, 3.365808e+02),
+    7105: (7.996597e+01, 1.945705e+04, -1.289501e+02, -1.448011e+04, 1.474895e+00, 2.395878e+02, 7.678143e+02, 2.669238e+01),
+    7106: (-1.289501e+02, -1.448011e+04, -3.378663e+02, -4.841727e+04, 1.474895e+00, 2.395878e+02, 7.678143e+02, 2.669238e+01),
+    7108: (-1.289059e+02, 1.442521e+04, -3.378756e+02, 4.827858e+04, 1.475274e+00, -2.389963e+02, 7.661254e+02, -2.669413e+01),
+    7109: (-4.764996e+02, 1.397083e+04, 1.249602e+03, -1.039788e+04, -1.218585e+01, 1.720370e+02, 4.983522e+02, -4.119271e+02),
+    7112: (1.263081e+03, 1.035789e+04, 2.980980e+03, 3.466514e+04, -1.212794e+01, -1.716031e+02, 4.970825e+02, 4.124196e+02),
+}
+
+MSC_NO_MID3_CBAR_STRESSES = {
+    7001: (1.304645e-01, 1.359255e-01, -4.496123e-01, -4.492027e-01, -2.551333e-02, 1.104122e-01, -4.751256e-01, -3.034850e-01, -3.065132e-01, 1.029198e+00, 1.028971e+00, 1.003685e+00, -3.320265e-01),
+    7025: (3.638914e+01, 3.639079e+01, -1.227819e+02, -1.227817e+02, 3.601010e+00, 3.999180e+01, -1.191809e+02, -7.897753e+00, -7.896229e+00, 2.664484e+01, 2.664496e+01, 3.024597e+01, -4.296743e+00),
+    7026: (-7.889588e+00, -7.888027e+00, 2.661723e+01, 2.661735e+01, 3.473229e+00, 3.009058e+01, -4.416359e+00, -1.017368e+00, -1.015618e+00, 3.429641e+00, 3.429772e+00, 6.903001e+00, 2.455861e+00),
+    7030: (-3.977040e+00, -3.974810e+00, 1.341492e+01, 1.341508e+01, 1.471008e+01, 2.812516e+01, 1.073304e+01, 1.280784e+01, 1.280974e+01, -4.321767e+01, -4.321753e+01, 2.751982e+01, -2.850759e+01),
+    7056: (8.282729e+00, 8.285663e+00, -2.795146e+01, -2.795124e+01, 2.197214e-02, 8.307635e+00, -2.792949e+01, -3.769599e+01, -3.769345e+01, 1.271840e+02, 1.271842e+02, 1.272062e+02, -3.767402e+01),
+    7066: (-1.676745e-01, 3.476457e-01, -3.476457e-01, 1.676745e-01, 1.271880e+01, 1.306645e+01, 1.237116e+01, -1.143047e+00, -3.498371e-01, 3.498371e-01, 1.143047e+00, 1.386185e+01, 1.157576e+01),
+    7072: (1.272621e-02, -5.986444e-03, 5.986444e-03, -1.272621e-02, 2.893895e+00, 2.906621e+00, 2.881169e+00, -4.558370e-01, -4.745496e-01, 4.745496e-01, 4.558370e-01, 3.368445e+00, 2.419345e+00),
+    7076: (-3.710173e-01, 1.442820e-01, -1.442820e-01, 3.710173e-01, 1.520980e+01, 1.558081e+01, 1.483878e+01, 4.126367e-01, 1.205819e+00, -1.205819e+00, -4.126367e-01, 1.641561e+01, 1.400398e+01),
+    7101: (3.070222e+01, 3.199626e+01, -3.199626e+01, -3.070222e+01, 3.486732e+00, 3.548299e+01, -2.850953e+01, -2.122957e+01, -2.543979e+01, 2.543979e+01, 2.122957e+01, 2.892652e+01, -2.195306e+01),
+    7102: (-1.061478e+01, -1.271989e+01, 1.271989e+01, 1.061478e+01, 1.743366e+00, 1.446326e+01, -1.097653e+01, -3.658068e+01, -4.143792e+01, 4.143792e+01, 3.658068e+01, 4.318129e+01, -3.969455e+01),
+    7105: (5.172554e+01, 5.204540e+01, -5.204540e+01, -5.172554e+01, 6.398453e+00, 5.844386e+01, -4.564695e+01, -3.835572e+01, -3.887152e+01, 3.887152e+01, 3.835572e+01, 4.526997e+01, -3.247307e+01),
+    7106: (-1.917786e+01, -1.943576e+01, 1.943576e+01, 1.917786e+01, 3.199226e+00, 2.263499e+01, -1.623653e+01, -6.421849e+01, -6.489422e+01, 6.489422e+01, 6.421849e+01, 6.809345e+01, -6.169499e+01),
+    7108: (1.936252e+01, 1.910471e+01, -1.910471e+01, -1.936252e+01, 3.192189e+00, 2.255471e+01, -1.617034e+01, 6.470931e+01, 6.403356e+01, -6.403356e+01, -6.470931e+01, 6.790150e+01, -6.151712e+01),
+    7109: (3.820853e+01, 3.630254e+01, -3.630254e+01, -3.820853e+01, 4.152935e+00, 4.236147e+01, -3.405560e+01, -3.022688e+01, -2.522847e+01, 2.522847e+01, 3.022688e+01, 3.437982e+01, -2.607395e+01),
+    7112: (1.254744e+01, 1.507360e+01, -1.507360e+01, -1.254744e+01, 2.071177e+00, 1.714478e+01, -1.300242e+01, 4.323921e+01, 4.920117e+01, -4.920117e+01, -4.323921e+01, 5.127235e+01, -4.712999e+01),
+}
+
+MSC_NO_MID3_CQUAD4_RESULTS = {
+    1001: (6.715000e+00, 1.210035e+01, -2.278013e+00, 3.366582e+00, 6.066199e+00, -1.109658e+00, 5.603955e+00),
+    1064: (8.012225e+00, 9.254912e+00, 3.336241e-01, 4.042611e+00, 4.646918e+00, 1.992392e-01, 4.389756e+00),
+    1096: (9.520939e+00, 7.786807e+00, -2.454638e-01, 4.819034e+00, 3.914626e+00, -1.017590e-01, 4.440015e+00),
+    1106: (3.194841e+01, 2.569418e+01, 2.292160e+01, 1.597542e+01, 1.284710e+01, 1.146085e+01, 2.467950e+01),
+    1128: (1.011816e+01, 8.811956e+00, -1.721577e+00, 5.146566e+00, 4.437044e+00, -8.515890e-01, 5.051195e+00),
+    1151: (7.399487e-01, -3.881808e+00, 1.653564e+01, 3.230105e-01, -2.146070e+00, 8.162495e+00, 1.432767e+01),
+    1152: (2.259203e+00, -1.201187e+01, 1.141972e+01, 9.534701e-01, -6.570285e+00, 5.681866e+00, 1.213232e+01),
+    1155: (2.328659e+00, 1.614440e+00, -1.507198e+01, 1.183151e+00, 7.739698e-01, -7.370260e+00, 1.280802e+01),
+    1192: (4.801901e+00, 1.351162e+01, 1.926801e+00, 2.434340e+00, 6.773145e+00, 9.951993e-01, 6.187458e+00),
+    1230: (3.780788e+01, 1.273233e+01, 1.016028e+01, 1.890582e+01, 6.365952e+00, 5.079028e+00, 1.884121e+01),
+    1231: (3.188634e+01, 2.656965e+01, -2.112242e+01, 1.594441e+01, 1.328484e+01, -1.056126e+01, 2.352685e+01),
+    1256: (1.461237e+00, -3.905959e-01, -2.182878e-01, 8.183437e-01, -1.631970e-01, -1.016822e-01, 9.278409e-01),
+    2001: (3.280017e-01, -6.178271e-01, -6.844679e-01, -5.128760e+00, 1.050113e+00, 3.887197e+00, 8.838756e+00),
+    2013: (4.381614e+00, 8.651832e-01, 1.050196e+00, 1.744702e+01, 2.506494e+00, 2.097698e+00, 1.673772e+01),
+    2032: (4.789776e-01, -6.543870e-01, -8.998461e-01, -6.394722e+00, 9.857857e-01, 4.835232e+00, 1.087688e+01),
+}
+
+MSC_NO_MID3_CTRIA3_RESULTS = {
+    5001: (2.282894e+00, 1.238230e+01, -1.490849e+00, 1.142565e+00, 6.211930e+00, -7.536998e-01, 5.873686e+00),
+    5008: (9.204723e+00, 3.337836e+01, 1.148728e+01, 4.603563e+00, 1.668560e+01, 5.743642e+00, 1.793759e+01),
+    5016: (1.710870e+01, -9.917122e+00, 4.082125e+00, 8.552940e+00, -4.959457e+00, 2.040451e+00, 1.235545e+01),
+    5024: (-1.504183e+01, -6.787716e+00, -1.250633e+01, -7.523666e+00, -3.397873e+00, -6.255276e+00, 1.264801e+01),
+    5032: (1.855988e+01, 3.179518e+01, 1.770983e+01, 9.277704e+00, 1.587958e+01, 8.858825e+00, 2.064818e+01),
+    5040: (1.593967e+01, 1.875634e+01, 1.496562e+01, 7.918511e+00, 9.310487e+00, 7.454986e+00, 1.556898e+01),
+    5048: (-9.686528e+00, -2.949691e+01, -1.216357e+01, -5.079484e+00, -1.507812e+01, -6.220421e+00, 1.710680e+01),
+    5050: (-2.278585e+01, -1.136446e+01, -1.340770e+01, -1.174391e+01, -5.804635e+00, -6.886266e+00, 1.567501e+01),
+    5051: (3.608114e+00, -4.354443e+00, -1.069074e+01, 1.767638e+00, -2.464486e+00, -5.384869e+00, 1.002721e+01),
+    5064: (1.096055e+01, 1.077981e+01, 6.888840e+00, 5.459664e+00, 5.383296e+00, 3.441043e+00, 8.057242e+00),
+    5065: (-1.223495e+00, 2.899547e+01, 5.805656e+00, -6.110978e-01, 1.451503e+01, 2.895041e+00, 1.565483e+01),
+    5096: (2.038524e+01, 2.038499e+01, 1.412040e+01, 1.019234e+01, 1.017593e+01, 7.065505e+00, 1.592108e+01),
+    5111: (-1.821839e+00, -1.590698e+01, 6.109671e+00, -9.956696e-01, -8.514146e+00, 3.191289e+00, 9.775364e+00),
+    5112: (-1.385218e+01, -3.992323e+01, -1.649518e+01, -7.162711e+00, -2.029086e+01, -8.386270e+00, 2.299292e+01),
+    5128: (3.245955e+01, 3.464449e+01, 2.505899e+01, 1.620712e+01, 1.731423e+01, 1.252469e+01, 2.743070e+01),
+}
+
+MSC_CQUAD4_FORCES = {
+    1001: (6.715000e+00, 1.210035e+01, -2.278013e+00, -3.042713e-02, -9.098733e-03, -3.359419e-02, 5.581321e-04, -1.581875e-05),
+    1064: (8.012225e+00, 9.254912e+00, 3.336241e-01, -5.812173e-02, -1.343411e-02, -2.618463e-02, 6.500433e-04, 4.512971e-05),
+    1096: (9.520939e+00, 7.786807e+00, -2.454638e-01, -7.553348e-02, -2.174863e-02, -1.536429e-02, 6.139666e-04, -4.926472e-05),
+    1106: (3.194841e+01, 2.569418e+01, 2.292160e+01, -5.416459e-03, -8.911386e-04, -2.371961e-03, 4.250034e-05, 8.403327e-06),
+    1128: (1.011816e+01, 8.811956e+00, -1.721577e+00, -9.953298e-02, -3.317227e-02, -6.551652e-03, 7.159655e-04, 7.445182e-05),
+    1151: (7.399487e-01, -3.881808e+00, 1.653564e+01, 6.107028e-02, 1.358361e-01, 5.956226e-02, 2.016622e-03, -2.331612e-03),
+    1152: (2.259203e+00, -1.201187e+01, 1.141972e+01, 1.261758e-01, 3.483918e-01, 1.717168e-02, 5.781722e-04, -8.026328e-03),
+    1155: (2.328659e+00, 1.614440e+00, -1.507198e+01, 1.087903e-02, 1.691282e-02, -8.714586e-02, 1.649271e-03, 1.194958e-04),
+    1192: (4.801901e+00, 1.351162e+01, 1.926801e+00, -5.306025e-02, -1.089302e-02, -2.555372e-02, 6.144303e-04, -3.416417e-06),
+    1230: (3.780788e+01, 1.273233e+01, 1.016028e+01, -4.045377e-03, 7.167779e-04, 3.771799e-03, -1.172109e-05, -1.064878e-05),
+    1231: (3.188634e+01, 2.656965e+01, -2.112242e+01, -5.380474e-03, -8.764190e-04, 2.376277e-03, 4.339999e-05, -8.380477e-06),
+    1256: (1.461237e+00, -3.905959e-01, -2.182878e-01, -9.754256e-02, -3.334628e-02, -3.365975e-03, 7.398026e-04, 1.272831e-04),
+    2001: (3.281703e-01, -6.177590e-01, -6.844019e-01, 1.388485e+01, -3.215597e+00, -1.080895e+01, 5.918949e-02, -1.013164e+00),
+    2013: (4.381458e+00, 8.655326e-01, 1.049993e+00, -4.358173e+01, -6.098510e+00, -4.900959e+00, -4.501673e-01, -4.487739e+00),
+    2032: (4.788122e-01, -6.544561e-01, -8.999107e-01, 1.738239e+01, -3.061667e+00, -1.350703e+01, -7.271324e-02, 1.197860e+00),
+}
+
+MSC_CTRIA3_FORCES = {
+    5001: (2.282894e+00, 1.238230e+01, -1.490849e+00, -1.510712e-02, -1.602269e-02, -4.422420e-02, 2.740975e-03, -1.214513e-03),
+    5008: (9.204723e+00, 3.337836e+01, 1.148728e+01, -2.078533e-02, 1.959612e-02, -6.142608e-03, 2.763102e-04, 7.845167e-04),
+    5016: (1.710870e+01, -9.917122e+00, 4.082125e+00, -7.983621e-03, -4.726116e-03, -3.359623e-03, -1.232334e-05, 1.324149e-03),
+    5024: (-1.504183e+01, -6.787716e+00, -1.250633e+01, 7.066192e-03, -1.726858e-02, 1.532865e-02, -5.813789e-05, -8.444233e-04),
+    5032: (1.855988e+01, 3.179518e+01, 1.770983e+01, 2.974396e-02, -7.704786e-02, 4.248940e-03, -1.015192e-03, -3.912429e-03),
+    5040: (1.593967e+01, 1.875634e+01, 1.496562e+01, 6.394253e-02, -8.676115e-02, 7.493560e-02, -9.022251e-04, -5.537990e-03),
+    5048: (-9.686528e+00, -2.949691e+01, -1.216357e+01, 3.526727e-01, 3.728080e-01, 1.825656e-01, -2.628237e-03, -1.735532e-02),
+    5050: (-2.278585e+01, -1.136446e+01, -1.340770e+01, 3.069095e-01, 3.839453e-01, 1.880459e-01, 8.151656e-03, 9.496470e-03),
+    5051: (3.608114e+00, -4.354443e+00, -1.069074e+01, 2.717828e-02, 1.536515e-01, -5.302186e-02, 1.058011e-03, 3.760513e-03),
+    5064: (1.096055e+01, 1.077981e+01, 6.888840e+00, -6.096361e-02, 5.694714e-02, -4.742644e-04, 1.587887e-03, 4.653217e-03),
+    5065: (-1.223495e+00, 2.899547e+01, 5.805656e+00, -1.367088e-02, -1.235494e-02, -4.459232e-02, 2.659604e-03, -1.172242e-03),
+    5096: (2.038524e+01, 2.038499e+01, 1.412040e+01, 2.575883e-02, -8.098297e-02, 2.462277e-03, -9.938496e-04, -3.898907e-03),
+    5111: (-1.821839e+00, -1.590698e+01, 6.109671e+00, 8.681913e-02, 3.868049e-01, 1.541853e-02, -1.271783e-03, -4.765049e-03),
+    5112: (-1.385218e+01, -3.992323e+01, -1.649518e+01, 3.561553e-01, 3.737218e-01, 1.838305e-01, -2.642368e-03, -1.774083e-02),
+    5128: (3.245955e+01, 3.464449e+01, 2.505899e+01, -5.710100e-02, 6.004777e-02, 1.165092e-03, 1.521732e-03, 4.601551e-03),
+}
+
+MSC_NO_MID3_CQUAD4_FORCES = {
+    1001: (6.715000e+00, 1.210035e+01, -2.278013e+00, -6.054924e-03, -1.068408e-02, -1.956524e-02, 4.501235e-04, 1.220759e-04),
+    1064: (8.012225e+00, 9.254912e+00, 3.336241e-01, -2.433243e-02, -1.297456e-02, -2.161810e-02, 5.231551e-04, 9.840287e-05),
+    1096: (9.520939e+00, 7.786807e+00, -2.454638e-01, -3.904318e-02, -1.414807e-02, -1.398192e-02, 4.283720e-04, -3.279293e-05),
+    1106: (3.194841e+01, 2.569418e+01, 2.292160e+01, -8.110463e-04, -6.166994e-06, -3.579294e-05, 3.246075e-06, 4.680180e-06),
+    1128: (1.011816e+01, 8.811956e+00, -1.721577e+00, -5.832263e-02, -2.071079e-02, -6.132872e-03, 4.635750e-04, 7.112276e-05),
+    1151: (7.399487e-01, -3.881808e+00, 1.653564e+01, 3.130923e-02, 1.367772e-01, 7.021496e-02, 1.718522e-03, -3.679761e-03),
+    1152: (2.259203e+00, -1.201187e+01, 1.141972e+01, 1.174211e-01, 3.762327e-01, 1.866230e-02, 3.808443e-04, -1.059214e-02),
+    1155: (2.328659e+00, 1.614440e+00, -1.507198e+01, -1.254776e-02, 2.216690e-02, -1.104868e-01, 1.797178e-03, 1.229861e-03),
+    1192: (4.801901e+00, 1.351162e+01, 1.926801e+00, -2.225947e-02, -1.155735e-02, -2.119920e-02, 5.049511e-04, 7.745985e-05),
+    1230: (3.780788e+01, 1.273233e+01, 1.016028e+01, -1.252661e-03, 1.401477e-04, 7.403457e-04, -3.671254e-06, 3.081156e-07),
+    1231: (3.188634e+01, 2.656965e+01, -2.112242e+01, -8.290269e-04, -7.592468e-06, 3.180989e-05, 3.428941e-06, -4.741431e-06),
+    1256: (1.461237e+00, -3.905959e-01, -2.182878e-01, -5.848354e-02, -2.140064e-02, -4.974460e-03, 4.855319e-04, 9.927704e-05),
+    2001: (3.280017e-01, -6.178271e-01, -6.844679e-01, 1.389536e+01, -3.212187e+00, -1.082217e+01, 5.924498e-02, -1.013039e+00),
+    2013: (4.381614e+00, 8.651832e-01, 1.050196e+00, -4.360431e+01, -6.107196e+00, -4.893731e+00, -4.503278e-01, -4.487414e+00),
+    2032: (4.789776e-01, -6.543870e-01, -8.998461e-01, 1.737191e+01, -3.065020e+00, -1.349385e+01, -7.265770e-02, 1.197985e+00),
+}
+
+MSC_NO_MID3_CTRIA3_FORCES = {
+    5001: (2.282894e+00, 1.238230e+01, -1.490849e+00, -7.452980e-04, -1.385321e-02, 5.516880e-03, 1.363420e-25, 5.775880e-26),
+    5008: (9.204723e+00, 3.337836e+01, 1.148728e+01, -8.010932e-04, 2.385933e-03, -2.112610e-06, 5.563601e-26, 8.298654e-26),
+    5016: (1.710870e+01, -9.917122e+00, 4.082125e+00, 9.403389e-04, 5.969286e-04, 4.074724e-04, 7.560764e-27, 7.963543e-27),
+    5024: (-1.504183e+01, -6.787716e+00, -1.250633e+01, 1.835364e-03, 2.676813e-03, 1.408039e-03, -2.001389e-26, -9.305484e-26),
+    5032: (1.855988e+01, 3.179518e+01, 1.770983e+01, 1.490259e-03, 1.200728e-02, -2.607158e-03, -1.040689e-25, -3.091204e-25),
+    5040: (1.593967e+01, 1.875634e+01, 1.496562e+01, 3.421712e-02, 4.512081e-02, 1.855007e-02, -4.592533e-25, -1.544373e-24),
+    5048: (-9.686528e+00, -2.949691e+01, -1.216357e+01, 1.574801e-01, 2.197763e-01, 9.242506e-02, -6.205147e-25, -6.487485e-25),
+    5050: (-2.278585e+01, -1.136446e+01, -1.340770e+01, 2.339895e-01, 8.160257e-02, 1.216112e-01, 2.490345e-25, 9.710646e-25),
+    5051: (3.608114e+00, -4.354443e+00, -1.069074e+01, 2.427964e-02, 1.915097e-01, 2.633188e-02, -2.188893e-25, 2.548323e-25),
+    5064: (1.096055e+01, 1.077981e+01, 6.888840e+00, 1.374161e-02, 4.406641e-03, 2.251227e-03, 3.530863e-25, 3.241625e-25),
+    5065: (-1.223495e+00, 2.899547e+01, 5.805656e+00, -4.331823e-04, -1.153246e-02, 5.191329e-03, 1.323340e-25, 5.788888e-26),
+    5096: (2.038524e+01, 2.038499e+01, 1.412040e+01, 1.842871e-04, 1.104145e-02, -3.536349e-03, -9.921962e-26, -3.099719e-25),
+    5111: (-1.821839e+00, -1.590698e+01, 6.109671e+00, 5.650007e-02, 3.737711e-01, -9.096886e-02, -4.739754e-25, -3.320701e-25),
+    5112: (-1.385218e+01, -3.992323e+01, -1.649518e+01, 1.577490e-01, 2.194977e-01, 9.245304e-02, -6.284883e-25, -6.583885e-25),
+    5128: (3.245955e+01, 3.464449e+01, 2.505899e+01, 1.510004e-02, 5.343135e-03, 3.201329e-03, 3.471868e-25, 3.233903e-25),
+}
+
+
 def _relative_l2(actual, reference):
     actual_array = np.asarray(actual, dtype=float)
     reference_array = np.asarray(reference, dtype=float)
@@ -198,9 +383,30 @@ def _shell_core_tuple(data):
     )
 
 
+def _shell_force_tuple(data):
+    return (
+        data["membrane_force_x"],
+        data["membrane_force_y"],
+        data["membrane_force_xy"],
+        data["bending_moment_x"],
+        data["bending_moment_y"],
+        data["bending_moment_xy"],
+        data["shear_force_x"],
+        data["shear_force_y"],
+    )
+
+
 @pytest.fixture(scope="module")
 def solved_t_frame():
     model = parse_nastran_input(str(CASE_FILE))
+    solver = LinearStaticSolver(model)
+    solver.assemble()
+    return model, solver, solver.solve()
+
+
+@pytest.fixture(scope="module")
+def solved_t_frame_no_ctria_mid3():
+    model = parse_nastran_input(str(CASE_FILE_NO_CTRIA_MID3))
     solver = LinearStaticSolver(model)
     solver.assemble()
     return model, solver, solver.solve()
@@ -455,3 +661,213 @@ def test_final_t_frame_matches_transcribed_msc_nastran_reference(solved_t_frame)
     assert _relative_l2(actual_ctria[:, :3], reference_ctria[:, :3]) < 3.0e-5
     assert _relative_l2(actual_ctria, reference_ctria) < 2.0e-2
     assert np.max(np.abs(actual_ctria[:, 3:] - reference_ctria[:, 3:])) < 4.5e-1
+
+
+def test_physical_mid3_keeps_known_ctria_recovery_mismatch_explicit(solved_t_frame):
+    """Accept CQUAD4 recovery but expose, rather than waive, the CTRIA3 gap."""
+    _model, _solver, results = solved_t_frame
+
+    actual_cquad = np.array(
+        [_shell_force_tuple(results["stresses"][eid]) for eid in MSC_CQUAD4_FORCES]
+    )
+    reference_cquad = np.asarray(list(MSC_CQUAD4_FORCES.values()))
+    assert _relative_l2(actual_cquad[:, :3], reference_cquad[:, :3]) < 1.0e-4
+    assert _relative_l2(actual_cquad[:, 3:6], reference_cquad[:, 3:6]) < 4.0e-2
+    assert _relative_l2(actual_cquad[:, 6:], reference_cquad[:, 6:]) < 1.0e-2
+
+    actual_ctria = np.array(
+        [_shell_force_tuple(results["stresses"][eid]) for eid in MSC_CTRIA3_FORCES]
+    )
+    reference_ctria = np.asarray(list(MSC_CTRIA3_FORCES.values()))
+    assert _relative_l2(actual_ctria[:, :3], reference_ctria[:, :3]) < 3.0e-5
+    moment_gap = _relative_l2(actual_ctria[:, 3:6], reference_ctria[:, 3:6])
+    shear_gap = _relative_l2(actual_ctria[:, 6:], reference_ctria[:, 6:])
+    assert 5.0e-1 < moment_gap < 5.3e-1
+    assert 1.4e1 < shear_gap < 1.6e1
+
+
+def test_no_ctria_mid3_variant_changes_only_the_diagnostic_shell_material(
+    solved_t_frame_no_ctria_mid3,
+):
+    model, _solver, _results = solved_t_frame_no_ctria_mid3
+    type_counts = Counter(type(element) for element in model.elements.values())
+
+    assert len(model.nodes) == 417
+    assert len(model.elements) == 506
+    assert type_counts == {
+        RodElement: 2,
+        BarElement: 88,
+        CTRIA3Element: 128,
+        CQUAD4Element: 288,
+    }
+    assert all(
+        element.prop_id == 11
+        for element in model.elements.values()
+        if isinstance(element, CTRIA3Element)
+    )
+    assert model.properties[11].mat_id == 1
+    assert model.properties[11].mat_id_bending == 1
+    assert model.properties[11].mat_id_shear == 99
+    assert model.materials[99].E == pytest.approx(1.0e-20)
+    assert model.materials[99].nu == pytest.approx(0.33)
+    compact_deck = "".join(
+        CASE_FILE_NO_CTRIA_MID3.read_text(encoding="utf-8").split()
+    ).upper()
+    assert "TITLE=TFMFINALLINEARAIRFRAMETNOCTRIA3MID3" in compact_deck
+    assert "PSHELL,11,1,2.0,1,,99,0.8333333333" in compact_deck
+    assert "MAT1,99,1.0E-20,,0.33" in compact_deck
+    assert "PARAM,AUTOSPC,NO" in compact_deck
+
+    def unchanged_bulk_lines(path):
+        lines = []
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            compact_line = "".join(raw_line.split()).upper()
+            if not compact_line or compact_line.startswith(("$", "TITLE=", "SUBTITLE=")):
+                continue
+            if compact_line.startswith(("PSHELL,11,", "MAT1,99,")):
+                continue
+            lines.append(compact_line)
+        return lines
+
+    assert unchanged_bulk_lines(CASE_FILE_NO_CTRIA_MID3) == unchanged_bulk_lines(CASE_FILE)
+    physical_deck = "".join(CASE_FILE.read_text(encoding="utf-8").split()).upper()
+    assert "PSHELL,11,1,2.0,1,,1,0.8333333333" in physical_deck
+    assert "MAT1,99," not in physical_deck
+
+
+def test_no_ctria_mid3_matches_msc_for_stable_dofs_and_element_recovery(
+    solved_t_frame_no_ctria_mid3,
+):
+    """Correlate the diagnostic deck without reading its F06/OP2 at runtime."""
+    _model, solver, results = solved_t_frame_no_ctria_mid3
+    displacements = results["displacements"]
+
+    actual_u = np.array(
+        [
+            displacements[solver.dof_mapper.get_dof_indices(node_id)]
+            for node_id in MSC_NO_MID3_DISPLACEMENTS
+        ]
+    )
+    reference_u = np.asarray(list(MSC_NO_MID3_DISPLACEMENTS.values()))
+    assert _relative_l2(actual_u[:, :2], reference_u[:, :2]) < 5.0e-7
+    assert np.max(np.abs(actual_u[:, :2] - reference_u[:, :2])) < 1.0e-6
+    assert _relative_l2(actual_u[:, 3:], reference_u[:, 3:]) < 3.0e-6
+    assert np.max(np.abs(actual_u[:, 3:] - reference_u[:, 3:])) < 5.0e-8
+
+    actual_reactions = np.array(
+        [results["reactions"][node_id] for node_id in MSC_NO_MID3_SPC_REACTIONS]
+    )
+    reference_reactions = np.asarray(list(MSC_NO_MID3_SPC_REACTIONS.values()))
+    assert _relative_l2(actual_reactions[:, :3], reference_reactions[:, :3]) < 5.0e-6
+    assert _relative_l2(actual_reactions[:, 3:], reference_reactions[:, 3:]) < 5.0e-7
+    assert np.max(np.abs(actual_reactions[:, :3] - reference_reactions[:, :3])) < 1.0e-3
+    # F06 writes six significant digits, which rounds 1.8e5 Nmm reactions by
+    # as much as 0.05 Nmm even though their relative correlation is tighter.
+    assert np.max(np.abs(actual_reactions[:, 3:] - reference_reactions[:, 3:])) < 6.0e-2
+
+    actual_crod = []
+    for element_id in MSC_NO_MID3_CROD_RESULTS:
+        data = results["stresses"][element_id]
+        actual_crod.append(
+            (
+                data["axial_force"],
+                data["torque"],
+                data["axial_stress"],
+                data["torsional_stress"],
+            )
+        )
+    actual_crod = np.asarray(actual_crod)
+    reference_crod = np.asarray(list(MSC_NO_MID3_CROD_RESULTS.values()))
+    assert _relative_l2(actual_crod[:, (0, 2)], reference_crod[:, (0, 2)]) < 1.0e-8
+    assert _relative_l2(actual_crod[:, (1, 3)], reference_crod[:, (1, 3)]) < 2.0e-6
+
+    actual_cbar_forces = np.array(
+        [
+            _cbar_force_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CBAR_FORCES
+        ]
+    )
+    reference_cbar_forces = np.asarray(list(MSC_NO_MID3_CBAR_FORCES.values()))
+    cbar_force_limits = (5.0e-5, 5.0e-6, 5.0e-5, 5.0e-6, 3.0e-4, 1.0e-5, 2.0e-5, 1.0e-5)
+    for column, limit in enumerate(cbar_force_limits):
+        assert _relative_l2(
+            actual_cbar_forces[:, column], reference_cbar_forces[:, column]
+        ) < limit
+    assert np.max(np.abs(actual_cbar_forces - reference_cbar_forces)) < 3.0e-1
+
+    actual_cbar_stress = np.array(
+        [
+            _cbar_stress_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CBAR_STRESSES
+        ]
+    )
+    reference_cbar_stress = np.asarray(list(MSC_NO_MID3_CBAR_STRESSES.values()))
+    assert _relative_l2(actual_cbar_stress, reference_cbar_stress) < 5.0e-6
+    assert np.max(np.abs(actual_cbar_stress - reference_cbar_stress)) < 5.0e-4
+
+    actual_cquad_forces = np.array(
+        [
+            _shell_force_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CQUAD4_FORCES
+        ]
+    )
+    reference_cquad_forces = np.asarray(list(MSC_NO_MID3_CQUAD4_FORCES.values()))
+    assert _relative_l2(actual_cquad_forces[:, :3], reference_cquad_forces[:, :3]) < 2.0e-5
+    assert _relative_l2(actual_cquad_forces[:, 3:6], reference_cquad_forces[:, 3:6]) < 1.0e-5
+    assert _relative_l2(actual_cquad_forces[:, 6:], reference_cquad_forces[:, 6:]) < 2.0e-3
+    assert np.max(np.abs(actual_cquad_forces - reference_cquad_forces)) < 2.0e-3
+
+    actual_cquad = np.array(
+        [
+            _shell_core_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CQUAD4_RESULTS
+        ]
+    )
+    reference_cquad = np.asarray(list(MSC_NO_MID3_CQUAD4_RESULTS.values()))
+    assert _relative_l2(actual_cquad, reference_cquad) < 1.0e-5
+    assert np.max(np.abs(actual_cquad - reference_cquad)) < 3.0e-4
+
+    actual_ctria_forces = np.array(
+        [
+            _shell_force_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CTRIA3_FORCES
+        ]
+    )
+    reference_ctria_forces = np.asarray(list(MSC_NO_MID3_CTRIA3_FORCES.values()))
+    assert _relative_l2(actual_ctria_forces[:, :3], reference_ctria_forces[:, :3]) < 1.0e-5
+    assert _relative_l2(actual_ctria_forces[:, 3:6], reference_ctria_forces[:, 3:6]) < 1.0e-4
+    assert np.max(np.abs(reference_ctria_forces[:, 6:])) < 2.0e-23
+    assert np.max(np.abs(actual_ctria_forces[:, 6:])) < 2.0e-11
+    assert np.max(
+        np.abs(actual_ctria_forces[:, 6:] - reference_ctria_forces[:, 6:])
+    ) < 2.0e-11
+
+    actual_ctria = np.array(
+        [
+            _shell_core_tuple(results["stresses"][element_id])
+            for element_id in MSC_NO_MID3_CTRIA3_RESULTS
+        ]
+    )
+    reference_ctria = np.asarray(list(MSC_NO_MID3_CTRIA3_RESULTS.values()))
+    assert _relative_l2(actual_ctria, reference_ctria) < 1.0e-5
+    assert np.max(np.abs(actual_ctria - reference_ctria)) < 3.0e-4
+
+
+def test_no_ctria_mid3_exposes_the_t3_near_mechanism(
+    solved_t_frame_no_ctria_mid3,
+):
+    """Expose the solver-dependent T3 response of the ill-conditioned deck."""
+    _model, solver, results = solved_t_frame_no_ctria_mid3
+    actual_t3 = np.array(
+        [
+            results["displacements"][solver.dof_mapper.get_dof_indices(node_id)[2]]
+            for node_id in MSC_NO_MID3_DISPLACEMENTS
+        ]
+    )
+    reference_t3 = np.asarray(list(MSC_NO_MID3_DISPLACEMENTS.values()))[:, 2]
+
+    assert np.max(np.abs(reference_t3)) < 5.0e-1
+    assert np.max(np.abs(actual_t3)) > 1.0e9
+    assert _relative_l2(actual_t3, reference_t3) > 1.0e8
+    all_t3 = results["displacements"].reshape(-1, 6)[:, 2]
+    assert np.max(np.abs(all_t3)) > 1.0e10

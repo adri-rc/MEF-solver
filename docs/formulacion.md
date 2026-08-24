@@ -148,6 +148,16 @@ El espesor multiplica la constitutiva de membrana; `t³/12` multiplica la de
 flexión; y `TS/T` interviene en el cortante transversal. PSHELL permite separar
 MID1, MID2 y MID3.
 
+La recuperación centroidal tridimensional de momentos y cortantes no se
+considera equivalente a MSC Nastran dentro del alcance actual. El frame T con
+MID3 físico correlaciona en desplazamientos, membrana y tensiones de fibra,
+pero no en `M/Q` CTRIA3. La sonda complementaria con `E(MID3)=1e-20` reduce el
+error de momentos a `7.106e-5` y lleva ambos cortantes a cero ingenieril, a
+costa de introducir un casi-mecanismo `T3`. Esta evidencia localiza el límite
+en el tratamiento de cortante/recuperación, pero no valida físicamente el
+deck degenerado ni justifica recalibrar la rigidez. Véase
+[`docs/validacion.md`](validacion.md#diagnóstico-complementario-sin-mid3-efectivo).
+
 ## CQUAD4
 
 CQUAD4 tiene cuatro nodos y 24 GDL. La clase activa reconstruye el QUAD4 de

@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `680 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `684 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -28,8 +28,18 @@ tres nervios simétricos formados por 12 CBAR y cuatro apoyos puntuales que
 idealizan remaches. MSC Nastran 2026.1 termina el deck con `AUTOSPC=NO`; el E2E
 compara ambos CROD y 15 elementos de cada otra familia. La respuesta global,
 la membrana y las tensiones de fibra se aceptan. Los momentos/cortantes
-centroidales CTRIA3 quedan abiertos como discrepancia de recuperación
-(`0.682/17.30` L2), sin alterar la rigidez para forzar el ajuste.
+centroidales CTRIA3 no correlacionan (`0.682/17.30` L2), sin alterar la
+rigidez para forzar el ajuste.
+
+La investigación causal se considera cerrada con
+`case_linear_test_final_T_no_CTRIA_MID3`, que cambia únicamente
+`PSHELL 11.MID3` a `MAT1 99`, `E=1e-20`. MSC alcanza `END OF JOB` con
+`AUTOSPC=NO`; el error L2 completo de momentos CTRIA3 cae a `7.106e-5` y los
+cortantes son cero ingenieril (normas menores que `4.1e-11` local y
+`8.7e-24` MSC). La sonda no valida una estructura física: tiene
+`cond(K)=5.660208e28` y un casi-mecanismo `T3` que no correlaciona
+(`7.3586e10 mm` local frente a `-0.3421 mm` de MSC en GRID 203). Reproducir
+físicamente la recuperación `M/Q` de Nastran permanece fuera de alcance.
 
 El modelo `case_nonlinear_test_final` aporta la demostración equivalente para
 `SOL 400`: un puente espacial de 48 CBAR y 30 CROD sometido a 15 fuerzas, 3
@@ -93,9 +103,10 @@ documenta qué magnitudes tienen correspondencia directa o reconstruida en F06.
    acumular errores por modelo.
 5. Revisar y aislar los módulos y scripts antiguos o exploratorios antes de
    ampliar el alcance físico.
-6. Investigar la recuperación centroidal 3D de momentos y cortantes CTRIA3
-   expuesta por `case_linear_test_final_T`, conservando por separado la
-   rigidez, la membrana y las tensiones de fibra ya correlacionadas.
+
+El desacuerdo centroidal `M/Q` CTRIA3 del frame T ya está aislado como límite
+de formulación mediante la sonda sin MID3 efectivo. No queda como tarea de
+consolidación ni justifica recalibrar la rigidez validada.
 
 ## Prioridad 2: rendimiento
 

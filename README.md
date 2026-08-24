@@ -18,7 +18,7 @@ E2E independiente. El alcance y sus límites están en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`680 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`684 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
 
 El caso lineal de integración para la defensa está en
@@ -38,6 +38,17 @@ y movimiento diferencial impuesto. El E2E transcribe el F06 de MSC Nastran
 global, la membrana de láminas y las tensiones de fibra correlacionan; los
 momentos y cortantes centroidales CTRIA3 quedan documentados como límite de
 recuperación, no como resultado validado.
+
+El diagnóstico complementario
+[`case_linear_test_final_T_no_CTRIA_MID3`](tests/solver_tst/validation_cases/case_linear_test_final_T_no_CTRIA_MID3/README.md)
+cambia únicamente `PSHELL 11.MID3` a un `MAT1 99` con `E=1e-20`. Con esa
+flexibilidad transversal degenerada, los momentos CTRIA3 pasan a un error L2
+completo de `7.106e-5` y ambos códigos recuperan cortantes de cero ingenieril.
+Las demás familias y los GDL no asociados a `T3` conservan la correlación.
+Esto localiza la discrepancia en la formulación de cortante/recuperación, pero
+no valida físicamente la variante: su condición es `5.660208e28` y `T3` se
+convierte en un casi-mecanismo que no correlaciona. La recuperación física de
+`M/Q` CTRIA3 como Nastran permanece fuera del alcance implementado.
 
 El caso no lineal final está en
 [`case_nonlinear_test_final`](tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md):

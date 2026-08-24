@@ -153,10 +153,11 @@ Trazabilidad de los dos ficheros fuente:
 ## Incorporación a la suite de validación
 
 [`test_linear_final_t_validation_case.py`](../../test_linear_final_t_validation_case.py)
-añade cinco comprobaciones independientes: inventario físico, geometría en T,
-cargas y restricciones, solución/equilibrio y correlación MSC. El test no lee
-el F06 ni el OP2 durante pytest; todos los valores MSC seleccionados están
-transcritos como literales en el módulo.
+mantiene cinco comprobaciones para este modelo: inventario físico, geometría
+en T, cargas y restricciones, solución/equilibrio y correlación MSC. El mismo
+módulo añade cuatro controles de la sonda sin MID3 efectivo, para un total de
+nueve pruebas. No lee el F06 ni el OP2 durante pytest; todos los valores MSC
+seleccionados están transcritos como literales en el módulo.
 
 Se comparan 15 GRID de desplazamiento, las seis estaciones con reacción, los
 dos CROD y 15 elementos de cada familia restante:
@@ -214,6 +215,16 @@ fibra sí forman parte de la aceptación, pero los momentos y cortantes
 centroidales no quedan validados por este deck. Su divergencia debe
 investigarse como recuperación de resultados antes de atribuirle precisión
 Nastran; no justifica recalibrar la rigidez de los elementos.
+
+El control A/B
+[`case_linear_test_final_T_no_CTRIA_MID3`](../case_linear_test_final_T_no_CTRIA_MID3/README.md)
+mantiene todo el modelo y asigna únicamente al `MID3` de los CTRIA3 un
+material con `E=1e-20`. Con esa contribución casi nula, la discrepancia L2 de
+momentos CTRIA3 baja de `0.682` a `7.106e-5`, lo que vincula el desacuerdo a la
+formulación de cortante/recuperación. El mismo control produce un
+casi-mecanismo local en `T3` y una condición `5.660208e28`; es evidencia
+diagnóstica complementaria, no una sustitución físicamente válida de este
+caso.
 
 El equilibrio del solver, transformando antes las reacciones desde cada
 `GRID.CD` al sistema básico, cierra por debajo de `1e-6 N` y `2e-3 Nmm` en el

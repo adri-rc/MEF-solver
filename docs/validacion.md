@@ -12,7 +12,7 @@ Resultado verificado el 24 de agosto de 2026 después de incorporar el frame
 lineal tridimensional en T:
 
 ```text
-680 passed, 6 xfailed, 2 warnings
+684 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -76,7 +76,7 @@ uniones remachadas discretas: dos están empotrados y dos reciben `T2=0.2 mm`.
 Dos fuerzas axiales de `6000 N` actúan en los CROD y un momento de
 `250000 Nmm` en el punto medio superior. El deck declara `AUTOSPC=NO`.
 
-`test_linear_final_t_validation_case.py` añade cinco controles de inventario,
+`test_linear_final_t_validation_case.py` incluye controles de inventario,
 geometría, acciones/contorno, equilibrio y referencia MSC. Los literales del
 F06 cubren 15 GRID, seis reacciones, ambos CROD y 15 CBAR, 15 CTRIA3 y 15
 CQUAD4; el test no lee resultados externos durante pytest. Frente al OP2
@@ -93,6 +93,35 @@ de rigidez. El F06 de MSC Nastran Student Edition 2026.1 acaba en `END OF JOB`
 con `AUTOSPC=NO`. Diseño, propiedades, selección de EID, hashes, discrepancias
 y capturas Patran están en el
 [`README` del caso](../tests/solver_tst/validation_cases/case_linear_test_final_T/README.md).
+
+### Diagnóstico complementario sin MID3 efectivo
+
+`case_linear_test_final_T_no_CTRIA_MID3` repite exactamente la geometría,
+cargas y restricciones del frame T. La única variación constitutiva es que
+`PSHELL 11.MID3` referencia el nuevo `MAT1 99`, cuyo módulo es `E=1e-20`. MSC Nastran
+2026.1 alcanza `END OF JOB` con `AUTOSPC=NO`, pero la matriz queda
+extremadamente mal condicionada (`cond(K)=5.660208e28`). No es un modelo
+físico alternativo, sino una sonda para aislar la contribución de cortante
+transversal del CTRIA3.
+
+En esta sonda, el error L2 de los momentos CTRIA3 del campo completo baja de
+`0.682` a `7.106e-5`. Los cortantes son cero ingenieril en ambos resultados:
+la norma local es menor que `4.1e-11` y la de MSC menor que `8.7e-24`. Las
+demás familias de elemento, reacciones y grados de libertad no asociados a
+`T3` conservan la correlación. En cambio, la traslación transversal del
+CTRIA3 se convierte en un casi-mecanismo: en GRID 203 el solver obtiene
+`7.3586e10 mm`, mientras MSC imprime `-0.3421 mm`. Por ello el deck degenerado
+no valida desplazamientos globales ni una respuesta estructural físicamente
+utilizable.
+
+La pareja de casos cierra la investigación causal dentro de la limitación
+formulativa actual: el frame original valida respuesta global, membrana y
+fibras, y la sonda demuestra que la discrepancia `M/Q` depende del tratamiento
+de cortante. No demuestra equivalencia física de la formulación ni incorpora
+la recuperación física de momentos/cortantes CTRIA3 de Nastran; esa capacidad
+permanece explícitamente fuera de alcance. El propósito, referencias y
+advertencias completas están en el
+[`README` de la sonda](../tests/solver_tst/validation_cases/case_linear_test_final_T_no_CTRIA_MID3/README.md).
 
 ## Modelo no lineal final para la defensa
 

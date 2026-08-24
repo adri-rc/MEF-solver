@@ -46,7 +46,7 @@ Comando de referencia:
 Resultado observado el 24 de agosto de 2026:
 
 ```text
-680 passed, 6 xfailed, 2 warnings
+684 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -254,8 +254,14 @@ controles extremadamente mal condicionados.
   CROD, con cuatro uniones puntuales tipo remache. El E2E transcribe ambos
   CROD y 15 CBAR/CTRIA3/CQUAD4 del F06 de MSC 2026.1. La respuesta global,
   membrana y tensiones de fibra forman parte de la aceptación; la recuperación
-  CTRIA3 centroidal de momentos/cortantes queda diagnosticada, con errores L2
-  `0.682/17.30`, y no se anuncia como validada.
+  CTRIA3 centroidal de momentos/cortantes no correlaciona, con errores L2
+  `0.682/17.30`, y no se anuncia como validada. El mismo módulo incorpora
+  `case_linear_test_final_T_no_CTRIA_MID3`, que sólo asigna a
+  `PSHELL 11.MID3` un `MAT1 99` con `E=1e-20`. MSC termina con `AUTOSPC=NO` y
+  los momentos CTRIA3 bajan a `7.106e-5` L2; los cortantes son cero ingenieril
+  (normas menores que `4.1e-11` local y `8.7e-24` MSC). Esta sonda cierra la
+  investigación causal, no la validación física: `cond(K)=5.660208e28` y el
+  `T3` de GRID 203 diverge (`7.3586e10 mm` local frente a `-0.3421 mm` MSC).
 - `test_nonlinear_final_validation_case.py` controla el puente mixto de
   defensa `case_nonlinear_test_final`: 32 GRID, 48 CBAR, 30 CROD, 15 FORCE,
   3 MOMENT, dos empotramientos y asiento diferencial impuesto. MSC Nastran
@@ -316,6 +322,12 @@ Prioridad recomendada:
 2. integración continua y entorno bloqueado/reproducible;
 3. estudio de convergencia, ensamblaje COO y benchmark de escalabilidad;
 4. política de errores del modo por lotes.
+
+La investigación del desacuerdo `M/Q` CTRIA3 del frame T ya no es una tarea
+abierta: la variante de MID3 casi nulo lo localiza en la formulación de
+cortante/recuperación. Implementar una recuperación física equivalente a
+Nastran sí permanece fuera del alcance; no usar el deck degenerado como
+evidencia de correlación global ni para recalibrar la rigidez.
 
 No es necesario crear más casos CQUAD4 de rigidez plana para cerrar la
 implementación actual. Cualquier ampliación debe comenzar con un deck mínimo,
