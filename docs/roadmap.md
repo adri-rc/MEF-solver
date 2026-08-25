@@ -4,7 +4,7 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `684 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `688 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.
@@ -50,12 +50,20 @@ incrementos sin recortes y muestra una diferencia del `1.97 %` frente a
 forma parte del E2E mixto con una envolvente del `2 %` gobernada por una fibra
 CBAR al `1.36 %`.
 
+`case_nonlinear_test_final_updated` amplía ese cierre a una geometría de tres
+vanos, 202 GRID y 572 elementos con bases de pilas/estribos explícitas. Ambos
+códigos completan 20 incrementos sin recortes. La respuesta global y axial
+mantiene errores L2 del orden de `10^-5`; la recuperación completa de fibras
+CBAR da `1.673 %` L2 y un máximo significativo del `11.57 %` en los largueros
+continuos. El E2E separa las tolerancias de desplazamientos, reacciones,
+estados centroidales y fibras para no ocultar esa diferencia localizada.
+
 El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
 `NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.
 `NonlinearStaticSolver` resuelve MAT1 con CROD o CBAR mediante Newton completo,
 stepping fijo/adaptativo y recortes. CROD dispone de 36 casos (92--127), CBAR
-de 39 (128--166) y la integración mixta de diez (167--176), todos con
-referencias MSC auditables.
+de 39 (128--166) y la integración mixta de doce referencias (167--176 más los
+dos puentes finales), todas con resultados MSC auditables.
 
 ## Prioridad 0 completada: no linealidad geométrica CROD
 
@@ -85,10 +93,10 @@ referencias MSC auditables.
 ### Cierre externo ejecutado
 
 Los seis diagnósticos 161--166, los diez modelos mixtos CROD/CBAR 167--176
-(de 2 a 30 elementos) y el puente final de 78 elementos terminan sin `FATAL`
-y alcanzan factor 1.0 en MSC. Las referencias finales están transcritas:
-161--166 amplían el E2E CBAR; 167--176 y el puente usan un módulo E2E mixto
-independiente. La respuesta global y la tensión axial
+(de 2 a 30 elementos) y los puentes finales de 78 y 572 elementos terminan sin
+`FATAL` y alcanzan factor 1.0 en MSC. Las referencias finales están
+transcritas: 161--166 amplían el E2E CBAR; 167--176 y ambos puentes usan un
+módulo E2E mixto independiente. La respuesta global y la tensión axial
 centroidal quedan cerradas; sigue abierta la reproducción estricta de algunas
 fibras casi neutras y del reparto de momentos en los tramos más rotados de
 165/166. El informe presenta esas fibras con los nombres C--F de Nastran y

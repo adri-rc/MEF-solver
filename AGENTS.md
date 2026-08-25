@@ -22,9 +22,10 @@ ha quedado desactualizado; en ese caso, actualizar también la documentación.
 
 - La ruta lineal cubre pequeñas deformaciones con `MAT1` isótropo y seis GDL
   por nodo para CROD, CBAR, CTRIA3 y CQUAD4 coplanar.
-- La ruta `SOL 400` cubre sólo no linealidad geométrica MAT1/PROD/CROD con
-  cargas nodales conservativas, Newton completo y `FIXED`/`ADAPT`. No incluye
-  plasticidad, contacto, arco de longitud, cargas seguidoras ni CBAR no lineal.
+- La ruta `SOL 400` cubre sólo no linealidad geométrica con `MAT1`,
+  `PROD/CROD` y `PBAR/PBARN1/CBAR`, cargas nodales conservativas, Newton
+  completo y `FIXED`/`ADAPT`. No incluye plasticidad, contacto, arco de
+  longitud ni cargas seguidoras.
 - No presentar el proyecto como un sustituto general de Nastran.
 - No existe `AUTOSPC` general: un mecanismo estructural real debe producir un
   fallo, no estabilizarse silenciosamente.

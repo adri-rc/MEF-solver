@@ -1,6 +1,6 @@
 # Traspaso técnico del proyecto
 
-Actualizado el **24 de agosto de 2026**. Este documento es el
+Actualizado el **25 de agosto de 2026**. Este documento es el
 punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
 El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
 La fase actual se desarrolla en `feat/non-linear-CBAR`. El commit `df88ee4`
@@ -43,10 +43,10 @@ Comando de referencia:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado observado el 24 de agosto de 2026:
+Resultado observado el 25 de agosto de 2026:
 
 ```text
-684 passed, 6 xfailed, 2 warnings
+688 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -269,6 +269,14 @@ controles extremadamente mal condicionados.
   referencias están en el E2E mixto: errores L2 `8.238e-5` en desplazamientos
   y `1.619e-4` en reacciones; la fibra CBAR seleccionada más discrepante da
   `1.36 %` y fija una envolvente explícita del `2 %`.
+- El mismo módulo controla ahora `case_nonlinear_test_final_updated`: un
+  puente de tres vanos con 202 GRID, 144 CBAR, 428 CROD, 44 FORCE, 3 MOMENT y
+  cuatro bases explícitas. `AUTOSPC=NO`; los 62 GRID exclusivamente CROD
+  restringen sólo sus rotaciones inactivas. MSC 2026.1 y el solver completan
+  20 incrementos sin recortes. Los errores L2 completos son `3.280e-5` en
+  traslaciones, `2.898e-5` en reacciones de fuerza, `2.125e-5` en tensiones
+  CROD y `1.379e-5` en axil CBAR. Las fibras CBAR se vigilan con una envolvente
+  separada: `1.673 %` L2 y `11.57 %` máximo significativo en el tablero.
 - `tests/postprocessing_tst/test_report_writer.py`: contrato del informe RPT,
   incluida configuración, convergencia iterativa, estado final no lineal y
   las cuatro tablas de recuperación CBAR.
@@ -285,8 +293,8 @@ controles extremadamente mal condicionados.
   tolerancias y descripciones legibles por caso.
 - `tests/solver_tst/test_nonlinear_CBAR_validation_E2E_.py`: 39 referencias
   CBAR explícitas, incluidas tensiones C--F seleccionadas de 161--166.
-- `tests/solver_tst/test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: once
-  referencias mixtas, los casos 167--176 más el puente final de defensa.
+- `tests/solver_tst/test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: doce
+  referencias mixtas, los casos 167--176 más los dos puentes finales.
 - `tests/solver_tst/validation_cases/NONLINEAR_CROD_CASES.md`: orden de
   ejecución y resultados de MSC que deben conservarse.
 - `docs/nonlinear_cbar.md`: formulación corrotacional implementada, validación

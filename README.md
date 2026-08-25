@@ -18,7 +18,7 @@ E2E independiente. El alcance y sus límites están en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`684 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`688 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
 
 El caso lineal de integración para la defensa está en
@@ -57,6 +57,16 @@ fuerzas, 3 momentos, empotramiento y asiento diferencial impuesto. Converge
 en 50 incrementos sin recortes tanto en MSC Nastran 2026.1 como localmente y
 ya forma parte del E2E mixto. Los errores L2 son `8.24e-5` en desplazamientos
 y `1.62e-4` en reacciones.
+
+La ampliación de escala está en
+[`case_nonlinear_test_final_updated`](tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md):
+un puente arco espacial de tres vanos y terreno escalonado con 202 GRID, 144
+CBAR y 428 CROD. Combina 44 fuerzas, 3 momentos y asientos de cimentación de
+`-2/-6/-10 mm`, con `AUTOSPC=NO`. MSC Nastran 2026.1 y el solver local
+completan 20 incrementos sin recortes. Los errores L2 son `3.28e-5` en
+traslaciones, `2.90e-5` en reacciones de fuerza y `2.13e-5` en tensiones CROD;
+la recuperación completa de fibras CBAR queda cuantificada por separado
+(`1.67 %` L2 y `11.57 %` máximo significativo en el larguero de tablero).
 
 El CBAR no lineal valida las dos variantes `PBARN1,SECT=S,BEH2=BAR`:
 `INT2=LC` usa interpolación lineal/cúbica Euler--Bernoulli y `INT2=LS` usa

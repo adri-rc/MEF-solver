@@ -66,6 +66,23 @@ combina `MAT1`, `PBAR/PBARN1`, `PROD`, `CBAR`, `CROD`, `FORCE`, `MOMENT`,
 distintas. No se usa `K6ROT`: ese parámetro estabiliza los giros de láminas y no
 forma parte de la formulación de CROD/CBAR.
 
+## Modelos finales de integración
+
+La campaña numerada culmina en dos modelos estructurales no numerados que se
+mantienen en el mismo E2E mixto:
+
+| Caso | GRID | CBAR | CROD | Acción y propósito |
+|---|---:|---:|---:|---|
+| `case_nonlinear_test_final` | 32 | 48 | 30 | puente arco de un vano, 50 incrementos y asiento diferencial |
+| `case_nonlinear_test_final_updated` | 202 | 144 | 428 | puente de tres vanos, bases explícitas, 44 FORCE, 3 MOMENT y 20 incrementos |
+
+El caso actualizado correlaciona las familias completas con errores L2 del
+orden de `10^-5` en desplazamientos, reacciones y axiles. Las fibras CBAR del
+tablero continuo requieren una lectura separada: `1.673 %` L2 y `11.57 %`
+máximo significativo. El test conserva por ello tolerancias distintas para
+respuesta global, reacciones, estados centroidales y rutas
+`stress_points_*`; la envolvente de fibras no se aplica al resto de resultados.
+
 ## Orden de ejecución y auditoría
 
 Ejecutar primero 161--163. Si aparecen `NLSTRESS/BOUTPUT` para CBAR y todos

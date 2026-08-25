@@ -192,15 +192,15 @@ Las pruebas se reparten en tres niveles:
 - `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 39
   casos con desplazamientos, reacciones, esfuerzos axiales, torsor y controles
   de incremento seleccionados, incluidas fibras C--F de 161--166;
-- `test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: once referencias
-  integradas, los casos 167--176 y el puente final, con desplazamientos,
-  reacciones y resultados CBAR/CROD.
-- `test_nonlinear_final_validation_case.py`: puente arco atirantado espacial
-  de 48 CBAR y 30 CROD con FORCE/MOMENT, empotramientos y asientos impuestos;
-  conserva los controles estructurales y la señal frente a `LGDISP=-1`.
+- `test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: doce referencias
+  integradas, los casos 167--176 y los dos puentes finales, con
+  desplazamientos, reacciones y resultados CBAR/CROD.
+- `test_nonlinear_final_validation_case.py`: los puentes espaciales de uno y
+  tres vanos, con FORCE/MOMENT y asientos impuestos; conserva los controles
+  estructurales y la señal frente a `LGDISP=-1`.
 
 La flexibilidad `dT2/dFy` del caso 137 difiere de la sonda MSC entre 0.1 % y
-0.8 % en factores 0.2--1.0. Los 39 E2E CBAR y los once E2E mixtos alcanzan
+0.8 % en factores 0.2--1.0. Los 39 E2E CBAR y los doce E2E mixtos alcanzan
 carga completa. Las tolerancias reflejan la complejidad: los casos básicos
 quedan por debajo de
 0.1 %, los ensamblajes grandes se comparan entre 0.3 % y 4 %, y el marco con
@@ -217,3 +217,9 @@ Los DAT y la lectura de sus salidas se describen en
 y [`validacion.md`](validacion.md). El modelo de integración para la defensa
 se documenta en el
 [`README` del puente](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md).
+La ampliación de tres vanos, con 202 GRID y bases explícitas, está en
+[`case_nonlinear_test_final_updated`](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md).
+Su correlación completa conserva errores L2 del orden de `10^-5` en respuesta
+global y axial; la recuperación C--F de los largueros continuos queda
+cuantificada aparte (`1.673 %` L2 y `11.57 %` máximo significativo), sin usar
+esa envolvente para los demás campos.

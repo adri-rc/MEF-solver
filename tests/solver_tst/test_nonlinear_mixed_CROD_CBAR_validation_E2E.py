@@ -5,7 +5,7 @@ Este módulo mantiene separada la evidencia integrada de las campañas puras:
 * ``test_nonlinear_validation_end_to_end.py`` valida CROD;
 * ``test_nonlinear_CBAR_validation_E2E_.py`` valida CBAR;
 * este archivo valida el ensamblaje y equilibrio cuando ambos conviven,
-  incluido el puente final de defensa en ``case_nonlinear_test_final``.
+  incluidos los puentes finales de uno y tres vanos.
 
 Las referencias se transcriben del último bloque ``LOAD STEP = 1.00000E+00``
 del F06/PCH. El test no lee resultados de Nastran durante su ejecución.
@@ -20,6 +20,14 @@ Claves de cada entrada de ``NONLINEAR_MIXED_VALIDATION_DATA``:
     Comportamiento validado y, opcionalmente, una observación importante.
 ``rel_tol`` y ``abs_tol``
     Tolerancias relativa y absoluta comunes a las magnitudes del caso.
+``fiber_rel_tol`` y ``fiber_abs_tol``
+    Envolvente opcional, exclusivamente para rutas ``stress_points_*`` de
+    CBAR. Permite conservar una tolerancia global estricta cuando la
+    recuperación de fibra gobierna un modelo grande.
+``reaction_rel_tol`` y ``element_rel_tol``
+    Envolventes relativas opcionales para reacciones o estados centroidales de
+    elemento. Si no existen, heredan ``rel_tol``. Se usan sólo cuando una
+    componente casi nula gobierna el porcentaje de su familia.
 ``expected_displacements`` y ``expected_reactions``
     ``{grid_id: {dof_index: value}}``; 0=T1, 1=T2, 2=T3, 3=R1, 4=R2,
     5=R3. Los valores proceden de ``DISPLACEMENT VECTOR`` y
@@ -1233,6 +1241,376 @@ NONLINEAR_MIXED_VALIDATION_DATA = [
         "expected_strain_energy": 1.167160e7,
         "expected_increments": 50,
     },
+    {
+        "case_name": "case_final_nonlinear_three_span_bridge_updated",
+        "folder": "case_nonlinear_test_final_updated",
+        "filename": "tfm_final_nonlinear_bridge_updated.dat",
+        "description": (
+            "Five-hundred-seventy-two-element, three-span spatial through-arch "
+            "bridge with explicit abutment and pier foundations."
+        ),
+        "note": (
+            "MSC Nastran 2026.1 completed 20 fixed increments without cutbacks "
+            "or USER/SYSTEM FATAL or WARNING. Global and centroidal fields "
+            "use a strict envelope; CBAR fibre recovery has its own documented "
+            "12 percent limit, governed by the continuous exterior deck girders."
+        ),
+        "rel_tol": 1.0e-3,
+        "abs_tol": 1.0e-5,
+        "reaction_rel_tol": 6.0e-3,
+        "element_rel_tol": 1.0e-2,
+        "fiber_rel_tol": 1.2e-1,
+        "fiber_abs_tol": 1.0e-4,
+        "expected_displacements": {
+            1001: {
+                0: 5.18891871e-1,
+                1: 1.96696192e-1,
+                2: -5.60905635e-2,
+                3: -2.70569755e-4,
+                4: 4.50870663e-4,
+                5: 3.90530215e-4,
+            },
+            1015: {
+                0: 1.060637712,
+                1: 2.199962616,
+                2: -6.464377403,
+                3: 4.40964997e-2,
+                4: 3.23175016e-4,
+                5: 8.07010074e-5,
+            },
+            1031: {
+                0: 1.131060004,
+                1: 6.43418133e-1,
+                2: -10.08899593,
+                3: -7.26408150e-4,
+                4: 5.3260557e-4,
+                5: -7.84821517e-4,
+            },
+            1115: {0: 9.02531743e-1, 1: 2.137879848, 2: -13.71115494},
+            1215: {0: 9.92179394e-1, 1: 2.290584326, 2: -8.216315269},
+            1315: {
+                0: 9.68431950e-1,
+                1: 2.263746500,
+                2: -6.743013382,
+                3: -3.44199278e-2,
+                4: 3.4040143e-4,
+                5: 9.76059309e-5,
+            },
+            2006: {
+                0: 1.153766274,
+                1: 3.584009886,
+                2: -2.081453323,
+                3: -1.81207631e-3,
+                4: 6.45652181e-5,
+                5: 2.83336121e-4,
+            },
+            2016: {
+                0: 1.950073361,
+                1: 9.716281891,
+                2: -6.875333309,
+                3: -2.77290307e-3,
+                4: 7.73359716e-5,
+                5: 1.69912790e-4,
+            },
+            2127: {
+                0: 2.252339840,
+                1: 6.946842194,
+                2: -9.861026764,
+                3: -3.00531625e-3,
+                4: 3.47564856e-5,
+                5: -2.77367391e-4,
+            },
+            3021: {
+                0: 2.87098587e-1,
+                1: 1.70260459e-1,
+                2: -6.163419724,
+                3: -4.89044644e-4,
+                4: 3.63985659e-4,
+                5: 7.21423533e-7,
+            },
+        },
+        "expected_reactions": {
+            4001: {
+                0: -6.28730225e3,
+                1: 1.83186309e4,
+                2: 2.36630356e2,
+                3: -5.46827875e5,
+                4: -2.2741346e7,
+                5: 2.3172904e7,
+            },
+            4012: {
+                0: -2.18571704e3,
+                1: -1.30986781e5,
+                2: 3.85182125e5,
+                3: -3.7330192e7,
+                4: -2.1086416e7,
+                5: -1.1457772e7,
+            },
+            4023: {
+                0: -1.52947969e4,
+                1: 1.33252547e5,
+                2: 1.46500672e5,
+                3: -6.805218e6,
+                4: -4.0784092e7,
+                5: 2.2350782e7,
+            },
+            4034: {
+                0: -7.96621563e4,
+                1: -1.01379141e5,
+                2: 1.99136594e5,
+                3: -3.4177728e7,
+                4: -9.153572e7,
+                5: -8.7049464e7,
+            },
+        },
+        "expected_element_types": {
+            10001: "CBAR",
+            10014: "CBAR",
+            10015: "CBAR",
+            10030: "CBAR",
+            10101: "CBAR",
+            10115: "CBAR",
+            10130: "CBAR",
+            11005: "CBAR",
+            11015: "CBAR",
+            11025: "CBAR",
+            11105: "CBAR",
+            11115: "CBAR",
+            11125: "CBAR",
+            12003: "CBAR",
+            12111: "CBAR",
+            20001: "CROD",
+            20015: "CROD",
+            20122: "CROD",
+            20208: "CROD",
+            20232: "CROD",
+            20401: "CROD",
+            20427: "CROD",
+            20514: "CROD",
+            20610: "CROD",
+            20715: "CROD",
+            20802: "CROD",
+            20931: "CROD",
+            21001: "CROD",
+            21030: "CROD",
+            21060: "CROD",
+        },
+        "expected_element_results": {
+            10001: {
+                "axial_stress": 6.2055855,
+                "axial_strain": 2.9550415e-5,
+                "axial_force": 1.11700539e5,
+                "current_length": 1000.029551,
+                "stress_points_end_a.P3.sigma_total": 46.16708,
+            },
+            10014: {
+                "axial_stress": 7.734396,
+                "axial_strain": 3.683046125e-5,
+                "axial_force": 1.39219128e5,
+                "current_length": 1000.036831,
+                "stress_points_end_b.P2.sigma_total": 24.37049,
+            },
+            10015: {
+                "axial_stress": 7.594746,
+                "axial_strain": 3.61654525e-5,
+                "axial_force": 1.36705428e5,
+                "current_length": 1000.036166,
+                "stress_points_end_a.P2.sigma_total": 24.26375,
+                "stress_points_end_b.P1.sigma_total": 19.48201,
+            },
+            10030: {
+                "axial_stress": 0.34214325,
+                "axial_strain": 1.62925125e-6,
+                "axial_force": 6158.5785,
+                "current_length": 1000.001629,
+                "stress_points_end_b.P3.sigma_total": 82.75841,
+            },
+            10101: {
+                "axial_stress": 6.072809125,
+                "axial_strain": 2.8918143875e-5,
+                "axial_force": 1.0931056425e5,
+                "current_length": 1000.028919,
+                "stress_points_end_a.P3.sigma_total": 39.29930,
+            },
+            10115: {
+                "axial_stress": 11.77963475,
+                "axial_strain": 5.609349625e-5,
+                "axial_force": 2.120334255e5,
+                "current_length": 1000.056095,
+                "stress_points_end_b.P1.sigma_total": 31.90125,
+            },
+            10130: {
+                "axial_stress": 3.03485525,
+                "axial_strain": 1.4451697875e-5,
+                "axial_force": 5.46273945e4,
+                "current_length": 1000.014452,
+                "stress_points_end_b.P3.sigma_total": 84.11115,
+            },
+            11005: {
+                "axial_stress": -11.66796575,
+                "axial_strain": -5.556175125e-5,
+                "axial_force": -1.40015589e5,
+                "current_length": 1006.970148,
+                "stress_points_end_a.P1.sigma_total": -41.34645,
+            },
+            11015: {
+                "axial_stress": -26.509585875,
+                "axial_strain": -1.262361275e-4,
+                "axial_force": -3.181150305e5,
+                "current_length": 1003.816119,
+                "stress_points_end_a.P1.sigma_total": -70.12650,
+            },
+            11025: {
+                "axial_stress": -16.5037625,
+                "axial_strain": -7.858934875e-5,
+                "axial_force": -1.9804515e5,
+                "current_length": 1004.518484,
+                "stress_points_end_a.P1.sigma_total": -44.50348,
+            },
+            11105: {
+                "axial_stress": -9.272777675,
+                "axial_strain": -4.415608875e-5,
+                "axial_force": -1.112733321e5,
+                "current_length": 1006.981633,
+                "stress_points_end_a.P0.sigma_total": -38.77187,
+            },
+            11115: {
+                "axial_stress": -21.51984875,
+                "axial_strain": -1.0247548e-4,
+                "axial_force": -2.58238185e5,
+                "current_length": 1003.839970,
+                "stress_points_end_a.P1.sigma_total": -66.43242,
+            },
+            11125: {
+                "axial_stress": -14.017498625,
+                "axial_strain": -6.67499875e-5,
+                "axial_force": -1.682099835e5,
+                "current_length": 1004.530378,
+                "stress_points_end_a.P0.sigma_total": -52.08711,
+            },
+            12003: {
+                "axial_stress": -17.381248125,
+                "axial_strain": -8.276784375e-5,
+                "axial_force": -4.17149955e5,
+                "current_length": 1799.851024,
+                "stress_points_end_b.P3.sigma_total": -93.77237,
+            },
+            12111: {
+                "axial_stress": -12.08203525,
+                "axial_strain": -5.753350025e-5,
+                "axial_force": -1.93312564e5,
+                "current_length": 1612.358782,
+                "stress_points_end_a.P3.sigma_total": -67.20936,
+            },
+            20001: {
+                "axial_stress": 5.049117e-4,
+                "axial_strain": 2.404341e-9,
+                "axial_force": 1.26227925,
+                "current_length": 1000.000002,
+                "torsional_stress": 0.0,
+            },
+            20015: {
+                "axial_stress": 10.56659,
+                "axial_strain": 5.031711e-5,
+                "axial_force": 26416.475,
+                "current_length": 1000.050317,
+                "torsional_stress": 0.0,
+            },
+            20122: {
+                "axial_stress": -1.918295e-2,
+                "axial_strain": -9.134739e-8,
+                "axial_force": -47.957375,
+                "current_length": 999.9999087,
+                "torsional_stress": 0.0,
+            },
+            20208: {
+                "axial_stress": 36.21027,
+                "axial_strain": 1.724299e-4,
+                "axial_force": 50694.378,
+                "current_length": 1200.206916,
+                "torsional_stress": 0.0,
+            },
+            20232: {
+                "axial_stress": 38.62264,
+                "axial_strain": 1.839173e-4,
+                "axial_force": 54071.696,
+                "current_length": 1200.220701,
+                "torsional_stress": 0.0,
+            },
+            20401: {
+                "axial_stress": -7.940762,
+                "axial_strain": -4.072186e-5,
+                "axial_force": -6352.6096,
+                "current_length": 831.2161500,
+                "torsional_stress": 0.0,
+            },
+            20427: {
+                "axial_stress": -12.56699,
+                "axial_strain": -6.444612e-5,
+                "axial_force": -10053.592,
+                "current_length": 3110.910612,
+                "torsional_stress": 0.0,
+            },
+            20514: {
+                "axial_stress": -20.58540,
+                "axial_strain": -1.055662e-4,
+                "axial_force": -13380.510,
+                "current_length": 3599.619962,
+                "torsional_stress": 0.0,
+            },
+            20610: {
+                "axial_stress": -103.1223,
+                "axial_strain": -5.288325e-4,
+                "axial_force": -67029.495,
+                "current_length": 3818.973969,
+                "torsional_stress": 0.0,
+            },
+            20715: {
+                "axial_stress": 7.260138,
+                "axial_strain": 3.723148e-5,
+                "axial_force": 6534.1242,
+                "current_length": 3736.447447,
+                "torsional_stress": 0.0,
+            },
+            20802: {
+                "axial_stress": 0.0,
+                "axial_strain": 0.0,
+                "axial_force": 0.0,
+                "current_length": 2000.0,
+                "torsional_stress": 0.0,
+            },
+            20931: {
+                "axial_stress": 0.2372828,
+                "axial_strain": 1.216835e-6,
+                "axial_force": 166.09796,
+                "current_length": 3334.522365,
+                "torsional_stress": 0.0,
+            },
+            21001: {
+                "axial_stress": 16.63063,
+                "axial_strain": 8.52853e-5,
+                "axial_force": 14967.567,
+                "current_length": 1562.183155,
+                "torsional_stress": 0.0,
+            },
+            21030: {
+                "axial_stress": -1.057321,
+                "axial_strain": -5.422158e-6,
+                "axial_force": -951.5889,
+                "current_length": 1562.041465,
+                "torsional_stress": 0.0,
+            },
+            21060: {
+                "axial_stress": 19.94731,
+                "axial_strain": 1.022939e-4,
+                "axial_force": 17952.579,
+                "current_length": 1562.209723,
+                "torsional_stress": 0.0,
+            },
+        },
+        "expected_strain_energy": 1.092467e7,
+        "expected_increments": 20,
+    },
 ]
 
 
@@ -1273,7 +1651,9 @@ def test_nonlinear_mixed_crod_cbar_final_results(reference):
         computed = result["reactions"][node_id]
         for dof, expected in dofs.items():
             assert computed[dof] == pytest.approx(
-                expected, rel=rel_tol, abs=abs_tol
+                expected,
+                rel=reference.get("reaction_rel_tol", rel_tol),
+                abs=reference.get("reaction_abs_tol", abs_tol),
             ), f"GRID {node_id} reaction DOF {dof + 1}"
 
     for element_id, expected_type in reference["expected_element_types"].items():
@@ -1282,8 +1662,19 @@ def test_nonlinear_mixed_crod_cbar_final_results(reference):
     for element_id, expected_results in reference["expected_element_results"].items():
         computed = result["stresses"][element_id]
         for result_name, expected in expected_results.items():
+            is_cbar_fiber = result_name.startswith("stress_points_")
+            result_rel_tol = (
+                reference.get("fiber_rel_tol", rel_tol)
+                if is_cbar_fiber
+                else reference.get("element_rel_tol", rel_tol)
+            )
+            result_abs_tol = (
+                reference.get("fiber_abs_tol", abs_tol)
+                if is_cbar_fiber
+                else reference.get("element_abs_tol", abs_tol)
+            )
             assert _nested_result_value(computed, result_name) == pytest.approx(
-                expected, rel=rel_tol, abs=abs_tol
+                expected, rel=result_rel_tol, abs=result_abs_tol
             ), f"Element {element_id} result {result_name}"
 
     if "expected_strain_energy" in reference:

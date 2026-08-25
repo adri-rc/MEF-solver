@@ -8,11 +8,11 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 24 de agosto de 2026 después de incorporar el frame
-lineal tridimensional en T:
+Resultado verificado el 25 de agosto de 2026 después de incorporar el puente
+no lineal actualizado de tres vanos:
 
 ```text
-684 passed, 6 xfailed, 2 warnings
+688 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -148,6 +148,30 @@ mayor diferencia de fibra CBAR seleccionada es `1.36e-2`. El E2E conserva una
 envolvente del `2 %` debido a esa fibra, sin ampliar la tolerancia de las
 campañas puras. El diseño, hashes, puntos GRID/EID y flujo Patran están en el
 [`README` del caso](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md).
+
+### Puente actualizado de tres vanos
+
+`case_nonlinear_test_final_updated` eleva la integración a 202 GRID y 572
+elementos: 144 CBAR para largueros exteriores, tres pares de arcos y
+cimentaciones, y 428 CROD para el tablero articulado, péndolas y
+arriostramientos. La geometría tiene luces `8/12/10 m`, flechas distintas y
+cuatro bases de terreno escalonadas. El único subcaso combina 44 FORCE, 3
+MOMENT y asientos `-2/-6/-10 mm`, con `AUTOSPC=NO` y 20 incrementos fijos.
+
+MSC Nastran 2026.1 y MEF-solver alcanzan factor uno sin recortes. Sobre las
+familias completas, los errores L2 son `3.280e-5` en traslaciones,
+`2.416e-5` en rotaciones, `2.898e-5` en reacciones de fuerza, `2.125e-5` en
+tensión CROD y `1.379e-5` en tensión axial CBAR. La energía difiere
+`1.392e-5`. Las fibras CBAR tienen `1.673e-2` L2 y concentran su diferencia en
+los largueros de tablero: el peor punto con `|sigma_MSC|>10 MPa` alcanza
+`11.57 %`. El E2E mantiene envolventes separadas para que esa recuperación no
+relaje la respuesta global o axial.
+
+El inventario, resultados completos, selección literal F06/PCH y alcance de
+las vistas Patran se conservan en el
+[`README` actualizado](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md)
+y en su
+[`análisis de resultados`](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/RESULTS_ANALYSIS.md).
 
 Las validaciones E2E de CBAR transcriben las tablas F06, sin leerlas durante la
 prueba. Los casos 13--17 cubren voladizo, orientación 3D, vigas en serie,
@@ -347,8 +371,8 @@ La implementación se valida mediante:
   estados convergidos de 155--159;
 - 39 entradas E2E CBAR con referencias explícitas de desplazamiento, reacción,
   energía y esfuerzos seleccionados. Todas pasan, incluido el caso 142;
-- once entradas E2E mixtas: los diez casos 167--176 y el puente final, con
-  referencias explícitas CBAR/CROD y de respuesta global.
+- doce entradas E2E mixtas: los diez casos 167--176 y los dos puentes finales,
+  con referencias explícitas CBAR/CROD y de respuesta global.
 
 Los decks 154--160 terminan sin `FATAL`. Los máximos errores vectoriales de la
 implementación frente a esos resultados son `8.04e-5` en desplazamientos,
