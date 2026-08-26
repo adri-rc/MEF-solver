@@ -63,6 +63,14 @@ son idénticas a las del caso original.
 Nastran ni el solver local deben ocultar mediante estabilización automática la
 pérdida de rigidez transversal introducida deliberadamente.
 
+La captura siguiente documenta en Patran que la geometría, las cargas y las
+condiciones de contorno son idénticas a las del caso físico. No se utiliza
+como evidencia de una respuesta estructural válida, puesto que la diferencia
+del control A/B se encuentra en la propiedad `MID3` y no es visible en esta
+representación.
+
+![Control A/B con cargas y condiciones de contorno en Patran](tfm_final_airframe_frame_T_no_CTRIA_MID3_patran_loads_spc.png)
+
 ## Ejecución de referencia MSC Nastran
 
 El

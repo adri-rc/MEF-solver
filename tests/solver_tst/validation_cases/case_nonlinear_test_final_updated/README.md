@@ -226,11 +226,19 @@ Frenado longitudinal y momentos nodales, también en perspectiva:
 
 ![Frenado y momentos en Patran](tfm_final_nonlinear_bridge_updated_patran_loads_braking_moments.png)
 
+Vista conjunta de las tres familias de carga, los apoyos y los asientos:
+
+![Cargas y condiciones de contorno superpuestas en Patran](tfm_final_nonlinear_bridge_updated_patran_loads_supports.png)
+
 Configuración final deformada, con la geometría original en azul y la
 deformada en blanco. Patran magnifica gráficamente los desplazamientos para
 hacer visible la respuesta; la imagen no está a escala real de deformación:
 
 ![Deformada final en Patran](tfm_final_nonlinear_bridge_updated_patran_deformed_final.png)
+
+Magnitud del desplazamiento traslacional del estado final convergido:
+
+![Magnitud del desplazamiento final en Patran](tfm_final_nonlinear_bridge_updated_patran_displacement_magnitude.png)
 
 No se incluye un mapa de tensiones: el registro de resultados que Patran
 construyó desde el OP2 consolidado sólo expone cargas aplicadas,
@@ -250,8 +258,9 @@ disponible realmente.
   reacciones en formato estructurado;
 - `bridge_model_updated.py`: generador determinista del DAT;
 - `RESULTS_ANALYSIS.md`: métricas de correlación y observaciones de alcance;
-- los seis PNG `*_patran_*.png`: geometría, condiciones de contorno, tres
-  familias de carga y deformada final verificadas en Patran.
+- los ocho PNG `*_patran_*.png`: geometría, condiciones de contorno, tres
+  familias de carga, vista conjunta, deformada final y magnitud del
+  desplazamiento verificadas en Patran.
 
 Los tres artefactos numéricos de referencia quedan identificados por SHA-256:
 

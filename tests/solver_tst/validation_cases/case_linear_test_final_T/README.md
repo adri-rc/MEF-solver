@@ -112,6 +112,11 @@ El único subcaso aplica simultáneamente:
 
 ![Fuerzas en A y momento en B mostrados en Patran](tfm_final_airframe_frame_T_patran_force_moment.png)
 
+La vista conjunta permite comprobar la posición relativa de cargas, apoyos,
+guías locales y desplazamientos impuestos:
+
+![Cargas y condiciones de contorno superpuestas en Patran](tfm_final_airframe_frame_T_patran_loads_spc.png)
+
 La deformada siguiente superpone la configuración original en azul y la
 deformada en blanco, con una amplificación automática aproximada de 9. La
 escala es exclusivamente visual; el análisis sigue siendo lineal de pequeñas
