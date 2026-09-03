@@ -157,7 +157,57 @@ STIFFNESS_VALIDATION_DATA = [
         "output_k_file": "draft_Ej46_KGlobal_CTRIA3_K6ROT_100_python_test.csv"   # Nombre del archivo donde se guardará la matriz
     
     },
-    #endregion    
+    #endregion
+    {
+        "case_name": "CTRIA3_PSHELL_TS_T_0.25",
+        "folder": "case_ctria3_pshell_factors_k",
+        "filename": "ctria3_k_ts_t_025.dat",
+        "k_csv_file": "ctria3_k_ts_t_025_Nastran.csv",
+        "description": "Control DMIG del factor PSHELL TS/T=0.25.",
+        "rel_tol": 2e-3,
+        "abs_tol": 1e-1,
+        "max_relative_frobenius_error": 1.1e-4,
+        "matrix_terms": [
+            (3, 3), (3, 4), (3, 9), (3, 10),
+            (4, 4), (4, 15), (4, 16), (10, 10), (15, 15),
+        ],
+        "debug_export": False,
+    },
+    {
+        "case_name": "CTRIA3_PSHELL_TS_T_1.25",
+        "folder": "case_ctria3_pshell_factors_k",
+        "filename": "ctria3_k_ts_t_125.dat",
+        "k_csv_file": "ctria3_k_ts_t_125_Nastran.csv",
+        "description": "Control DMIG del factor PSHELL TS/T=1.25.",
+        "rel_tol": 2e-3,
+        "abs_tol": 1e-1,
+        "max_relative_frobenius_error": 5.1e-4,
+        "matrix_terms": [
+            (3, 3), (3, 4), (3, 9), (3, 10),
+            (4, 4), (4, 15), (4, 16), (10, 10), (15, 15),
+        ],
+        "debug_export": False,
+    },
+    {
+        "case_name": "CTRIA3_PSHELL_12I_T3_0.40",
+        "folder": "case_ctria3_pshell_factors_k",
+        "filename": "ctria3_k_12i_t3_040.dat",
+        "k_csv_file": "ctria3_k_12i_t3_040_Nastran.csv",
+        "description": "Control DMIG del factor PSHELL 12I/T^3=0.40.",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1,
+        "debug_export": False,
+    },
+    {
+        "case_name": "CTRIA3_PSHELL_12I_T3_1.60",
+        "folder": "case_ctria3_pshell_factors_k",
+        "filename": "ctria3_k_12i_t3_160.dat",
+        "k_csv_file": "ctria3_k_12i_t3_160_Nastran.csv",
+        "description": "Control DMIG del factor PSHELL 12I/T^3=1.60.",
+        "rel_tol": 1e-4,
+        "abs_tol": 1e-1,
+        "debug_export": False,
+    },
 ]
 
 class TestStiffnessMatrix:
@@ -247,6 +297,17 @@ class TestStiffnessMatrix:
         assert K_python.shape == K_nastran.shape, \
             f"Dimensión de matriz K no coincide. Python: {K_python.shape}, Nastran: {K_nastran.shape}"
 
+        max_frobenius_error = case_data.get("max_relative_frobenius_error")
+        if max_frobenius_error is not None:
+            reference_norm = np.linalg.norm(K_nastran)
+            relative_frobenius_error = (
+                np.linalg.norm(K_python - K_nastran) / reference_norm
+            )
+            assert relative_frobenius_error <= max_frobenius_error, (
+                f"Error relativo de Frobenius excesivo en {case_data['case_name']}: "
+                f"{relative_frobenius_error:.6e} > {max_frobenius_error:.6e}"
+            )
+
         # 5. Comparación elemento a elemento
         rel_tol = case_data.get("rel_tol", 1e-4)
         abs_tol = case_data.get("abs_tol", 1e-6)
@@ -254,21 +315,25 @@ class TestStiffnessMatrix:
         # Identificamos los índices donde hay diferencias significativas
         diferencias = []
         n_rows, n_cols = K_python.shape
-        
-        for i in range(n_rows):
-            for j in range(n_cols):
-                val_py = K_python[i, j]
-                val_nas = K_nastran[i, j]
-                
-                # Usamos isclose de numpy para tolerancia robusta
-                if not np.isclose(val_py, val_nas, rtol=rel_tol, atol=abs_tol):
-                    diferencias.append({
-                        "Fila_Global": i,
-                        "Columna_Global": j,
-                        "Val_Python": val_py,
-                        "Val_Nastran": val_nas,
-                        "Error_Abs": abs(val_py - val_nas)
-                    })
+        matrix_terms = case_data.get("matrix_terms")
+        if matrix_terms is None:
+            matrix_terms = (
+                (i, j) for i in range(n_rows) for j in range(n_cols)
+            )
+
+        for i, j in matrix_terms:
+            val_py = K_python[i, j]
+            val_nas = K_nastran[i, j]
+
+            # Usamos isclose de numpy para tolerancia robusta
+            if not np.isclose(val_py, val_nas, rtol=rel_tol, atol=abs_tol):
+                diferencias.append({
+                    "Fila_Global": i,
+                    "Columna_Global": j,
+                    "Val_Python": val_py,
+                    "Val_Nastran": val_nas,
+                    "Error_Abs": abs(val_py - val_nas)
+                })
 
         # Si hay diferencias, fallamos el test mostrando los peores términos
         if diferencias:

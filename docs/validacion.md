@@ -12,7 +12,7 @@ Resultado verificado el 3 de septiembre de 2026 después de corregir la
 semántica PSHELL del CTRIA3:
 
 ```text
-696 passed, 6 xfailed, 2 warnings
+703 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
@@ -36,6 +36,35 @@ ceros de los bloques inactivos, la matriz de membrana frente a Nastran, la
 lectura de MID1 vacío y la ausencia de sustituciones MID2/MID3. No exige
 equivalencia de la matriz de placa, ya que este cambio no modifica la
 formulación Reissner--Mindlin ni resuelve la discrepancia CTRIA3 ya conocida.
+
+## Factores PSHELL del CTRIA3
+
+La carpeta
+[`case_ctria3_pshell_factors_k`](../tests/solver_tst/validation_cases/case_ctria3_pshell_factors_k/README.md)
+contiene cuatro modelos DMIG con `AUTOSPC=NO` y `K6ROT=0`. Dos cambian
+`TS/T` de `0.25` a `1.25`; los otros dos cambian `12I/T^3` de `0.40` a
+`1.60`. Las dos matrices de flexión coinciden término a término con errores de
+Frobenius menores que `1.9e-10`. En los controles de cortante, el error de
+Frobenius es `9.96e-5/4.98e-4` y el mayor error relativo de los términos
+seleccionados es `2.46e-4/1.23e-3`. Esta diferencia acotada es coherente con
+la limitación formulativa CTRIA3 ya documentada y no se oculta mediante una
+tolerancia absoluta global.
+
+La carpeta
+[`case_ctria3_pshell_factors_e2e`](../tests/solver_tst/validation_cases/case_ctria3_pshell_factors_e2e/README.md)
+contiene tres voladizos de cuatro CTRIA3. Todos terminan en MSC Nastran 2026.1
+sin `FATAL` y con `AUTOSPC=NO`. Los tests comparan traslaciones y giros,
+reacciones, tensiones/resultantes de membrana, momentos, cortantes y tensiones
+en ambas fibras. Los máximos observados en los valores seleccionados son
+`1.10 %` en desplazamientos, `0.61 %` en reacciones, `2.7e-6 %` en membrana,
+`4.02 %` en momentos y `4.41 %` en fibras. Para cortantes significativos el
+máximo es `0.87 %`; las componentes próximas a cero difieren menos de
+`8.3e-3 N/mm` y usan una tolerancia absoluta separada.
+
+Estos casos confirman que `TS/T` sustituye al antiguo `5/6` fijo y que
+`12I/T^3` es un factor distinto, aplicado a flexión y al módulo resistente de
+las fibras. No demuestran equivalencia general de la recuperación M/Q del
+CTRIA3 con MSC Nastran.
 
 ## Capas de comprobación
 

@@ -60,6 +60,9 @@ class CTRIA3ElementSolver:
         @param mat Optional MID1 material for membrane stiffness.
         @param mat_bending Optional MID2 material for bending stiffness.
         @param mat_shear Optional MID3 material for transverse shear stiffness.
+
+        PSHELL ``12I/T^3`` and ``TS/T`` are stored in ``prop`` and scale the
+        bending and transverse-shear constitutive matrices, respectively.
         """
         self.node1 = node1
         self.node2 = node2
@@ -186,7 +189,15 @@ class CTRIA3ElementSolver:
         D_f = np.zeros((3, 3))
         if self.mat_bending is not None:
             E_f, nu_f = self.mat_bending.E, self.mat_bending.nu
-            factor_f = (E_f * t**3) / (12.0 * (1.0 - nu_f**2))
+            bending_ratio = float(
+                getattr(self.prop, "bending_inertia_ratio", 1.0)
+            )
+            factor_f = (
+                bending_ratio
+                * E_f
+                * t**3
+                / (12.0 * (1.0 - nu_f**2))
+            )
             D_f = factor_f * np.array([
                 [1.0,  nu_f, 0.0],
                 [nu_f, 1.0,  0.0],
@@ -198,8 +209,10 @@ class CTRIA3ElementSolver:
         if self.mat_shear is not None:
             E_s, nu_s = self.mat_shear.E, self.mat_shear.nu
             G_c = getattr(self.mat_shear, 'G', E_s / (2.0 * (1.0 + nu_s)))
-            k_shear = 5.0 / 6.0  # Factor de corrección de Mindlin
-            D_c = (k_shear * G_c * t) * np.eye(2)
+            shear_ratio = float(
+                getattr(self.prop, "shear_thickness_ratio", 5.0 / 6.0)
+            )
+            D_c = (shear_ratio * G_c * t) * np.eye(2)
 
         return D_m, D_f, D_c
     
@@ -406,7 +419,13 @@ class CTRIA3ElementSolver:
         # Public convention: top is local z=+t/2 and bottom is local z=-t/2.
         # Avoid Z1/Z2 aliases because their meaning depends on the external
         # solver's shell-result convention.
-        sb_x, sb_y, sb_xy = 6.0 * m_x / t**2, 6.0 * m_y / t**2, 6.0 * m_xy / t**2
+        bending_ratio = float(
+            getattr(self.prop, "bending_inertia_ratio", 1.0)
+        )
+        section_modulus = bending_ratio * t**2 / 6.0
+        sb_x = m_x / section_modulus
+        sb_y = m_y / section_modulus
+        sb_xy = m_xy / section_modulus
         sig_x_top, sig_x_bot = sig_x - sb_x, sig_x + sb_x
         sig_y_top, sig_y_bot = sig_y - sb_y, sig_y + sb_y
         tau_xy_top, tau_xy_bot = tau_xy - sb_xy, tau_xy + sb_xy

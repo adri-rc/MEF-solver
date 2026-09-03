@@ -144,9 +144,19 @@ membrana:
 omega = 0.5*(dv/dx - du/dy)
 ```
 
-El espesor multiplica la constitutiva de membrana; `t³/12` multiplica la de
-flexión; y `TS/T` interviene en el cortante transversal. PSHELL permite separar
-MID1, MID2 y MID3.
+El espesor multiplica la constitutiva de membrana. En la placa, los factores
+PSHELL se aplican de forma independiente:
+
+```text
+D_b = (12I/T^3) * E2*t^3/[12*(1-nu2^2)] * C(nu2)
+D_s = (TS/T) * G3*t * I
+```
+
+Por tanto, `TS/T` es el factor de corrección de cortante que sustituye al valor
+predeterminado `5/6`; no es el mismo parámetro que `12I/T^3`, que sólo escala
+la flexión. La recuperación de tensiones de fibra emplea el módulo resistente
+efectivo `(12I/T^3)*t^2/6`, coherente con la salida MSC para factores distintos
+de uno. PSHELL permite además separar MID1, MID2 y MID3.
 
 Los tres campos se asignan sin herencias implícitas. `MID1` vacío anula el
 bloque de membrana y `MID2` vacío anula el bloque completo de placa. `MID3` no

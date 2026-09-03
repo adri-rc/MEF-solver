@@ -2389,6 +2389,129 @@ VALIDATION_DATA = [
 
     },
     #endregion
+    {
+        "case_name": "CTRIA3_PSHELL_TS_T_0.25_E2E",
+        "folder": "case_ctria3_pshell_factors_e2e",
+        "filename": "ctria3_e2e_ts_t_025.dat",
+        "description": "Four-element CTRIA3 cantilever with TS/T=0.25.",
+        "note": "MSC Nastran 2026.1 reference; AUTOSPC=NO.",
+        "rel_tol": 0.06,
+        "rel_tol_disp": 0.015,
+        "rel_tol_force": 0.02,
+        "rel_tol_shear": 0.20,
+        "abs_tol_disp": 1e-6,
+        "abs_tol_force": 0.02,
+        "abs_tol_shear": 0.02,
+        "expected_displacements": {
+            3: {0: 3.053448454e-04, 1: -2.357341815e-03, 2: -2.903097153e+01, 4: 3.913707566e-03},
+            5: {0: 1.819616882e-03, 1: -5.551666953e-03, 2: -5.835988617e+01, 4: 5.719000474e-03},
+            6: {0: 2.993631642e-03, 1: -6.390629336e-03, 2: -5.831832886e+01, 4: 5.910182837e-03},
+        },
+        "expected_reactions": {
+            1: {0: 1.998733063e+02, 1: 2.821232605e+02, 2: 1.501314240e+02, 4: -3.003023047e+04, 5: 3.173344851e+00},
+            2: {0: -9.998732910e+02, 1: 2.178767548e+02, 2: 1.498685760e+02, 4: -3.496976953e+04, 5: 9.495823860e+00},
+        },
+        "expected_element_forces": {
+            101: {
+                "sigma_x": 2.348806381e-01, "sigma_y": 7.046419382e-02, "tau_xy": -6.346689701e-01,
+                "membrane_force_x": 2.348806381e+00, "membrane_force_y": 7.046419382e-01, "membrane_force_xy": -6.346689701e+00,
+                "bending_moment_x": -4.870391541e+02, "bending_moment_y": -1.217597885e+02,
+                "shear_force_x": -3.001824856e+00, "shear_force_y": -8.036214276e-04,
+                "stress_bot_fiber_x": -2.898746872e+01, "stress_bot_fiber_y": -7.235123158e+00,
+                "stress_top_fiber_x": 2.945722961e+01, "stress_top_fiber_y": 7.376051426e+00,
+            },
+            103: {
+                "sigma_x": 1.010378551e+00, "sigma_y": -1.653728247e-01, "tau_xy": -4.103708744e-01,
+                "membrane_force_x": 1.010378551e+01, "membrane_force_y": -1.653728247e+00, "membrane_force_xy": -4.103708744e+00,
+                "bending_moment_x": -2.029710236e+02, "bending_moment_y": 3.058591080e+01,
+                "shear_force_x": -3.001374245e+00, "shear_force_y": -1.655671163e-03,
+                "stress_bot_fiber_x": -1.116788292e+01, "stress_bot_fiber_y": 1.669781804e+00,
+                "stress_top_fiber_x": 1.318864059e+01, "stress_top_fiber_y": -2.000527382e+00,
+            },
+        },
+    },
+    {
+        "case_name": "CTRIA3_PSHELL_TS_T_1.25_E2E",
+        "folder": "case_ctria3_pshell_factors_e2e",
+        "filename": "ctria3_e2e_ts_t_125.dat",
+        "description": "Four-element CTRIA3 cantilever with TS/T=1.25.",
+        "note": "MSC Nastran 2026.1 reference; AUTOSPC=NO.",
+        "rel_tol": 0.06,
+        "rel_tol_disp": 0.015,
+        "rel_tol_force": 0.02,
+        "rel_tol_shear": 0.20,
+        "abs_tol_disp": 1e-6,
+        "abs_tol_force": 0.02,
+        "abs_tol_shear": 0.02,
+        "expected_displacements": {
+            3: {0: 3.053448454e-04, 1: -2.357341815e-03, 2: -5.990248203e+00, 4: 3.923573997e-03},
+            5: {0: 1.819616882e-03, 1: -5.551666953e-03, 2: -1.227856064e+01, 4: 5.729883444e-03},
+            6: {0: 2.993631642e-03, 1: -6.390629336e-03, 2: -1.223981190e+01, 4: 5.897646770e-03},
+        },
+        "expected_reactions": {
+            1: {0: 1.998733063e+02, 1: 2.821232605e+02, 2: 1.506245575e+02, 4: -3.014171094e+04, 5: 3.173344851e+00},
+            2: {0: -9.998732910e+02, 1: 2.178767548e+02, 2: 1.493754425e+02, 4: -3.485828906e+04, 5: 9.495823860e+00},
+        },
+        "expected_element_forces": {
+            101: {
+                "sigma_x": 2.348806381e-01, "sigma_y": 7.046419382e-02, "tau_xy": -6.346689701e-01,
+                "membrane_force_x": 2.348806381e+00, "membrane_force_y": 7.046419382e-01, "membrane_force_xy": -6.346689701e+00,
+                "bending_moment_x": -4.882669678e+02, "bending_moment_y": -1.220667419e+02,
+                "shear_force_x": -3.008591890e+00, "shear_force_y": -3.899288364e-03,
+                "stress_bot_fiber_x": -2.906113815e+01, "stress_bot_fiber_y": -7.253540516e+00,
+                "stress_top_fiber_x": 2.953089905e+01, "stress_top_fiber_y": 7.394468784e+00,
+            },
+            103: {
+                "sigma_x": 1.010378551e+00, "sigma_y": -1.653728247e-01, "tau_xy": -4.103708744e-01,
+                "membrane_force_x": 1.010378551e+01, "membrane_force_y": -1.653728247e+00, "membrane_force_xy": -4.103708744e+00,
+                "bending_moment_x": -2.031917877e+02, "bending_moment_y": 3.017736626e+01,
+                "shear_force_x": -3.006382942e+00, "shear_force_y": -7.912937552e-03,
+                "stress_bot_fiber_x": -1.118112850e+01, "stress_bot_fiber_y": 1.645269156e+00,
+                "stress_top_fiber_x": 1.320188522e+01, "stress_top_fiber_y": -1.976014853e+00,
+            },
+        },
+    },
+    {
+        "case_name": "CTRIA3_PSHELL_COMBINED_FACTORS_E2E",
+        "folder": "case_ctria3_pshell_factors_e2e",
+        "filename": "ctria3_e2e_combined_factors.dat",
+        "description": "Four-element CTRIA3 cantilever with 12I/T^3=0.40 and TS/T=0.50.",
+        "note": "MSC Nastran 2026.1 reference; AUTOSPC=NO.",
+        "rel_tol": 0.06,
+        "rel_tol_disp": 0.015,
+        "rel_tol_force": 0.02,
+        "rel_tol_shear": 0.20,
+        "abs_tol_disp": 1e-6,
+        "abs_tol_force": 0.02,
+        "abs_tol_shear": 0.02,
+        "expected_displacements": {
+            3: {0: 3.053448454e-04, 1: -2.357341815e-03, 2: -1.497562027e+01, 4: 9.808934294e-03},
+            5: {0: 1.819616882e-03, 1: -5.551666953e-03, 2: -3.069640160e+01, 4: 1.432470884e-02},
+            6: {0: 2.993631642e-03, 1: -6.390629336e-03, 2: -3.059952927e+01, 4: 1.474411786e-02},
+        },
+        "expected_reactions": {
+            1: {0: 1.998733063e+02, 1: 2.821232605e+02, 2: 1.506245575e+02, 4: -3.014171094e+04, 5: 3.173344851e+00},
+            2: {0: -9.998732910e+02, 1: 2.178767548e+02, 2: 1.493754425e+02, 4: -3.485828906e+04, 5: 9.495823860e+00},
+        },
+        "expected_element_forces": {
+            101: {
+                "sigma_x": 2.348806381e-01, "sigma_y": 7.046419382e-02, "tau_xy": -6.346689701e-01,
+                "membrane_force_x": 2.348806381e+00, "membrane_force_y": 7.046419382e-01, "membrane_force_xy": -6.346689701e+00,
+                "bending_moment_x": -4.882669678e+02, "bending_moment_y": -1.220667419e+02,
+                "shear_force_x": -3.008591890e+00, "shear_force_y": -3.899288364e-03,
+                "stress_bot_fiber_x": -7.300516510e+01, "stress_bot_fiber_y": -1.823954773e+01,
+                "stress_top_fiber_x": 7.347492218e+01, "stress_top_fiber_y": 1.838047600e+01,
+            },
+            103: {
+                "sigma_x": 1.010378551e+00, "sigma_y": -1.653728247e-01, "tau_xy": -4.103708744e-01,
+                "membrane_force_x": 1.010378551e+01, "membrane_force_y": -1.653728247e+00, "membrane_force_xy": -4.103708744e+00,
+                "bending_moment_x": -2.031917877e+02, "bending_moment_y": 3.017736626e+01,
+                "shear_force_x": -3.006382942e+00, "shear_force_y": -7.912937552e-03,
+                "stress_bot_fiber_x": -2.946838951e+01, "stress_bot_fiber_y": 4.361232281e+00,
+                "stress_top_fiber_x": 3.148914528e+01, "stress_top_fiber_y": -4.691977978e+00,
+            },
+        },
+    },
 ]
 
 
@@ -2441,9 +2564,11 @@ class TestNastranEndToEnd:
         rel_tol = case_data.get("rel_tol", 1e-2)
         rel_tol_disp = case_data.get("rel_tol_disp", fallback_rel_tol)
         rel_tol_force = case_data.get("rel_tol_force", fallback_rel_tol)
+        rel_tol_shear = case_data.get("rel_tol_shear", rel_tol)
 
         abs_tol_disp = case_data.get("abs_tol_disp", 1e-5)
         abs_tol_force = case_data.get("abs_tol_force", 1e-3)
+        abs_tol_shear = case_data.get("abs_tol_shear", abs_tol_force)
 
         # 4. VERIFY DISPLACEMENTS
 
@@ -2512,8 +2637,20 @@ class TestNastranEndToEnd:
                 except (KeyError, IndexError, ValueError, TypeError) as e:
                     pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {e}")
 
+                # La recuperación centroidal Q del CTRIA3 tiene una tolerancia
+                # independiente, documentada por la discrepancia frente a MSC.
+                quantity_rel_tol = rel_tol
+                quantity_abs_tol = abs_tol_force
+                if qty_name.startswith("shear_force_"):
+                    quantity_rel_tol = rel_tol_shear
+                    quantity_abs_tol = abs_tol_shear
+
                 # Verificamos que sea un número (float o numpy scalar)
-                assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
+                assert val_calc == pytest.approx(
+                    val_ref,
+                    rel=quantity_rel_tol,
+                    abs=quantity_abs_tol,
+                ), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
 
 

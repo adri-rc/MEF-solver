@@ -46,7 +46,7 @@ Comando de referencia:
 Resultado observado el 3 de septiembre de 2026:
 
 ```text
-696 passed, 6 xfailed, 2 warnings
+703 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -93,6 +93,10 @@ independientes (`SNORM,0`) y pasan.
 - En CTRIA3, `MID1`, `MID2` y `MID3` no se heredan entre sí: MID1 vacío
   desactiva membrana, MID2 vacío desactiva placa y MID3 sin MID2 se rechaza.
   La referencia MSC está en `case_ctria3_pshell_material_semantics`.
+- En CTRIA3, `12I/T^3` escala la constitutiva de flexión y `TS/T` sustituye
+  al valor `5/6` del término de cortante transversal. Los casos
+  `case_ctria3_pshell_factors_k` y `case_ctria3_pshell_factors_e2e` validan
+  matrices y resultados con factores no predeterminados.
 - No hay `AUTOSPC` general: los mecanismos reales deben fallar.
 - El informe `.rpt` distingue análisis lineal/no lineal y contiene resumen del
   modelo, configuración, desplazamientos, reacciones y tablas físicas
@@ -240,6 +244,11 @@ controles extremadamente mal condicionados.
 - `tests/solver_tst/elements/test_ctria3_pshell_material_semantics.py`: siete
   combinaciones PSHELL contrastadas con MSC 2026.1; valida campos independientes,
   bloques inactivos, MID1 vacío y el rechazo de MID3 sin MID2.
+- `tests/solver_tst/elements/test_E2E_CTRIA_K_solution.py`: añade cuatro DMIG
+  CTRIA3 para `TS/T=0.25/1.25` y `12I/T^3=0.40/1.60`.
+- `tests/solver_tst/test_validation_end_to_end_ctria3.py`: añade tres
+  voladizos de cuatro CTRIA3 con factores PSHELL no predeterminados y
+  referencias MSC de desplazamientos, reacciones, N, M, Q y fibras.
 - `tests/solver_tst/elements/test_cquad4_pshell_material_semantics.py`: MID2,
   MID3, `12I/T^3` y `TS/T`.
 - `tests/solver_tst/elements/test_E2E_CQUAD_Nastran_K_solution.py`: DMIG,

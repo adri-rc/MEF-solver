@@ -18,7 +18,7 @@ E2E independiente. El alcance y sus límites están en
 [docs/cquad4.md](docs/cquad4.md). La lectura del informe `.rpt` y su
 correspondencia con F06 se explican en
 [docs/result_report.md](docs/result_report.md). La revisión obtiene
-`696 passed, 6 xfailed`; todos los `xfail` documentan geometrías
+`703 passed, 6 xfailed`; todos los `xfail` documentan geometrías
 CQUAD4 alabeadas o suavizado `SNORM` fuera de alcance.
 
 La asignación de materiales PSHELL del CTRIA3 es explícita: `MID1` activa
@@ -27,6 +27,11 @@ cortante de la formulación implementada. Los campos vacíos no heredan otro
 material y `MID3` sin `MID2` se rechaza como MSC Nastran. La campaña mínima
 auditable está en
 [`case_ctria3_pshell_material_semantics`](tests/solver_tst/validation_cases/case_ctria3_pshell_material_semantics/README.md).
+
+CTRIA3 aplica también los factores PSHELL sin valores codificados: `12I/T^3`
+escala la flexión y `TS/T` escala el término de cortante transversal, cuyo
+valor por defecto es `5/6`. Las campañas DMIG y E2E con factores no
+predeterminados están documentadas en `docs/validacion.md`.
 
 El caso lineal de integración para la defensa está en
 [`case_linear_test_final`](tests/solver_tst/validation_cases/case_linear_test_final/README.md):

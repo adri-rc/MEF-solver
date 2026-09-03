@@ -79,7 +79,7 @@ lote.
 | Nodos | `GRID` | pyNastran transforma `CP` a coordenadas cartesianas globales. |
 | Materiales | `MAT1` | Se necesitan al menos dos valores de `E`, `G` y `NU`; el tercero se calcula. |
 | Propiedades | `PROD`, `PBAR`, `PBARN1`, `PSHELL` | PBARN1 conserva `SECT`, `BEH2` e `INT2` para SOL 400. |
-| Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CQUAD4 usa por defecto la reconstrucción Nastran y completa el postproceso. |
+| Elementos | `CROD`, `CBAR`, `CTRIA3`, `CQUAD4` | CTRIA3 y CQUAD4 leen `12I/T^3` y `TS/T`; CQUAD4 usa por defecto la reconstrucción Nastran. |
 | Cargas | `FORCE`, `MOMENT`, `LOAD` | Los vectores se transforman desde su `CID`; se reducen combinaciones. |
 | Restricciones | `SPC`, `SPC1`, `SPCADD`, `GRID.PS` | Se admiten desplazamientos impuestos no nulos. |
 | Parámetros | `PARAM,K6ROT`, `PARAM,LGDISP`, `PARAM,FOLLOWK` | `K6ROT` se utiliza en láminas; `LGDISP=-1/1/2` controla CROD/CBAR y `FOLLOWK` debe ser `NO`. |
