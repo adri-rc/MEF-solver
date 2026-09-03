@@ -193,7 +193,7 @@ class LinearStaticSolver:
         n2 = self.model.get_node(element.nodes[1])
         n3 = self.model.get_node(element.nodes[2])
         prop = self.model.properties[element.prop_id]
-        mat = self.model.materials[prop.mat_id]
+        mat = self.model.materials.get(prop.mat_id)
         
         # Check for Bending Material (if property supports it)
         mat_bending = None
@@ -569,7 +569,7 @@ class LinearStaticSolver:
                 n2 = self.model.get_node(element.nodes[1])
                 n3 = self.model.get_node(element.nodes[2])
                 prop = self.model.properties[element.prop_id]
-                mat = self.model.materials[prop.mat_id]
+                mat = self.model.materials.get(prop.mat_id)
                 
                 # Check for Bending Material (if property supports it)
                 mat_bending = None

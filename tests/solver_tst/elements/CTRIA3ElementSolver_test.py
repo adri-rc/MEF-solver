@@ -59,7 +59,7 @@ CASES = [
         "id": "1_CANONICAL_XY",
         "nodes": [[0.,0.,0.], [2.,0.,0.], [0.,2.,0.]], # Rectángulo Isósceles
         "mat_mem": (210e9, 0.3), # Acero
-        "mat_bend": None,        # Igual a membrana
+        "mat_bend": None,        # MID2/MID3 explícitos con propiedades de MID1
         "thick": 0.1,
         "area": 2.0,
         "desc": "Caso base en plano XY"
@@ -155,22 +155,29 @@ def element_setup(request):
     # 2. Crear Materiales
     mat_mem = MockMat(*data["mat_mem"], name="Membrane")
     
-    mat_bend = None
-    if data["mat_bend"]:
-        mat_bend = MockMat(*data["mat_bend"], name="Bending")
+    bending_data = data["mat_bend"] or data["mat_mem"]
+    mat_bend = MockMat(*bending_data, name="Bending/Shear")
     
     # 3. Propiedad
     prop = MockProp(t=data["thick"], mat_bending=mat_bend)
     
-    # 4. Instanciar Solver (Aquí se inyecta la lógica de corrección que hiciste)
-    # Nota: El solver real debería aceptar mat_bending en __init__
-    solver = CTRIA3ElementSolver(n1, n2, n3, prop, mat_mem, mat_bending=mat_bend)
+    # Estos casos validan la formulación completa, por lo que MID2 y MID3 se
+    # proporcionan expresamente incluso cuando usan las propiedades de MID1.
+    solver = CTRIA3ElementSolver(
+        n1,
+        n2,
+        n3,
+        prop,
+        mat_mem,
+        mat_bending=mat_bend,
+        mat_shear=mat_bend,
+    )
     
     return {
         "solver": solver,
         "data": data,
         "mat_mem": mat_mem,
-        "mat_bend": mat_bend if mat_bend else mat_mem
+        "mat_bend": mat_bend
     }
 
 

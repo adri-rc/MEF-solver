@@ -1,6 +1,6 @@
 # Traspaso técnico del proyecto
 
-Actualizado el **25 de agosto de 2026**. Este documento es el
+Actualizado el **3 de septiembre de 2026**. Este documento es el
 punto de entrada para continuar MEF-solver en otra cuenta, sesión u ordenador.
 El punto de referencia histórico es la rama `feat/ctria3`, commit `0cc154c`.
 La fase actual se desarrolla en `feat/non-linear-CBAR`. El commit `df88ee4`
@@ -43,10 +43,10 @@ Comando de referencia:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado observado el 25 de agosto de 2026:
+Resultado observado el 3 de septiembre de 2026:
 
 ```text
-688 passed, 6 xfailed, 2 warnings
+696 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias se deben a que pytest no puede escribir `.pytest_cache`.
@@ -90,6 +90,9 @@ independientes (`SNORM,0`) y pasan.
 - Posición GRID.CP, grados de libertad GRID.CD y cargas en sistemas locales se
   transforman a la base adecuada.
 - `PARAM,K6ROT` se aplica a CTRIA3 y CQUAD4.
+- En CTRIA3, `MID1`, `MID2` y `MID3` no se heredan entre sí: MID1 vacío
+  desactiva membrana, MID2 vacío desactiva placa y MID3 sin MID2 se rechaza.
+  La referencia MSC está en `case_ctria3_pshell_material_semantics`.
 - No hay `AUTOSPC` general: los mecanismos reales deben fallar.
 - El informe `.rpt` distingue análisis lineal/no lineal y contiene resumen del
   modelo, configuración, desplazamientos, reacciones y tablas físicas
@@ -234,6 +237,9 @@ controles extremadamente mal condicionados.
 
 - `tests/solver_tst/elements/CQUAD4Element_test.py`: geometría, simetría,
   modos rígidos, hourglass, K6ROT, ley oblicua y rechazo no coplanar.
+- `tests/solver_tst/elements/test_ctria3_pshell_material_semantics.py`: siete
+  combinaciones PSHELL contrastadas con MSC 2026.1; valida campos independientes,
+  bloques inactivos, MID1 vacío y el rechazo de MID3 sin MID2.
 - `tests/solver_tst/elements/test_cquad4_pshell_material_semantics.py`: MID2,
   MID3, `12I/T^3` y `TS/T`.
 - `tests/solver_tst/elements/test_E2E_CQUAD_Nastran_K_solution.py`: DMIG,

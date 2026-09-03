@@ -148,6 +148,20 @@ El espesor multiplica la constitutiva de membrana; `t³/12` multiplica la de
 flexión; y `TS/T` interviene en el cortante transversal. PSHELL permite separar
 MID1, MID2 y MID3.
 
+Los tres campos se asignan sin herencias implícitas. `MID1` vacío anula el
+bloque de membrana y `MID2` vacío anula el bloque completo de placa. `MID3` no
+puede definirse sin `MID2`, de acuerdo con el `FATAL 9994` observado en MSC
+Nastran. Cuando `MID2` está activo y `MID3` vacío, el solver conserva la matriz
+de flexión pero deja a cero el término físico de cortante de su formulación
+Reissner--Mindlin; no sustituye `MID3` por el material de flexión.
+
+Esta corrección reproduce la selección de materiales y los bloques inactivos,
+pero no convierte la formulación local en la placa nativa de MSC. En
+particular, MSC conserva respuesta transversal con `MID2` y `MID3` vacío,
+mientras el término de cortante explícito del modelo local es nulo. Las nuevas
+referencias DMIG validan la semántica de activación, no una igualdad completa
+del bloque de placa.
+
 La recuperación centroidal tridimensional de momentos y cortantes no se
 considera equivalente a MSC Nastran dentro del alcance actual. El frame T con
 MID3 físico correlaciona en desplazamientos, membrana y tensiones de fibra,

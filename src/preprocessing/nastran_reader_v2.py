@@ -158,7 +158,10 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
 
         # --- PSHELL Mapping ---
         elif isinstance(prop, PSHELL):
-            
+            mid1_val = prop.Mid1()
+            if mid1_val == 0 or mid1_val is None:
+                mid1_val = None
+
             mid2_val = prop.Mid2()
             if mid2_val == 0 or mid2_val is None:
                 mid2_val = None
@@ -169,7 +172,7 @@ def _map_properties(bdf_model: BDF, model: FEMModel):
                 
             model.properties[pid] = ShellProperty(
                 pid=pid,
-                mat_id=prop.Mid1(),
+                mat_id=mid1_val,
                 t=prop.t,
                 mat_id_bending=mid2_val,
                 mat_id_shear=None if mid3_val == -1 else mid3_val,

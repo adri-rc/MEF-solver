@@ -4,7 +4,13 @@
 
 El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
 operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `688 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+con `696 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+
+La semántica PSHELL del CTRIA3 ya no usa herencias de materiales: MID1, MID2 y
+MID3 permanecen independientes, se admite MID2 sin MID1 y se rechaza MID3 sin
+MID2. Siete decks mínimos ejecutados con MSC Nastran 2026.1 conservan las DMIG
+y los dos F06 de rechazo. Este cierre corrige la activación de los bloques sin
+reformular la placa CTRIA3 ni anunciar equivalencia de su recuperación M/Q.
 
 La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
 planifica extenderla a elementos alabeados en la siguiente fase.

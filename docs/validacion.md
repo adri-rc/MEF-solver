@@ -8,14 +8,34 @@ Comando:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Resultado verificado el 25 de agosto de 2026 después de incorporar el puente
-no lineal actualizado de tres vanos:
+Resultado verificado el 3 de septiembre de 2026 después de corregir la
+semántica PSHELL del CTRIA3:
 
 ```text
-688 passed, 6 xfailed, 2 warnings
+696 passed, 6 xfailed, 2 warnings
 ```
 
 Las dos advertencias proceden de que pytest no puede escribir su caché.
+
+## Semántica PSHELL del CTRIA3
+
+La carpeta
+[`case_ctria3_pshell_material_semantics`](../tests/solver_tst/validation_cases/case_ctria3_pshell_material_semantics/README.md)
+contiene siete decks de un único CTRIA3, ejecutados con MSC Nastran Student
+Edition 2026.1. Los materiales MID1, MID2 y MID3 tienen módulos distintos y
+`K6ROT=0`, por lo que las DMIG `KAAX` permiten separar membrana y placa.
+
+MSC confirma que sólo MID1 produce membrana sin placa; sólo MID2 produce placa
+sin membrana; y MID2+MID3 sin MID1 también es válido. En cambio, MID3 solo o
+MID1+MID3 generan `USER FATAL MESSAGE 9994 (BULAEM)` porque MID3 requiere
+MID2. Los cinco casos válidos conservan F06 y PCH; los dos rechazos conservan
+su F06 y no generan PCH.
+
+`test_ctria3_pshell_material_semantics.py` comprueba los artefactos MSC, los
+ceros de los bloques inactivos, la matriz de membrana frente a Nastran, la
+lectura de MID1 vacío y la ausencia de sustituciones MID2/MID3. No exige
+equivalencia de la matriz de placa, ya que este cambio no modifica la
+formulación Reissner--Mindlin ni resuelve la discrepancia CTRIA3 ya conocida.
 
 ## Capas de comprobación
 

@@ -5,10 +5,12 @@
 Implements the stiffness matrix calculation for a 3-node Triangular Shell.
         - Membrane Stiffness: Constant Strain Triangle (CST).
         - Bending Stiffness: Reissner-Mindlin Formulation.
-IMPORTANT: 
-Pure shear stiffnes does not mach with Nastrnas vales.
-Therefore to match Nastran results MID3 with E=0.0 value HAVE TO BE DEFINED in PSHELL card.
+The PSHELL materials remain independent: MID1 controls membrane, MID2 controls
+bending and MID3 controls the transverse-shear term of the implemented
+formulation. Blank fields are not filled from another material.
 """
+
+from typing import Optional
 
 import numpy as np
 from src.preprocessing.data_model import Node, ShellProperty, IsotropicMaterial
@@ -32,8 +34,6 @@ class CTRIA3ElementSolver:
     Physics:
       - Membrane (In-plane): u (tx), v (ty). Formulation: CST (Linear shape functions).
       - Bending (Out-of-plane) & Shear: w, theta_x, theta_y. Formulation: Reissner-Mindlin.
-        Pure shear stiffnes does not mach with Nastrnas vales.
-        Therefore to match Nastran results MID3 with E=0.0 value HAVE TO BE DEFINED in PSHELL card.
       - Drilling: theta_z. (Defined with Nastran formula, K6ROT).
     """
 
@@ -43,10 +43,23 @@ class CTRIA3ElementSolver:
     # Global Local Vector indices: 
     # Node 1: 0-5, Node 2: 6-11, Node 3: 12-17
     
-    def __init__(self, node1: Node, node2: Node, node3: Node, prop: ShellProperty, mat: IsotropicMaterial, mat_bending: IsotropicMaterial = None, mat_shear: IsotropicMaterial = None, k6rot: float = 0.0, theta: float = 0.0):
+    def __init__(
+        self,
+        node1: Node,
+        node2: Node,
+        node3: Node,
+        prop: ShellProperty,
+        mat: Optional[IsotropicMaterial],
+        mat_bending: Optional[IsotropicMaterial] = None,
+        mat_shear: Optional[IsotropicMaterial] = None,
+        k6rot: float = 0.0,
+        theta: float = 0.0,
+    ):
         """
         @brief Initialize the CTRIA3 Element Solver.
-        @param mat_bending Optional material for bending stiffness (if different from membrane).
+        @param mat Optional MID1 material for membrane stiffness.
+        @param mat_bending Optional MID2 material for bending stiffness.
+        @param mat_shear Optional MID3 material for transverse shear stiffness.
         """
         self.node1 = node1
         self.node2 = node2
@@ -54,11 +67,13 @@ class CTRIA3ElementSolver:
         self.prop = prop
         self.k6rot = k6rot
         self.theta = float(theta)
-        self.mat = mat # MID1
-        
-        # Use bending material if provided, otherwise use the same as membrane
-        self.mat_bending = mat_bending if mat_bending is not None else mat # MID2
-        self.mat_shear = mat_shear if mat_shear is not None else self.mat_bending # MID3
+        self.mat = mat  # MID1
+        self.mat_bending = mat_bending  # MID2
+        self.mat_shear = mat_shear  # MID3
+        if self.mat is None and self.mat_bending is None:
+            raise ValueError("CTRIA3 requires a MID1 or MID2 material.")
+        if self.mat_shear is not None and self.mat_bending is None:
+            raise ValueError("CTRIA3 cannot define MID3 without MID2.")
         
         self.n1_coords = node1.get_coords()
         self.n2_coords = node2.get_coords()
@@ -156,34 +171,35 @@ class CTRIA3ElementSolver:
         @brief Calcula las matrices D utilizando materiales independientes para cada comportamiento.
         """
         # --- COMPORTAMIENTO A MEMBRANA (MID1) ---
-        E_m, nu_m = self.mat.E, self.mat.nu
-        factor_m = E_m / (1.0 - nu_m**2)
-        D_m = factor_m * np.array([
-            [1.0,  nu_m, 0.0],
-            [nu_m, 1.0,  0.0],
-            [0.0,  0.0,  (1.0 - nu_m) / 2.0]
-        ])
+        D_m = np.zeros((3, 3))
+        if self.mat is not None:
+            E_m, nu_m = self.mat.E, self.mat.nu
+            factor_m = E_m / (1.0 - nu_m**2)
+            D_m = factor_m * np.array([
+                [1.0,  nu_m, 0.0],
+                [nu_m, 1.0,  0.0],
+                [0.0,  0.0,  (1.0 - nu_m) / 2.0]
+            ])
 
         # --- COMPORTAMIENTO A FLEXIÓN (MID2) ---
         t = self.prop.t
-        E_f, nu_f = self.mat_bending.E, self.mat_bending.nu
-        factor_f = (E_f * t**3) / (12.0 * (1.0 - nu_f**2))
-        D_f = factor_f * np.array([
-            [1.0,  nu_f, 0.0],
-            [nu_f, 1.0,  0.0],
-            [0.0,  0.0,  (1.0 - nu_f) / 2.0]
-        ])
+        D_f = np.zeros((3, 3))
+        if self.mat_bending is not None:
+            E_f, nu_f = self.mat_bending.E, self.mat_bending.nu
+            factor_f = (E_f * t**3) / (12.0 * (1.0 - nu_f**2))
+            D_f = factor_f * np.array([
+                [1.0,  nu_f, 0.0],
+                [nu_f, 1.0,  0.0],
+                [0.0,  0.0,  (1.0 - nu_f) / 2.0]
+            ])
 
         # --- COMPORTAMIENTO A CORTANTE TRANSVERSAL (MID3) ---
-        E_s, nu_s = self.mat_shear.E, self.mat_shear.nu
-        G_c = getattr(self.mat_shear, 'G', E_s / (2.0 * (1.0 + nu_s)))
-        k_shear = 5.0 / 6.0              # Factor de corrección de Mindlin
-        factor_c = k_shear * G_c * t
-        
-        D_c = factor_c * np.array([
-            [1.0, 0.0],
-            [0.0, 1.0]
-        ])
+        D_c = np.zeros((2, 2))
+        if self.mat_shear is not None:
+            E_s, nu_s = self.mat_shear.E, self.mat_shear.nu
+            G_c = getattr(self.mat_shear, 'G', E_s / (2.0 * (1.0 + nu_s)))
+            k_shear = 5.0 / 6.0  # Factor de corrección de Mindlin
+            D_c = (k_shear * G_c * t) * np.eye(2)
 
         return D_m, D_f, D_c
     
@@ -269,7 +285,7 @@ class CTRIA3ElementSolver:
                 K_local[idx_m[i], idx_m[j]] += k_mem[i, j]
                 
         # 2. Rigidez de Flexión y Cortante Transversal
-        has_bending = self.prop.t > 0.0
+        has_bending = self.prop.t > 0.0 and self.mat_bending is not None
         if has_bending:
             k_flex = (detJ * peso_gauss) * (B_f.T @ D_f @ B_f)
             k_cort = (detJ * peso_gauss) * (B_c.T @ D_c @ B_c)
@@ -284,7 +300,9 @@ class CTRIA3ElementSolver:
         # 3. Estabilización Drilling Dinámica (Sintonizada con MSC Nastran)
         # ---------------------------------------------------------------------
         
-        if self.k6rot > 0.0:
+        # K6ROT stabilizes the drilling rotation of the membrane block; without
+        # MID1 there is no membrane material from which to derive its penalty.
+        if self.k6rot > 0.0 and self.mat is not None:
             # 3.1 Calcular el módulo de cortante G
             nu = self.mat.nu  # Asegúrate de tener acceso al coeficiente de Poisson
             G = self.mat.E / (2.0 * (1.0 + nu))
@@ -371,7 +389,7 @@ class CTRIA3ElementSolver:
         f_x, f_y, f_xy = sig_x * t, sig_y * t, tau_xy * t
         
         # --- Esfuerzos Flexión y Cortante ---
-        has_bending = self.prop.t > 0.0
+        has_bending = self.prop.t > 0.0 and self.mat_bending is not None
         if has_bending:
             u_bend_RM = np.array([u_loc[2], u_loc[3], u_loc[4], u_loc[8], u_loc[9], u_loc[10], u_loc[14], u_loc[15], u_loc[16]])
             kappa = B_f @ u_bend_RM

@@ -260,7 +260,7 @@ class ShellProperty(Property):
     @brief Properties for Shell elements (PSHELL).
     @details Defines thickness and material IDs for membrane and bending.
     """
-    mat_id: int          #: Material ID for Membrane
+    mat_id: Optional[int] #: Material ID for membrane (blank MID1 disables membrane)
     t: float             #: Thickness
     mat_id_bending: Optional[int] = None #: Material ID for bending (blank MID2 disables bending)
     mat_id_shear: Optional[int] = None #: Material ID for transverse-shear flexibility (MID3)
@@ -270,10 +270,20 @@ class ShellProperty(Property):
     def __post_init__(self):
         if not np.isfinite(self.t) or self.t <= 0.0:
             raise ValueError(f"ShellProperty {self.pid} requires a finite thickness t > 0.")
+        if self.mat_id == -1:
+            self.mat_id = None
         if self.mat_id_bending == -1:
             self.mat_id_bending = None
         if self.mat_id_shear == -1:
             self.mat_id_shear = None
+        if self.mat_id_shear is not None and self.mat_id_bending is None:
+            raise ValueError(
+                f"ShellProperty {self.pid} cannot define MID3 without MID2."
+            )
+        if self.mat_id is None and self.mat_id_bending is None:
+            raise ValueError(
+                f"ShellProperty {self.pid} requires MID1 or MID2."
+            )
         if (
             not np.isfinite(self.bending_inertia_ratio)
             or self.bending_inertia_ratio <= 0.0
