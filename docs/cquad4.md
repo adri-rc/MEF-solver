@@ -1,71 +1,75 @@
-# CQUAD4 plano: formulación y validación final
+# Planar CQUAD4: final formulation and validation
 
-## Estado
+## Status
 
-La implementación activa es `CQUAD4NastranElementSolver`. Reconstruye la
-rigidez del QUAD4 de Nastran para cuadriláteros **coplanares**, no degenerados
-y con jacobiano positivo. El plano puede tener cualquier orientación 3D y los
-elementos de una estructura pueden pertenecer a planos distintos.
+The active implementation is `CQUAD4NastranElementSolver`. It reconstructs
+the Nastran QUAD4 stiffness for **coplanar**, non-degenerate quadrilaterals
+with a positive Jacobian. The plane may have any three-dimensional
+orientation, and different elements in one structure may lie in different
+planes.
 
-Los CQUAD4 alabeados quedan deliberadamente fuera del proyecto. La clase base
-comprueba la distancia de los cuatro nodos al plano local y genera
-`ValueError` si su rango supera `max(1e-10, 1e-8*L)`, con `L` igual a la mayor
-longitud de lado. No se proyecta la geometría ni se aplica una corrección de
-alabeo.
+Warped CQUAD4 elements are deliberately outside the project scope. The base
+class checks the distance of all four nodes from the local plane and raises
+`ValueError` if their range exceeds `max(1e-10, 1e-8*L)`, where `L` is the
+greatest side length. The geometry is neither projected nor corrected for
+warping.
 
-La colección global actual arroja `688 passed, 6 xfailed`. Los seis `xfail`
-pertenecen a esta formulación: casos 54, 59 y 62–64 alabeados, y caso 78 con
-suavizado `SNORM` predeterminado. Los casos facetados equivalentes con
-`SNORM,0` sí pasan.
+The complete-suite baseline observed on 19 September 2026 was `718 passed,
+6 xfailed, 2 warnings`. All six `xfail` cases concern this formulation: warped
+cases 54, 59, and 62--64, and case 78 with default `SNORM` smoothing. The
+equivalent faceted cases with `SNORM,0` pass. The two warnings were local
+`PytestCacheWarning` messages, not numerical failures.
 
-## Clases
+## Classes
 
-- `CQUAD4ElementBase`: geometría plana, funciones de forma, constitutivas,
-  transformación, `K6ROT` y recuperación común.
-- `CQUAD4NastranElementSolver`: formulación usada por el solver global.
-- `CQUAD4ReissnerMindlinElementSolver`: formulación clásica independiente,
-  conservada para comparación académica; no es el elemento activo.
+- `CQUAD4ElementBase`: planar geometry, shape functions, constitutive
+  matrices, transformation, `K6ROT`, and shared recovery.
+- `CQUAD4NastranElementSolver`: the formulation used by the global solver.
+- `CQUAD4ReissnerMindlinElementSolver`: an independent classical formulation
+  retained for academic comparison; it is not the active element.
 
-## Geometría y sistema local
+## Geometry and local system
 
-El origen es el promedio de los cuatro nodos. La normal es el producto de las
-diagonales `G1-G3` y `G2-G4`; el eje local x es la bisectriz de las diagonales
-unitarias `G1-G3` y `G4-G2`; y el eje y completa el triedro.
+The origin is the average of the four nodes. The normal is obtained from the
+cross product of diagonals `G1-G3` and `G2-G4`; local x is the bisector of the
+unit diagonals `G1-G3` and `G4-G2`; and local y completes the right-handed
+triad.
 
-Las funciones bilineales en `[-1,1]²` son:
+The bilinear shape functions on `[-1,1]^2` are:
 
 ```text
 N1 = 1/4 (1-xi)(1-eta)       N2 = 1/4 (1+xi)(1-eta)
 N3 = 1/4 (1+xi)(1+eta)       N4 = 1/4 (1-xi)(1+eta)
 ```
 
-El jacobiano se evalúa en todos los puntos y vértices requeridos. Un
-determinante no positivo se rechaza.
+The Jacobian is evaluated at every point and vertex required by the
+formulation. A non-positive determinant is rejected.
 
 ## PSHELL
 
-- `MID1`: material de membrana.
-- `MID2`: material de flexión; vacío desactiva la flexión y **no** hereda
-  `MID1`.
-- `MID3`: material de flexibilidad física de cortante; vacío no hereda `MID2`.
-  Permanece la flexibilidad residual de flexión propia de QUAD4.
-- `12I/T^3`: multiplica `t^3/12`, con valor por defecto 1.
-- `TS/T`: multiplica el espesor de cortante, con valor por defecto `5/6`.
-- `THETA`: orienta el material; con `MAT1` isótropo no cambia la constitutiva y
-  la salida se recupera en ejes del elemento.
+- `MID1`: membrane material; it is required by the active CQUAD4.
+- `MID2`: bending material; a blank value disables bending and does **not**
+  inherit `MID1`.
+- `MID3`: material for physical transverse-shear flexibility; a blank value
+  does not inherit `MID2`. QUAD4's residual bending flexibility remains.
+- `12I/T^3`: multiplies `t^3/12`, with a default value of 1.
+- `TS/T`: multiplies the shear thickness, with a default value of `5/6`.
+- `THETA`: orients the material; with isotropic `MAT1` it does not change the
+  constitutive matrix, and output is recovered in element axes.
 
-## Membrana y flexión
+A bending-only CQUAD4 with blank `MID1` is outside the supported subset and is
+rejected explicitly.
 
-La formulación Nastran no usa una cuadratura completa 2x2. Cada bloque combina:
+## Membrane and bending
 
-1. una deformación uniforme calculada en el centro;
-2. dos modos bilineales `hourglass` ortogonalizados frente a los campos
-   lineales;
-3. una normalización por distorsión;
-4. una métrica construida con las líneas que unen puntos medios de lados
-   opuestos.
+The Nastran formulation does not use full 2x2 quadrature. Each block combines:
 
-En forma abreviada:
+1. a uniform strain evaluated at the center;
+2. two bilinear `hourglass` modes orthogonalized against linear fields;
+3. distortion normalization;
+4. a metric built from lines joining the midpoints of opposite sides.
+
+In abbreviated form:
 
 ```text
 K0  = A*s*B0.T*D*B0
@@ -76,115 +80,119 @@ Khg = s*L*(E*chi*M/12)*L.T
 K   = K0 + Khg
 ```
 
-`s=t` en membrana y `s=(t³/12)*(12I/T³)` en flexión.
+Here `s=t` for membrane and `s=(t³/12)*(12I/T³)` for bending.
 
-## Cortante transversal
+## Transverse shear
 
-El operador cinemático procede de las cuatro aristas, siguiendo la
-construcción pública `UEV/ANGLEI/EDGSHR` de NASTRAN-95. Se toman dos muestras
-en cada línea natural central:
+The kinematic operator is derived from the four edges, following the public
+NASTRAN-95 `UEV/ANGLEI/EDGSHR` construction. Two samples are taken on each
+natural centerline:
 
 ```text
 (0, -1/sqrt(3)), (0, +1/sqrt(3)),
 (-1/sqrt(3), 0), (+1/sqrt(3), 0)
 ```
 
-La rigidez se obtiene desde una flexibilidad aumentada:
+The stiffness is obtained from an augmented flexibility:
 
 ```text
 Z = Z_residual_bending + Z_MID3
 Kshear = S.T * solve(Z, S)
 ```
 
-`MID3` se suma en serie como flexibilidad, por lo que activarlo hace más blando
-el elemento. La corrección de aspecto usa `epsilon=0.025`.
+`MID3` is added in series as flexibility, so activating it makes the element
+softer. The aspect correction uses `epsilon=0.025`.
 
-En cuadriláteros afines oblicuos, el modo antisimétrico de cada pareja se
-escala con:
+For oblique affine quadrilaterals, the antisymmetric mode of each pair is
+scaled by:
 
 ```text
 m(c²) = 1 + 0.4100259495463487*c² / (1 - 0.9156556465380681*c²)
 ```
 
-`c` es el coseno entre las líneas medias. La ley vale 1 para un rectángulo,
-permanece positiva en todo el dominio y se identificó con DMIG de oblicuidad
-moderada (casos 81/89) y alta (caso 90). El caso cargado 60 verifica un ángulo
-intermedio. Es una identificación del proyecto, no una constante publicada
-por MSC.
+Here `c` is the cosine between the midlines. The law equals 1 for a rectangle,
+remains positive over the complete domain, and was identified from moderate-
+obliquity DMIG cases 81/89 and high-obliquity case 90. Loaded case 60 checks
+an intermediate angle. This is a project identification, not a constant
+published by MSC.
 
 ## K6ROT
 
-La implementación es la extensión a cuatro nodos de la ya validada en CTRIA3.
-En cada vértice penaliza:
+The implementation extends the CTRIA3 formulation, which has already been
+validated, to four nodes. At every vertex it penalizes:
 
 ```text
 r_i = theta_z_i - 0.5*(dv/dx - du/dy)_i
 K6 = sum_i K6ROT*1e-6*G*t*(4*detJ_i)*(r_i outer r_i)
 ```
 
-No es una rigidez diagonal aislada. La forma conserva los movimientos rígidos
-y acopla el drilling nodal con la macrorrotación de membrana.
+This is not an isolated diagonal stiffness. It preserves rigid-body motion
+and couples nodal drilling rotation to the membrane macro-rotation.
 
-## Recuperación
+## Recovery
 
-En el centro se calculan fuerzas de membrana `N`, momentos `M`, tensiones en
-fibras superior/inferior, principales y von Mises. Estas magnitudes, junto con
-rigidez, desplazamientos y reacciones, coinciden estrechamente con Nastran.
+Membrane forces `N`, moments `M`, top/bottom fiber stresses, principal
+stresses, and von Mises stresses are evaluated at the center. These
+quantities, together with stiffness, displacements, and reactions, closely
+match Nastran.
 
-La interfaz de resultados de los elementos shell usa una sola nomenclatura
-para cada componente de fibra: `stress_top_fiber_x`,
-`stress_top_fiber_y`, `tau_top_fiber_xy`, `stress_bot_fiber_x`,
-`stress_bot_fiber_y` y `tau_bot_fiber_xy`. `top` representa `z=+t/2` y
-`bot`, `z=-t/2` en los ejes locales. No se exponen alias basados en `Z1/Z2`,
-porque esa etiqueta depende de la convención de salida del solver externo.
+The shell-element result interface uses one name for each fiber component:
+`stress_top_fiber_x`, `stress_top_fiber_y`, `tau_top_fiber_xy`,
+`stress_bot_fiber_x`, `stress_bot_fiber_y`, and `tau_bot_fiber_xy`. `top`
+means `z=+t/2` and `bot` means `z=-t/2` in element axes. No `Z1/Z2`-based
+aliases are exposed because that label depends on the external solver's
+output convention.
 
-`Qx/Qy` se recuperan desde las cuatro fuerzas generalizadas de cortante. La
-convención centroidal propietaria de MSC no está reproducida exactamente: en
-el caso 91 la mayor diferencia es 47.1 % en una componente pequeña, 0.0216 en
-valor absoluto, mientras `N`, `M` y fibras quedan por debajo del 0.1 %. Es una
-limitación de postproceso, no de rigidez ni equilibrio.
+`Qx/Qy` are recovered from the four generalized shear forces. MSC's
+proprietary centroidal convention is not reproduced exactly: in case 91 the
+largest difference is 47.1% on a small component, 0.0216 in absolute value,
+while `N`, `M`, and fiber stresses remain below 0.1%. This is a recovery
+limitation, not a stiffness or equilibrium error.
 
-## Validación
+## Validation
 
-`tests/solver_tst/elements/test_E2E_CQUAD_Nastran_K_solution.py` compara DMIG:
+`tests/solver_tst/elements/test_E2E_CQUAD_Nastran_K_solution.py` compares
+DMIG data using:
 
-- error relativo de Frobenius global;
-- comparación término a término con tolerancia relativa y absoluta;
-- bloques en ejes de elemento: membrana, placa/cortante y drilling;
-- acoplamiento drilling–membrana cuando procede;
-- exportación opcional mediante `debug_export` y `output_k_file`.
+- global relative Frobenius error;
+- termwise comparisons with relative and absolute tolerances;
+- element-axis membrane, plate/shear, and drilling blocks;
+- drilling--membrane coupling where applicable;
+- optional export through `debug_export` and `output_k_file`.
 
-`tests/solver_tst/test_validation_end_to_end_cquad4.py` contiene directamente
-las referencias de desplazamientos, cargas, reacciones y resultados; no lee el
-F06 durante el test.
+`tests/solver_tst/test_validation_end_to_end_cquad4.py` stores displacement,
+load, reaction, and element-result references directly; it does not parse the
+F06 during a test.
 
-El caso 90 obligó a ajustar sólo la continuación geométrica del modo torsional.
-Con la ley final su DMIG completa queda por debajo de `1e-6` de Frobenius, el
-bloque placa/cortante por debajo de `4e-6` y sus términos cumplen
-`rtol=1e-5`, `atol=2e-3`. El caso 91 obtiene errores vectoriales de
-`2.07e-5` en desplazamientos y `6.30e-5` en reacciones.
+Case 90 required changing only the geometric continuation of the torsional
+mode. With the final law, its full DMIG has a Frobenius error below `1e-6`, its
+plate/shear block is below `4e-6`, and its terms satisfy `rtol=1e-5`,
+`atol=2e-3`. Case 91 gives vector errors of `2.07e-5` for displacements and
+`6.30e-5` for reactions.
 
-Los casos 57 y 58 no son controles limpios de formulación: contienen un MID3
-con módulo del orden de `1e-20` y números de condición `2.90e25` y `8.52e26`.
-Sus comentarios y tolerancias documentan ahora qué componentes pequeñas son
-sensibles. El caso 59 es alabeado y se conserva sólo como `xfail` de alcance.
+Cases 57 and 58 are not clean formulation controls: their MID3 modulus is of
+order `1e-20`, with condition numbers `2.90e25` and `8.52e26`. Their comments
+and tolerances document which small components are sensitive. Case 59 is
+warped and is retained only as a scope `xfail`.
 
-## Limitaciones
+## Limitations
 
-- Sólo cuadriláteros coplanares y no degenerados.
-- `MAT1` isótropo; sin laminados, `MAT8` ni acoplamiento de composite.
-- Sin `ZOFFS`, espesores nodales, `TFLAG`, `MID4` o cargas de cara.
-- Sin suavizado `SNORM`; usar normales independientes, equivalentes a
-  `SNORM,0`, en ensamblajes facetados.
-- Recuperación de `Qx/Qy` aproximada respecto a la impresión de MSC Nastran.
+- Coplanar, non-degenerate quadrilaterals only.
+- Isotropic `MAT1`; no laminates, `MAT8`, or composite coupling.
+- No `ZOFFS`, nodal thicknesses, `TFLAG`, `MID4`, or face loads.
+- No `SNORM` smoothing; use independent normals, equivalent to `SNORM,0`, in
+  faceted assemblies.
+- `Qx/Qy` recovery is approximate relative to MSC Nastran output.
 
-La derivación matemática y la correspondencia detallada con el código se
-encuentran en [`cquad4_tesis.md`](cquad4_tesis.md).
+The mathematical derivation and detailed code correspondence are in
+[`cquad4_formulation.md`](cquad4_formulation.md). See also the general
+[`architecture.md`](architecture.md), [`formulation.md`](formulation.md), and
+[`validation.md`](validation.md) documents.
 
-## Referencias
+## References
 
 - R. H. MacNeal, *A Simple Quadrilateral Shell Element*, Computers &
-  Structures 8, 175–183, 1978.
+  Structures 8, 175--183, 1978.
 - R. H. MacNeal, [*Derivation of element stiffness matrices by assumed strain
   distributions*](https://doi.org/10.1016/0029-5493(82)90262-X), 1982.
 - NASA, [NASTRAN-95 `quad4d.f`](https://github.com/nasa/NASTRAN-95/blob/master/mis/quad4d.f).

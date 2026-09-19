@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.elements.ctria3_element import CTRIA3ElementSolver
 from src.solver.linear_static_solver import LinearStaticSolver
-from tests.solver_tst.elements.CTRIA3_pch_reader import leer_dmig_pch
+from tests.solver_tst.elements.dmig_pch_reader import read_dmig_pch
 
 
 CASE_DIR = (
@@ -81,8 +81,8 @@ def test_nastran_reference_files_record_expected_outcomes():
 
 def test_mid1_only_is_membrane_only_and_matches_nastran_membrane():
     _, stiffness = _build_global_stiffness("ctria3_01_mid1_only")
-    nastran = leer_dmig_pch(
-        CASE_DIR / "ctria3_01_mid1_only.pch", num_nudos=3
+    nastran = read_dmig_pch(
+        CASE_DIR / "ctria3_01_mid1_only.pch", node_count=3
     )
 
     np.testing.assert_allclose(_block(nastran, PLATE_DOFS), 0.0, atol=0.0)
@@ -98,8 +98,8 @@ def test_mid1_only_is_membrane_only_and_matches_nastran_membrane():
 def test_mid2_only_is_accepted_without_creating_membrane_stiffness():
     model, stiffness = _build_global_stiffness("ctria3_04_mid2_only")
     prop = model.properties[10]
-    nastran = leer_dmig_pch(
-        CASE_DIR / "ctria3_04_mid2_only.pch", num_nudos=3
+    nastran = read_dmig_pch(
+        CASE_DIR / "ctria3_04_mid2_only.pch", node_count=3
     )
 
     assert prop.mat_id is None

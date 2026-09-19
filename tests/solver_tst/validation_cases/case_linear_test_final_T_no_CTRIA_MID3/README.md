@@ -1,185 +1,163 @@
-# Caso lineal T sin rigidez física MID3 en CTRIA3
+# Linear T-frame diagnostic with negligible CTRIA3 MID3 stiffness
 
-Este caso es el control A/B del
-[`case_linear_test_final_T`](../case_linear_test_final_T/README.md). Conserva
-su geometría, conectividad, propiedades estructurales, cargas y condiciones de
-contorno, pero sustituye **sólo** el material de cortante transversal `MID3` de
-los 128 CTRIA3 por un material auxiliar con `E=1e-20 MPa`. Su propósito es
-aislar la discrepancia observada en la recuperación centroidal de momentos y
-cortantes del CTRIA3; no representa una variante físicamente utilizable del
-frame.
+This model is the A/B control for
+[case_linear_test_final_T](../case_linear_test_final_T/README.md). Geometry,
+connectivity, structural properties, loads, and boundary conditions are
+unchanged. The **only** modification replaces transverse-shear `MID3` in the
+128 CTRIA3 with an auxiliary `E=1e-20 MPa` material. Its purpose is to
+isolate the discrepancy in centroidal CTRIA3 moment/shear recovery; it is not
+a physically usable frame variant.
 
-El nombre `no_CTRIA_MID3` es una abreviatura del experimento numérico. El
-campo `MID3` de PSHELL no está vacío: apunta a `MAT1 99`, cuya rigidez es
-despreciable. Se usa este sustituto porque reproduce la limitación ya
-documentada en el proyecto sin cambiar el resto del modelo y permite que
-ambos códigos recuperen los términos de lámina bajo la misma hipótesis casi
-nula.
+The name `no_CTRIA_MID3` abbreviates the numerical experiment. PSHELL
+`MID3` is not blank: it points to `MAT1 99`, whose stiffness is negligible.
+This preserves the remainder of the model and lets both codes recover shell
+terms under the same nearly zero physical-shear assumption.
 
-## Diferencia exacta frente al modelo físico
+## Exact change from the physical model
 
-En el modelo T original, la propiedad de los triángulos es:
+Original T-frame triangle property:
 
 ```text
 PSHELL,11,1,2.0,1,,1,0.8333333333
 ```
 
-En este control pasa a ser:
+Diagnostic property:
 
 ```text
 PSHELL,11,1,2.0,1,,99,0.8333333333
 MAT1,99,1.0E-20,,0.33
 ```
 
-Por tanto, `MID1=1` y `MID2=1` conservan la membrana y la flexión del aluminio
-estructural; únicamente `MID3` cambia de `MAT1 1` a `MAT1 99`. Los CQUAD4 de
-PID 10 y 12 continúan usando `MID3=1`. No se modifican GRID, EID, PID,
-espesores, orientación, coordenadas, cargas, SPC ni parámetros de solución.
+Thus `MID1=1` and `MID2=1` retain aluminium membrane and bending; only
+`MID3` changes from `MAT1 1` to `MAT1 99`. PID 10/12 CQUAD4 continue to
+use `MID3=1`. No GRID, EID, PID, thickness, orientation, coordinate system,
+load, SPC, or solution parameter changes.
 
-## Modelo que se conserva
+## Preserved model
 
-El deck sigue representando una sección de frame aeronáutico en T, en el
-sistema coherente `mm - N - MPa` y con pequeñas deformaciones:
+The coherent `mm - N - MPa`, small-deformation T frame still contains:
 
-| Familia | Cantidad | PID | Función |
+| Family | Count | PID | Function |
 |---|---:|---:|---|
-| CQUAD4 | 256 | 10 | Paños del web perforado, `t=2 mm` |
-| CTRIA3 | 128 | 11 | Transición alrededor de los dos aligeramientos, `t=2 mm` |
-| CQUAD4 | 32 | 12 | Ala de la T, `t=4 mm` |
-| CBAR | 56 | 20 | Cap perimetral y montante central |
-| CBAR | 20 | 21 | Refuerzos secundarios |
-| CBAR | 6 | 22 | Mitades de los tres nervios próximas al web |
-| CBAR | 6 | 23 | Mitades próximas al ala, con sección doble |
-| CROD | 2 | 30 | Tirantes de introducción de carga |
+| CQUAD4 | 256 | 10 | `t=2 mm` perforated web panels |
+| CTRIA3 | 128 | 11 | `t=2 mm` cut-out transitions |
+| CQUAD4 | 32 | 12 | `t=4 mm` T flange |
+| CBAR | 56 | 20 | Perimeter cap and central post |
+| CBAR | 20 | 21 | Secondary reinforcement |
+| CBAR | 6 | 22 | Rib halves next to the web |
+| CBAR | 6 | 23 | Doubled rib halves next to the flange |
+| CROD | 2 | 30 | Load-introduction ties |
 
-Son 417 GRID y 506 elementos: 288 CQUAD4, 128 CTRIA3, 88 CBAR y 2
-CROD. Se mantienen las dos fuerzas de `6000 N` en A, el momento de
-`250000 Nmm` en B y el movimiento diferencial `T2=+0.2 mm`. Dos puntos del
-ala están empotrados y otros dos representan remaches guiados con el
-desplazamiento impuesto. Las guías de los extremos libres de los CROD también
-son idénticas a las del caso original.
+Totals remain 417 GRID and 506 elements: 288 CQUAD4, 128 CTRIA3, 88 CBAR,
+and 2 CROD. Both `6000 N` forces at A, the `250000 Nmm` moment at B, and
+the `T2=+0.2 mm` differential motion remain. Two flange points are fixed,
+two are guided prescribed-displacement rivets, and CROD free-end guides are
+identical to the original model.
 
-`PARAM,AUTOSPC,NO` permanece escrito expresamente. En consecuencia, ni MSC
-Nastran ni el solver local deben ocultar mediante estabilización automática la
-pérdida de rigidez transversal introducida deliberadamente.
+`PARAM,AUTOSPC,NO` remains explicit. Neither MSC Nastran nor the local solver
+should hide the deliberately introduced transverse stiffness loss through
+automatic stabilization.
 
-La captura siguiente documenta en Patran que la geometría, las cargas y las
-condiciones de contorno son idénticas a las del caso físico. No se utiliza
-como evidencia de una respuesta estructural válida, puesto que la diferencia
-del control A/B se encuentra en la propiedad `MID3` y no es visible en esta
-representación.
+![A/B control with unchanged loads and boundary conditions](tfm_final_airframe_frame_T_no_CTRIA_MID3_patran_loads_spc.png)
 
-![Control A/B con cargas y condiciones de contorno en Patran](tfm_final_airframe_frame_T_no_CTRIA_MID3_patran_loads_spc.png)
+## MSC Nastran reference
 
-## Ejecución de referencia MSC Nastran
+[tfm_final_airframe_frame_T_no_CTRIA_MID3.dat](tfm_final_airframe_frame_T_no_CTRIA_MID3.dat)
+was run with MSC Nastran Student Edition 2026.1 on 24 August 2026. The
+[F06](tfm_final_airframe_frame_t_no_ctria_mid3.f06) reaches `END OF JOB`,
+contains no `FATAL`, and exits with `NSEXIT: EXIT(0)`.
 
-El
-[`tfm_final_airframe_frame_T_no_CTRIA_MID3.dat`](tfm_final_airframe_frame_T_no_CTRIA_MID3.dat)
-se ejecutó con MSC Nastran Student Edition 2026.1 el 24 de agosto de 2026. El
-[`F06`](tfm_final_airframe_frame_t_no_ctria_mid3.f06) alcanza `END OF JOB`, no
-contiene mensajes `FATAL` y el lanzador termina con `NSEXIT: EXIT(0)`. MSC
-informa:
+MSC reports:
 
-- número de condición de la matriz de rigidez: `5.660208e28`;
-- epsilon energético: `1.2989111e-13`;
-- máximo módulo de traslación: `3.982957 mm` en GRID 434;
-- máximo `|T3|`: `0.466976792 mm` en GRID 364.
+- stiffness-matrix condition number: `5.660208e28`;
+- energy epsilon: `1.2989111e-13`;
+- largest translation magnitude: `3.982957 mm` at GRID 434;
+- largest `|T3|`: `0.466976792 mm` at GRID 364.
 
-El número de condición, casi veinte órdenes de magnitud mayor que el del
-modelo físico (`3.172218e9`), es parte esencial del resultado: la terminación
-normal de MSC no convierte este deck en una estructura bien condicionada.
+The condition number is almost twenty orders of magnitude above the physical
+model's `3.172218e9`. Normal MSC termination does not make this a
+well-conditioned structure.
 
-| Fichero | SHA-256 |
+| File | SHA-256 |
 |---|---|
 | `tfm_final_airframe_frame_T_no_CTRIA_MID3.dat` | `9088444b921ee252f53310b76aa2e2bc9f9bfeab951c4dd63e216dfc803a789e` |
 | `tfm_final_airframe_frame_t_no_ctria_mid3.f06` | `5d82a82c9a2bf9951e8b4f1211674f9e503726e8dab244eb9d06eadf600baec0` |
 | `tfm_final_airframe_frame_t_no_ctria_mid3.op2` | `f52d9e98fe108fc60882c82d1efdd3501dbdeeda042a27c1d439d2476e8f4236` |
 
-## Qué demuestra la comparación
+## What the comparison establishes
 
-La tabla siguiente usa campos completos del OP2 y el error relativo
-`||resultado_MEF - resultado_MSC||2 / ||resultado_MSC||2`. El `core 7` de
-CTRIA3 agrupa `Nx, Ny, Nxy` y las cuatro magnitudes de tensión de la fibra
-positiva usadas en la validación. Los resultados impresos seleccionados se
-transcriben como literales en
+The table uses full OP2 fields and relative error
+`||result_MEF - result_MSC||2 / ||result_MSC||2`. CTRIA3 `core 7` combines
+`Nx, Ny, Nxy` with the four positive-fibre stress quantities used by
+validation. Selected printed results are embedded in
 [`test_linear_final_t_validation_case.py`](../../test_linear_final_t_validation_case.py);
-el test no lee el F06 ni el OP2 durante pytest.
+pytest reads neither F06 nor OP2.
 
-| Magnitud | T con MID3 físico | T con `E(MID3)=1e-20` | Lectura |
+| Quantity | Physical MID3 T frame | `E(MID3)=1e-20` | Interpretation |
 |---|---:|---:|---|
-| Traslaciones, vector completo | `8.206e-3` | `1.745e9` | El segundo valor está gobernado por el casi-mecanismo `T3` local |
-| Rotaciones | `2.546e-2` | `5.079e-6` | Correlación muy estrecha en el control A/B |
-| Reacciones de fuerza | `1.705e-4` | `2.298e-7` | Cierre global estrecho |
-| Reacciones de momento | `3.553e-4` | `4.897e-8` | Cierre global estrecho |
-| CTRIA3, membrana `N` | `7.218e-6` | `7.218e-6` | El cambio MID3 no altera la membrana |
-| CTRIA3, momentos `M` | `6.820e-1` | `7.106e-5` | Mejora aproximada de `9.6e3` veces |
-| CTRIA3, cortantes `Q` relativos | `1.730e1` | `4.612e12` | El cociente de la segunda columna no es interpretable porque MSC es casi cero |
-| CTRIA3, `core 7` | `5.820e-3` | `6.880e-6` | Membrana y fibra positiva correlacionan |
+| Complete translation vector | `8.206e-3` | `1.745e9` | Second value is dominated by the local `T3` near-mechanism |
+| Rotations | `2.546e-2` | `5.079e-6` | Very close A/B control correlation |
+| Force reactions | `1.705e-4` | `2.298e-7` | Close global closure |
+| Moment reactions | `3.553e-4` | `4.897e-8` | Close global closure |
+| CTRIA3 membrane `N` | `7.218e-6` | `7.218e-6` | MID3 does not alter membrane |
+| CTRIA3 moments `M` | `6.820e-1` | `7.106e-5` | About `9.6e3` improvement |
+| Relative CTRIA3 shears `Q` | `1.730e1` | `4.612e12` | Second ratio is meaningless because MSC is nearly zero |
+| CTRIA3 `core 7` | `5.820e-3` | `6.880e-6` | Membrane and positive fibre correlate |
 
-En el caso casi nulo, las componentes de desplazamiento que siguen
-controladas también coinciden: los errores L2 son `1.795e-7` en `T1`,
-`3.233e-8` en `T2` y `5.079e-6` en las rotaciones. El máximo error absoluto
-es `2.806e-7 mm` en T1 (GRID 164), `3.831e-7 mm` en T2 (GRID 364) y menor de
-`1.40e-7 rad` en las tres rotaciones. En las seis estaciones de reacción, las
-máximas diferencias son `4.692e-4 N` en F3 (GRID 430) y `1.213e-2 Nmm` en M1
-(GRID 422).
+Controlled displacement components also correlate: L2 errors are
+`1.795e-7` for `T1`, `3.233e-8` for `T2`, and `5.079e-6` for
+rotations. Maximum absolute differences are `2.806e-7 mm` in T1 (GRID 164),
+`3.831e-7 mm` in T2 (GRID 364), and below `1.40e-7 rad` in rotations. At
+six reaction stations, maxima are `4.692e-4 N` in F3 (GRID 430) and
+`1.213e-2 Nmm` in M1 (GRID 422).
 
-Los dos CROD dan un error agregado `1.248e-10`; su máxima diferencia es
-`7.618e-7 Nmm` en torsión y `9.522e-8 MPa` en tensión torsional. En los 15
-CBAR seleccionados, los errores L2 de fuerzas y tensiones son
-`2.237e-6/2.140e-6`, con máximos absolutos de `0.20584 Nmm` en `MA2` del EID
-7056 y `3.608e-4 MPa` en `MINA` del mismo elemento. Los 15 CQUAD4 dan
-`2.160e-5` en resultantes completas y `5.269e-6` en la fibra positiva; sus
-máximos son `1.579e-3 N/mm` en `Qy` y `1.418e-4 MPa` en von Mises, ambos en
-el EID 1151.
+Both CROD have aggregate error `1.248e-10`; maxima are `7.618e-7 Nmm` in
+torque and `9.522e-8 MPa` in torsional stress. For 15 selected CBAR, force
+and stress L2 errors are `2.237e-6 / 2.140e-6`; maxima are `0.20584 Nmm`
+in EID 7056 `MA2` and `3.608e-4 MPa` in its `MINA`. The 15 CQUAD4 have
+`2.160e-5` complete-resultant and `5.269e-6` positive-fibre errors; maxima
+are `1.579e-3 N/mm` in `Qy` and `1.418e-4 MPa` in von Mises, both EID
+1151.
 
-En los 15 CTRIA3, la membrana difiere como máximo `2.247e-4 N/mm` en `Ny` del
-EID 5065. Los errores L2 por componente de momento son
-`4.11e-5/4.64e-5/7.36e-5` para `Mx/My/Mxy`; la máxima diferencia seleccionada
-es `1.455e-5 Nmm/mm` en `My` del EID 5112. La fibra positiva da
-`3.675e-6`, con máximo `1.122e-4 MPa` en `smin` del EID 5111.
+For selected CTRIA3, maximum membrane difference is `2.247e-4 N/mm` in EID
+5065 `Ny`. Component moment L2 errors are
+`4.11e-5 / 4.64e-5 / 7.36e-5` for `Mx/My/Mxy`, with maximum
+`1.455e-5 Nmm/mm` in EID 5112 `My`. Positive-fibre error is `3.675e-6`,
+with maximum `1.122e-4 MPa` in EID 5111 `smin`.
 
-Para `Q`, la norma local del campo completo es aproximadamente
-`4.002e-11 N/mm` y la de MSC `8.677e-24 N/mm`; la máxima diferencia absoluta
-es sólo `1.867e-11 N/mm`, en `Qy` del EID 5084. En la selección del test el
-máximo local baja a `1.166e-11 N/mm`, frente a valores MSC del orden de
-`1e-25`. Dividir por una referencia casi nula produce el aparente error
-`4.612e12`, pero no expresa una diferencia física relevante. Normalizada con
-la escala de `Q` del caso T original, la diferencia es `6.817e-10`. La
-evidencia correcta es que ambos recuperan cortante de ingeniería cero, no que
-exista una correlación relativa de doce órdenes.
+For `Q`, the complete local-field norm is about `4.002e-11 N/mm` and MSC's
+is `8.677e-24 N/mm`; maximum absolute difference is only
+`1.867e-11 N/mm` in EID 5084 `Qy`. Dividing by a nearly zero reference
+creates the apparent `4.612e12` ratio. Normalized by physical-case `Q`
+scale, the difference is `6.817e-10`. The correct conclusion is that both
+recover engineering-zero shear, not that a twelve-order relative discrepancy
+is physically significant.
 
-## Casi-mecanismo transversal y alcance de la evidencia
+## Transverse near-mechanism and evidence boundary
 
-El solver local obtiene un máximo `|T3|=7.3586443229e10 mm` en GRID 203,
-mientras que MSC conserva allí `T3=-0.342126399 mm` y mantiene todo su campo
-transversal finito. El error relativo L2 de `T3` es `2.163e10`. Esta
-divergencia no debe ocultarse ni aceptarse mediante una tolerancia grande. Al
-retirar en la práctica la contribución MID3, la formulación local deja casi
-sin control el desplazamiento transversal de los triángulos. Que MSC conserve
-un campo finito es compatible con una estabilización o flexibilidad residual
-distinta, pero el DAT y el F06 no permiten identificar de forma única ese
-tratamiento interno. El enorme número de condición confirma que se está
-interrogando un límite numérico, no una configuración estructural robusta.
+The local solver obtains `|T3|=7.3586443229e10 mm` at GRID 203, while MSC
+keeps `T3=-0.342126399 mm` there and a finite transverse field. `T3`
+relative L2 error is `2.163e10`. This must not be hidden behind a broad
+tolerance. With physical MID3 effectively removed, the local formulation
+leaves triangle transverse motion nearly uncontrolled. MSC's finite field is
+consistent with different residual flexibility or stabilization, but DAT/F06
+cannot uniquely identify that internal treatment. The condition number
+confirms a numerical limit, not a robust structure.
 
-Por ello, este caso aporta evidencia causal sobre la **recuperación de
-resultados de elemento**: los momentos CTRIA3 pasan de una discrepancia del
-orden de `68 %` a `7.1e-5`, y las membranas, fibras y restantes resultados
-seleccionados permanecen correlacionados. No valida el desplazamiento `T3`, no
-reemplaza el modelo con MID3 físico y no amplía el alcance declarado del
-solver. La validación lineal sólo puede considerarse cerrada dentro de esas
-limitaciones explícitas.
+This case therefore gives causal evidence about **element-result recovery**:
+CTRIA3 moment discrepancy drops from about 68% to `7.1e-5`, while membrane,
+fibre, and other selected results remain correlated. It does not validate
+`T3`, replace the physical-MID3 model, or expand solver scope. Linear
+validation is closed only within these explicit limits.
 
-## Ejecución local
-
-Desde la raíz del repositorio:
+## Local execution
 
 ```powershell
 .\.venv\Scripts\python.exe main.py --file tests\solver_tst\validation_cases\case_linear_test_final_T_no_CTRIA_MID3\tfm_final_airframe_frame_T_no_CTRIA_MID3.dat
 .\.venv\Scripts\python.exe -m pytest -q tests\solver_tst\test_linear_final_t_validation_case.py
 ```
 
-Las capturas de geometría, apoyos, cargas, deformada y tensiones del modelo T
-físico se conservan en el caso original. No se presentan como imágenes de
-validación de esta variante porque la deformada `T3` local está dominada por
-el casi-mecanismo deliberadamente introducido.
+Geometry/support/load/deformation/stress images for the physical model remain
+in the original case. They are not presented as validation images for this
+variant because the local `T3` deformation is dominated by the deliberately
+introduced near-mechanism.

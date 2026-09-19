@@ -1,6 +1,7 @@
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 import main as main_module
 from main import run_analysis_job
@@ -11,7 +12,7 @@ from src.preprocessing.data_model import (
     RodElement,
     RodProperty,
 )
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 
@@ -144,6 +145,52 @@ CROD,1,1,1,2
     assert model.analysis.solution_sequence is None
     assert model.analysis.analysis_type is AnalysisType.LINEAR_STATIC
     assert model.analysis.nonlinear_step is None
+
+
+def test_complete_deck_without_solution_sequence_is_rejected(tmp_path):
+    path = tmp_path / "missing_solution_sequence.dat"
+    path.write_text(
+        """CEND
+SUBCASE 1
+  ANALYSIS = STATICS
+BEGIN BULK
+GRID,1,,0.,0.,0.
+ENDDATA
+"""
+    )
+
+    with pytest.raises(ValueError, match=r"complete Nastran deck requires SOL"):
+        parse_nastran_input(str(path))
+
+
+@pytest.mark.parametrize(
+    ("solution_sequence", "analysis_line", "error_match"),
+    [
+        (103, "", r"Unsupported solution sequence SOL 103"),
+        (101, "  ANALYSIS = NLSTAT", r"ANALYSIS=NLSTAT requires SOL 400"),
+        (400, "", r"SOL 400 requires ANALYSIS=NLSTAT"),
+    ],
+)
+def test_unsupported_solution_sequences_and_analysis_pairs_are_rejected(
+    tmp_path,
+    solution_sequence,
+    analysis_line,
+    error_match,
+):
+    path = tmp_path / "unsupported_analysis.dat"
+    path.write_text(
+        f"""SOL {solution_sequence}
+CEND
+SUBCASE 1
+{analysis_line}
+BEGIN BULK
+GRID,1,,0.,0.,0.
+ENDDATA
+"""
+    )
+
+    with pytest.raises(ValueError, match=error_match):
+        parse_nastran_input(str(path))
 
 
 EXTENDED_CAMPAIGN_COUNTS = {

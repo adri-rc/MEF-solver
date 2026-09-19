@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 
@@ -33,3 +34,28 @@ ENDDATA
     np.testing.assert_allclose(
         stiffness[np.ix_(plate_dofs, plate_dofs)], 0.0, atol=1.0e-12
     )
+
+
+def test_blank_mid1_is_rejected_explicitly_for_cquad4(tmp_path):
+    """CQUAD4 does not silently accept an unvalidated bending-only PSHELL."""
+    deck = tmp_path / "blank_mid1_cquad4.dat"
+    deck.write_text(
+        """SOL 101
+CEND
+BEGIN BULK
+PARAM,K6ROT,0.0
+MAT1,2,2.1E5,,0.3
+PSHELL,1,,1.0,2
+GRID,1,,0.,0.,0.
+GRID,2,,2.,0.,0.
+GRID,3,,2.,1.,0.
+GRID,4,,0.,1.,0.
+CQUAD4,1,1,1,2,3,4
+ENDDATA
+"""
+    )
+
+    model = parse_nastran_input(str(deck))
+    solver = LinearStaticSolver(model)
+    with pytest.raises(ValueError, match="CQUAD4.*MID1"):
+        solver.build_stiffness_matrix()

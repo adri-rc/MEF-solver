@@ -16,7 +16,7 @@ from src.preprocessing.data_model import (
     SinglePointLoad,
     SinglePointMoment,
 )
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.nonlinear_analysis import NonlinearStaticSolver
 
 

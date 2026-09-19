@@ -1,21 +1,21 @@
-# Factores PSHELL del CTRIA3: matrices de rigidez
+# CTRIA3 PSHELL factors: stiffness matrices
 
-Estos cuatro modelos de un único CTRIA3 aíslan los dos factores escalares de
-`PSHELL`. Los casos K01 y K02 cambian `TS/T` manteniendo `12I/T^3=1`; los
-casos K03 y K04 cambian `12I/T^3` manteniendo `TS/T=0.833333`.
+These four one-element models isolate the two scalar `PSHELL` factors. K01
+and K02 vary `TS/T` while keeping `12I/T^3=1`; K03 and K04 vary
+`12I/T^3` while keeping `TS/T=0.833333`.
 
-Todos los decks declaran `AUTOSPC=NO`, `K6ROT=0` y solicitan la matriz `KAAX`
-mediante `EXTOUT=DMIGPCH`. MSC Nastran conserva las referencias en los
-archivos PCH y los CSV derivados de ellos.
+Every deck sets `AUTOSPC=NO`, `K6ROT=0`, and requests the `KAAX` matrix
+through `EXTOUT=DMIGPCH`. Preserved PCH files and their derived CSV matrices
+provide the MSC references.
 
-MSC Nastran Student Edition 2026.1 ejecutó los cuatro decks el 3 de septiembre
-de 2026 sin mensajes `FATAL` y finalizó con `END OF JOB`. Los errores relativos
-de Frobenius solver/MSC son `9.96e-5` y `4.98e-4` para K01/K02, y menores que
-`1.9e-10` para K03/K04. Los términos representativos de K01/K02 permanecen
-por debajo de `1.23e-3` de error relativo.
+MSC Nastran Student Edition 2026.1 completed all four decks on 3 September
+2026 with `END OF JOB` and no `FATAL`. Solver/MSC relative Frobenius errors
+are `9.96e-5` and `4.98e-4` for K01/K02 and below `1.9e-10` for
+K03/K04. Representative K01/K02 terms remain below `1.23e-3` relative
+error.
 
-El material `MID3` de K01/K02 se hace deliberadamente flexible para que su
-aportación pueda aislarse sin convertir este control en una recalibración de
-la formulación de placa. K03/K04 emplean un `MID3` casi nulo para aislar el
-escalado de flexión. La campaña valida el uso de los factores leídos del DAT,
-no la equivalencia general de la placa CTRIA3 con la formulación nativa MSC.
+K01/K02 deliberately use a flexible `MID3` so its contribution can be
+isolated without turning this check into a plate-formulation recalibration.
+K03/K04 use a nearly zero `MID3` to isolate bending scaling. The campaign
+validates application of factors read from the deck, not general equivalence
+between the local CTRIA3 plate and MSC's native formulation.

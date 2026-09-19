@@ -214,7 +214,7 @@ energía. El caso 142 pasa con `rtol=5e-4` y deja de ser `xfail`.
 
 Los DAT y la lectura de sus salidas se describen en
 [`NONLINEAR_CBAR_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CBAR_CASES.md)
-y [`validacion.md`](validacion.md). El modelo de integración para la defensa
+y [`validation.md`](validation.md). El modelo de integración para la defensa
 se documenta en el
 [`README` del puente](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md).
 La ampliación de tres vanos, con 202 GRID y bases explícitas, está en

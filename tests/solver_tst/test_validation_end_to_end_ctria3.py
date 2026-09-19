@@ -1,17 +1,8 @@
-"""
-@file test_validation_end_to_end_ctria3.py
-@brief System tests validation against Nastran reference cases with CTRIA3 elements.
-@details
-Runs full analysis cycles (Parse -> Assemble -> Solve) on external .dat files
-and compares the resulting displacements against reference values extracted 
-from MSC Nastran .f06 output files.
-"""
-import pytest
-import os
-from pathlib import Path
+"""End-to-end CTRIA3 validation against MSC Nastran reference results."""
 
-# Imports de tu proyecto
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+import pytest
+
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 # --- DATABASE OF VALIDATION CASES ---
@@ -41,7 +32,7 @@ from src.solver.linear_static_solver import LinearStaticSolver
 #                    'bending_moment_y': m_y, 
 #                    'bending_moment_xy': m_xy,
 
-#                    # Tensiones Fibra Superior (Z = +t/2)
+#                    # Top-fiber stresses (Z = +t/2)
 #                    'stress_top_fiber_x': sig_x_top, 
 #                    'stress_top_fiber_y': sig_y_top,
 #                    'tau_top_fiber_xy': tau_xy_top,
@@ -49,7 +40,7 @@ from src.solver.linear_static_solver import LinearStaticSolver
 #                    'major_principal': s_major_principal, 
 #                    'minor_principal': s_minor_principal,
 #
-#                    # Tensiones Fibra Inferior (Z = -t/2)
+#                    # Bottom-fiber stresses (Z = -t/2)
 #                    'stress_bot_fiber_x': sig_x_bot,
 #                    'stress_bot_fiber_y': sig_y_bot,
 #                    'tau_bot_fiber_xy': tau_xy_bot,
@@ -62,13 +53,13 @@ from src.solver.linear_static_solver import LinearStaticSolver
 # DOF Index map: 0=Tx, 1=Ty, 2=Tz, 3=Rx, 4=Ry, 5=Rz
 
 VALIDATION_DATA = [
-    #region --- CASO 20: Single CTRIA3 Element (Membrane Tension) ---
+    # Case 20: single CTRIA3 element under membrane tension.
     {
         "case_name": "Ej20_Single_CTRIA3",
         "folder": "case_20",
         "filename": "Ej20.dat",
         "description": "Single CTRIA3 element under uniaxial tension. Validates Constant Strain Triangle (CST) formulation.",
-        "note": "Test análisis de membrana puro, no K6ROT.",
+        "note": "Pure membrane test without K6ROT.",
         "rel_tol": 0.01,
         "expected_displacements": {
             2: {0: 2.600000E-05, 1: 0.0, 2: 0.0},
@@ -114,14 +105,13 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-    #region --- CASO 32: Single CTRIA3 Element (Membrane Tension) ---
+    # Case 32: single skewed CTRIA3 element under membrane tension.
     {
         "case_name": "Ej32_3D_Skewed_Membrane",
         "folder": "case_32",
         "filename": "Ej32.dat",
         "description": "3D Skewed CTRIA3. Validates membrane, flexure stiffness & coords rotation.",
-        "note": "Test: K6ROT= 100.0 y MI3/E=0.",
+        "note": "K6ROT=100.0 and MID3/E=0.",
         "rel_tol": 0.01,
         "expected_displacements": {
             1: {
@@ -132,9 +122,9 @@ VALIDATION_DATA = [
             2: {
                 0: 1.323787E-05, # T1
                 1: 2.329877E-05, # T2
-                2: 0.0           # T3 (Debe ser 0 en membrana pura local si la carga está bien alineada)
+                2: 0.0           # T3 (zero for a correctly aligned local membrane load)
             },
-            # Node 3 (Restringido en Z en este caso según F06)
+            # Node 3 is constrained in Z in the reference F06.
             3: {
                 0: -5.701140E-07, # T1
                 1:  1.547815E-05, # T2
@@ -150,7 +140,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 5.242224E+05,
                 "sigma_y": 0.0,
                 "tau_xy": 0.0,
@@ -158,7 +148,7 @@ VALIDATION_DATA = [
                 "major_principal": 5.242224E+05,
                 "minor_principal": 0.0,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   2.621112E+03,
                 "membrane_force_y":   0.0, 
                 "membrane_force_xy":  0.0,
@@ -186,16 +176,13 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 33: 3D Skewed - 'Pure Bending' Load Configuration ---
-    # Descripcion: Carga normal al plano en Nodo 3.
+    # Case 33: skewed 3D element with a normal load at node 3.
     {
         "case_name": "Ej33_3D_Skewed_Bending_Mixed",
         "folder": "case_33",
         "filename": "Ej33.dat",
-        "description": "3D Skewed CTRIA3 with nomral membrane plane load. Validates mixed coupling/reactions, with no pure shear stiffnes.",
-        "note": "Desplazamientos bien, pero problemas con los signos de los mosmentos. Test: K6ROT= 100.0 y MI3/E=0.",
+        "description": "Skewed 3D CTRIA3 under a load normal to its plane. Validates mixed coupling and reactions without transverse shear stiffness.",
+        "note": "Displacements match; moment-sign differences remain. K6ROT=100.0 and MID3/E=0.",
         "rel_tol": 0.01,    
         #"abs_tol_disp": 1e-5,
         #"abs_tol_force": 1e-3,
@@ -239,19 +226,19 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Fuerzas de Membrana
+                # Membrane forces
                 "membrane_force_x":   1.398897E+02,
                 "membrane_force_y":   4.239083E+02,
                 "membrane_force_xy":  1.870749E+02,
                 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "bending_moment_x":   7.500000E+01,
                 "bending_moment_y":   1.666667E+02,
                 "bending_moment_xy":  7.280867E+01,
                 'shear_force_x': -4.805034E-22, 
                 'shear_force_y': -8.814329E-22,
                 
-                # Top Fiber (Z2 = +t/2, Línea 2 en el f06)
+                # Top fiber (Z2 = +t/2, second F06 line)
                 "stress_top_fiber_x":  -1.797202E+07,
                 "stress_top_fiber_y":  -3.991522E+07,
                 "tau_top_fiber_xy":    -1.743667E+07,
@@ -259,7 +246,7 @@ VALIDATION_DATA = [
                 "major_principal_top": -8.342327E+06,
                 "minor_principal_top": -4.954491E+07,
             
-                # Bottom Fiber (Z1 = -t/2, Línea 1 en el f06)
+                # Bottom fiber (Z1 = -t/2, first F06 line)
                 "stress_bot_fiber_x":   1.802798E+07,
                 "stress_bot_fiber_y":   4.008478E+07,
                 "tau_bot_fiber_xy":     1.751150E+07,
@@ -269,15 +256,13 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 34: CTRIA3 Plano XY, Validación Drilling DOF ---
+    # Case 34: CTRIA3 in the XY plane, drilling-DOF validation.
     {
         "case_name": "Ej34_CTRIA3_Drilling_DOF",
         "folder": "case_34",
         "filename": "Ej34.dat",
         "description": "Single CTRIA3 element in XY plane. Validates CST + Drilling dof formulation.",
-        "note": "Vaqlido la implmentación del drilling dof, al ponerlo K6ROT = 100. y eliminando SPC de drilling Dof.",
+        "note": "Validates the drilling DOF with K6ROT=100.0 and no drilling SPC.",
         "rel_tol": 0.01, 
         "expected_displacements": {
             2: {
@@ -307,7 +292,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "membrane_force_x":   1.154734E+03,
                 "membrane_force_y":  -5.684342E-14,
                 "membrane_force_xy":  2.000000E+03,
@@ -336,15 +321,13 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 35: CTRIA3 Plano XY, Isosceles Skewness alto 3D Force ---
+    # Case 35: highly skewed isosceles CTRIA3 in the XY plane under a 3D load.
     {
         "case_name": "Ej35_CTRIA3_XY_Skewed",
         "folder": "case_35", 
         "filename": "Ej35.dat",
         "description": "CTRIA3 in XY plane with high skewness 3D loaded. Validates element stability under geometric distortion.",
-        "note": "Valido la implementación del drilling dof, al ponerlo K6ROT = 100. y eliminando SPC de drilling Dof.",
+        "note": "Validates the drilling DOF with K6ROT=100.0 and no drilling SPC.",
         "rel_tol": 0.01,
         "expected_displacements": {
             2: {
@@ -382,7 +365,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "membrane_force_x":   1.333333E+03,
                 "membrane_force_y":  -4.000000E+04,
                 "membrane_force_xy":  3.966667E+04,
@@ -392,7 +375,7 @@ VALIDATION_DATA = [
                 'shear_force_x':      0.0, 
                 'shear_force_y':      0.0,
 
-                # Tensiones Fibra Superior (z = +t/2)
+                # Top-fiber stresses (z = +t/2)
                 "stress_top_fiber_x":  1.333333E+06,
                 "stress_top_fiber_y": -4.000000E+07,
                 "tau_top_fiber_xy":    3.966667E+07,
@@ -411,15 +394,13 @@ VALIDATION_DATA = [
         }
         
     },
-    #endregion
-
-    #region --- CASO 36: CTRIA3 Plano XY, Irregular offset ---
+    # Case 36: irregularly offset CTRIA3 in the XY plane.
     {
         "case_name": "Ej36_CTRIA3_XY_Irregular_Offset",
         "folder": "case_36", 
         "filename": "Ej36.dat",
         "description": "CTRIA3 in XY plane, large coordinates without origin (0,0). Validates coordinate projection independence.",
-        "note": "El resultado de desplazamiento no tiene sentido (resultado que coincide), pero no tiene sentido comparar pospocreso del caso",
+        "note": "The displacement matches the reference but is physically meaningless, so element recovery is not compared.",
         "rel_tol": 0.02,
         #"rel_tol_force": 0.11,
         "expected_displacements": {
@@ -450,7 +431,7 @@ VALIDATION_DATA = [
                 5: -3.330049E-08
             }
         },
-        # NO TIENE SENTIDO ESTA COMPARATIVA DE REACCIONES PUES EL ELEMENTO NO TIENE SENTIDO POR LOS RESULTADOS DE DESPLAZAMIENTOS
+        # These reactions are retained only to reproduce the singular reference case.
         "expected_reactions": {
             1: {
                 0:   4.399524E+01,
@@ -475,15 +456,13 @@ VALIDATION_DATA = [
             }
         },
     },
-    #endregion
-
-    #region --- CASO 37: 2 CTRIAs Plano XZ ---
+    # Case 37: two CTRIA3 elements in the XZ plane.
     {
         "case_name": "Ej37_CTRIA3_XZ_2Elems",
         "folder": "case_37", 
         "filename": "Ej37.dat",
         "description": "Two CTRIA3 elements sharing nodes in XZ plane. Validates local axes transformation out of XY plane.",
-        "note": "Validación en el plano de dos ctrias, solo con rigidez a membrana.",
+        "note": "Validates two connected CTRIA3 elements with membrane stiffness only.",
         "rel_tol": 0.01,
         "expected_displacements": {
             2: {
@@ -565,17 +544,16 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 38: 2 CTRIAs Plano YZ ---
+    # Case 38: two CTRIA3 elements in the YZ plane.
     {
         "case_name": "Ej38_CTRIA3_YZ_2Elems",
         "folder": "case_38", 
         "filename": "Ej38.dat",
         "description": "Two CTRIA3 elements sharing nodes in YZ plane. Validates full 3D transformation capability.",
-        "note": "Validación de dos ctrias conectados, con rigidez a membrana y flexión y carga 3D.",
+        "note": "Validates two connected CTRIA3 elements with membrane and bending stiffness under a 3D load.",
         "rel_tol": 0.01,
-        "abs_tol_force": 0.5, # las deformaciones resultado (que coinciden) no tienen sentido físico por lo qeu las reacciones tampoco cuadran mucho, pero está bien, todo es del orden. 
+        # The singular reference produces nonphysical displacements; compare reactions by order of magnitude.
+        "abs_tol_force": 0.5,
         "expected_displacements": {
             2: {
                 0: -6.240000E+18,
@@ -624,7 +602,7 @@ VALIDATION_DATA = [
                 'shear_force_x':     -1.000000E-02, 
                 'shear_force_y':     1.000000E-02,
 
-                # Tensiones Fibra Inferior (z = -t/2)
+                # Bottom-fiber stresses (z = -t/2)
                 "stress_bot_fiber_x":  2.450750E-01,
                 "stress_bot_fiber_y":  2.532837E-01,
                 "tau_bot_fiber_xy":   -1.441044E-01,
@@ -632,7 +610,7 @@ VALIDATION_DATA = [
                 "major_principal_bot": 3.933422E-01,
                 "minor_principal_bot": 1.050165E-01,
 
-                # Tensiones Fibra Superior (z = +t/2)
+                # Top-fiber stresses (z = +t/2)
                 "stress_top_fiber_x":  2.749250E-01,
                 "stress_top_fiber_y":  2.667163E-01,
                 "tau_top_fiber_xy":   -1.358956E-01,
@@ -652,7 +630,7 @@ VALIDATION_DATA = [
                 'shear_force_y':     -1.000000E-02,
 
 
-                # Tensiones Fibra Inferior (z = -t/2)
+                # Bottom-fiber stresses (z = -t/2)
                 "stress_bot_fiber_x":  2.749250E-01,
                 "stress_bot_fiber_y":  2.667163E-01,
                 "tau_bot_fiber_xy":   -1.358956E-01,
@@ -660,7 +638,7 @@ VALIDATION_DATA = [
                 "major_principal_bot": 4.067782E-01,
                 "minor_principal_bot": 1.348631E-01,
 
-                # Tensiones Fibra Superior (z = +t/2)
+                # Top-fiber stresses (z = +t/2)
                 "stress_top_fiber_x":  2.450750E-01,
                 "stress_top_fiber_y":  2.532837E-01,
                 "tau_top_fiber_xy":   -1.441044E-01,
@@ -670,9 +648,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 39: Plano Arbitrario (Inclinado 13.5º), Alta Distorsion ---
+    # Case 39: highly distorted elements in an arbitrary plane tilted 13.5 degrees.
     {
         "case_name": "Ej39_CTRIA3_Arbitrary_Plane_Distorted",
         "folder": "case_39",
@@ -771,9 +747,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 40: Trapezoide Irregular en Plano XY, 10 Elementos ---
+    # Case 40: ten-element irregular trapezoid in the XY plane.
     {
         "case_name": "Ej40_CTRIA3_Trapezoid_XY",
         "folder": "case_40", 
@@ -840,9 +814,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 41: Trapezoide en Plano Arbitrario 3D, 10 Elementos ---
+    # Case 41: ten-element trapezoid in an arbitrary 3D plane.
     {
         "case_name": "Ej41_CTRIA3_Trapezoid_3D",
         "folder": "case_41", 
@@ -909,7 +881,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 1.304317E+05,
                 "sigma_y": 1.052227E+05,
                 "tau_xy": -1.111881E+05,
@@ -917,7 +889,7 @@ VALIDATION_DATA = [
                 "major_principal": 2.297275E+05,
                 "minor_principal": 5.926994E+03,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  1.304317E+02,
                 "membrane_force_y":  1.052227E+02,
                 "membrane_force_xy": -1.111881E+02,
@@ -944,7 +916,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 5.926994E+03
             },
             2: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 1.060832E+05,
                 "sigma_y": 4.326561E+05,
                 "tau_xy":  1.586497E+05,
@@ -952,7 +924,7 @@ VALIDATION_DATA = [
                 "major_principal": 4.970365E+05,
                 "minor_principal": 4.170287E+04,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  1.060832E+02,
                 "membrane_force_y":  4.326561E+02,
                 "membrane_force_xy": 1.586497E+02,
@@ -979,7 +951,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 4.170287E+04
             },
             10: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": -1.347920E+05,
                 "sigma_y":  1.216227E+05,
                 "tau_xy":   3.243900E+05,
@@ -987,7 +959,7 @@ VALIDATION_DATA = [
                 "major_principal": 3.422219E+05,
                 "minor_principal": -3.553913E+05,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -1.347920E+02,
                 "membrane_force_y":   1.216227E+02,
                 "membrane_force_xy":  3.243900E+02,
@@ -1015,9 +987,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 42: Trapecio Plano XZ, Multi-Material (8 Elementos) ---
+    # Case 42: eight-element, multi-material trapezoid in the XZ plane.
     {
         "case_name": "Ej42_CTRIA3_Trapezoid_XZ_MultiMat",
         "folder": "case_42",
@@ -1028,12 +998,12 @@ VALIDATION_DATA = [
         "abs_tol_force": 1e-3,
 
         "expected_displacements": {
-            1:  {0: -7.154935E-06, 1: 0.0, 2: -3.398146E-06, 3:0.0, 4: 1.527657E-07}, # Nodo empotrado
+            1:  {0: -7.154935E-06, 1: 0.0, 2: -3.398146E-06, 3:0.0, 4: 1.527657E-07}, # Clamped node
             5:  {0: 8.620173E-06,  1: 0.0, 2:  4.231403E-06, 3:0.0, 4: 1.717897E-07},
             9:  {0: 2.130888E-05,  1: 0.0, 2:  3.170477E-05, 3:0.0, 4:-5.673143E-07},
         },
         "expected_reactions": {
-            # Nodos empotrados 2, 4, 6, 8 evaluados en X(0) y Z(2)
+            # Clamped nodes 2, 4, 6, and 8 evaluated in X (0) and Z (2).
             2: { 0:  1.216458E+02, 2: -2.610722E+02, 4: -1.406964E-01},
             4: { 0:  2.026487E+02, 2:  5.495897E+02, 4: -2.216302E-01},
             6: { 0: -2.742055E+03, 2:  2.498112E+02, 4:  -1.837294E-01},
@@ -1041,7 +1011,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 3.824137E+04,
                 "sigma_y": 1.119145E+04,
                 "tau_xy":  2.692750E+03,
@@ -1049,7 +1019,7 @@ VALIDATION_DATA = [
                 "major_principal": 3.850683E+04,
                 "minor_principal": 1.092600E+04,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   3.824137E+01,
                 "membrane_force_y":   1.119145E+01,
                 "membrane_force_xy":  2.692750E+00,
@@ -1076,7 +1046,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 1.092600E+04
             },
             2: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 6.207154E+04,
                 "sigma_y": 2.387653E+04,
                 "tau_xy":  2.259487E+04,
@@ -1084,7 +1054,7 @@ VALIDATION_DATA = [
                 "major_principal": 7.255854E+04,
                 "minor_principal": 1.338953E+04,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   6.207154E+01,
                 "membrane_force_y":   2.387653E+01,
                 "membrane_force_xy":  2.259487E+01,
@@ -1111,7 +1081,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 1.338953E+04
             },
             4: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": -7.061358E+02,
                 "sigma_y": -2.017531E+03,
                 "tau_xy":   8.946562E+04,
@@ -1119,7 +1089,7 @@ VALIDATION_DATA = [
                 "major_principal": 8.810619E+04,
                 "minor_principal": -9.082986E+04,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -7.061358E-01,
                 "membrane_force_y":  -2.017531E+00,
                 "membrane_force_xy":  8.946562E+01,
@@ -1146,7 +1116,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -9.082986E+04
             },
             5: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x":  3.043178E+03,
                 "sigma_y": -5.353096E+02,
                 "tau_xy":  -1.078739E+03,
@@ -1154,7 +1124,7 @@ VALIDATION_DATA = [
                 "major_principal": 3.343210E+03,
                 "minor_principal": -8.353412E+02,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   3.043178E+00,
                 "membrane_force_y":  -5.353096E-01,
                 "membrane_force_xy": -1.078739E+00,
@@ -1181,7 +1151,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -8.353412E+02
             },
             7: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": -3.244819E+05,
                 "sigma_y":  2.192878E+05,
                 "tau_xy":  -3.854987E+05,
@@ -1189,7 +1159,7 @@ VALIDATION_DATA = [
                 "major_principal": 4.191345E+05,
                 "minor_principal": -5.243286E+05,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -3.244819E+02,
                 "membrane_force_y":   2.192878E+02,
                 "membrane_force_xy": -3.854987E+02,
@@ -1216,7 +1186,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -5.243286E+05
             },
             8: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 1.107391E+05,
                 "sigma_y": 1.918343E+05,
                 "tau_xy": -6.898659E+04,
@@ -1224,7 +1194,7 @@ VALIDATION_DATA = [
                 "major_principal": 2.313071E+05,
                 "minor_principal": 7.126633E+04,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.107391E+02,
                 "membrane_force_y":   1.918343E+02,
                 "membrane_force_xy": -6.898659E+01,
@@ -1252,9 +1222,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 43: Trapecio Plano YZ, Multi-Material (8 Elementos) ---
+    # Case 43: eight-element, multi-material trapezoid in the YZ plane.
     {
         "case_name": "Ej43_CTRIA3_Trapezoid_YZ_MultiMat",
         "folder": "case_43",
@@ -1274,7 +1242,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -3.890586E+00,
                 "membrane_force_y":   3.355102E+00,
                 "membrane_force_xy": -1.415027E-01,
@@ -1301,7 +1269,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -3.893348E+03
             },
             2: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -3.276435E+00,
                 "membrane_force_y":  -1.562509E+01,
                 "membrane_force_xy":  5.977812E+00,
@@ -1328,7 +1296,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -3.608949E+03
             },
             3: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.381637E+02,
                 "membrane_force_y":   9.223628E+01,
                 "membrane_force_xy": -8.527009E+01,
@@ -1355,7 +1323,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 2.689190E+03
             },
             4: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.020218E+01,
                 "membrane_force_y":   2.914909E+01,
                 "membrane_force_xy": -2.031564E+00,
@@ -1382,7 +1350,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": 6.657866E+02
             },
             5: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -4.510177E+01,
                 "membrane_force_y":  -1.428301E+02,
                 "membrane_force_xy":  1.427830E+01,
@@ -1409,7 +1377,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -7.243675E+03
             },
             6: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -2.000000E+01,
                 "membrane_force_y":  -6.666667E+01,
                 "membrane_force_xy":  6.666000E+01,
@@ -1436,7 +1404,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -2.279182E+03
             },
             7: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.167642E+02,
                 "membrane_force_y":  -1.522493E+02,
                 "membrane_force_xy": -2.843417E+01,
@@ -1463,7 +1431,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot": -1.552219E+03
             },
             8: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   4.434409E+01,
                 "membrane_force_y":  -2.870864E+02,
                 "membrane_force_xy": -1.123684E+02,
@@ -1491,11 +1459,9 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 44: Flexión Pura Plano XY ---
+    # Case 44: pure bending in the XY plane.
     {
-        "case_name": "CASO 44: Flexión CTRIA3 XY",
+        "case_name": "Case 44: CTRIA3 bending in XY",
         "folder": "case_44",
         "filename": "case_44.dat",
         "description": "",
@@ -1504,7 +1470,7 @@ VALIDATION_DATA = [
         "abs_tol_disp": 1e-5,
         "abs_tol_force": 1e-3,
         "expected_displacements": {
-            # Desplazamientos extraídos del caso 44 (w, theta_x, theta_y)
+            # Reference case 44 displacements (w, theta_x, theta_y).
             2: {0:0.0, 1:0.0, 2: 6.240000E+25, 3: 0.0, 4: 0.0},
             3: {0:0.0, 1:0.0, 2: 6.240000E+25, 3: 0.0, 4: 0.0}
         },
@@ -1517,7 +1483,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             50: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  0.0,
                 "membrane_force_y":  0.0,
                 "membrane_force_xy": 0.0,
@@ -1545,16 +1511,15 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 45: Cortadura transversal 2 elementos ---
+    # Case 45: transverse shear in two elements.
     {
-        "case_name": "CASO 45: Cortadura transversal 2 CTRIAs",
+        "case_name": "Case 45: transverse shear in two CTRIA3 elements",
         "folder": "case_45",
         "filename": "case_45.dat",
         "rel_tol": 0.01,  
         "abs_tol_disp": 1e-1,
-        "abs_tol_force": 2.0, # al tener deformaciones en giros tan elevadas hay que levantar la mano con la toleracia en los esfuerzos
+        # Large rotations in the singular reference require a wider force tolerance.
+        "abs_tol_force": 2.0,
         "expected_displacements": {
             1: {
                 0: 0.0,
@@ -1605,7 +1570,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  0.0,
                 "membrane_force_y":  0.0,
                 "membrane_force_xy": 0.0,
@@ -1632,7 +1597,7 @@ VALIDATION_DATA = [
                 "minor_principal_bot":-1.116279E+01
             },
             2: {
-                # Membrana / Midplane
+                # Membrane / mid-plane
                 "sigma_x": 0.0,
                 "sigma_y": 0.0,
                 "tau_xy": 0.0,
@@ -1640,7 +1605,7 @@ VALIDATION_DATA = [
                 "major_principal": 0.0,
                 "minor_principal": 0.0,
 
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  0.0,
                 "membrane_force_y":  0.0,
                 "membrane_force_xy": 0.0,
@@ -1668,11 +1633,9 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO 46: Rotación de Matrices ---  
+    # Case 46: matrix rotation.
     {
-        "case_name": "CASO 46: Rotación de Matrices",
+        "case_name": "Case 46: matrix rotation",
         "folder": "case_46",
         "filename": "Ej46.dat",
         "rel_tol": 0.01,    
@@ -1726,8 +1689,8 @@ VALIDATION_DATA = [
                 "bending_moment_x":   0.0,
                 "bending_moment_y":   0.0,
                 "bending_moment_xy":  5.075695E-06,
-                "shear_force_x":     0.0, # Prácticamente cero en F06
-                "shear_force_y":     0.0, # Prácticamente cero en F06
+                "shear_force_x":     0.0, # Effectively zero in the F06.
+                "shear_force_y":     0.0, # Effectively zero in the F06.
                 
                 # Top Fiber (z = +t/2)
                 "stress_top_fiber_x": -6.120276E+02,
@@ -1748,11 +1711,9 @@ VALIDATION_DATA = [
         },
         
     },
-    #endregion
-
-    #region --- CASO 47: Convergencia de Malla 18 CTRIA3 ---
+    # Case 47: mesh convergence with 18 CTRIA3 elements.
     {
-        "case_name": "CASO 47: Convergencia de Malla 18 CTRIA3",
+        "case_name": "Case 47: 18-element CTRIA3 mesh convergence",
         "folder": "case_47",
         "filename": "case_47.dat",
         "rel_tol": 0.2,
@@ -1840,14 +1801,13 @@ VALIDATION_DATA = [
         },
         
     },
-    #endregion
-    #region --- CASO 48: Análogo al caso 43 pero analizando más flexión ---
+    # Case 48: case 43 geometry with increased bending response.
     {
         "case_name": "Ej48_CTRIA3_Trapezoid_YZ_MultiMat",
         "folder": "case_48",
         "filename": "Ej48.dat",
-        "description": " (As Case 43, but with more bending analisis) 8 CTRIA3 elements with 8 different materials in YZ plane.",
-        "note": "Multimateial, skeewe mesh anf 3D force out of membrane plane. K6ROT=100 & MID3/E=0.0.",
+        "description": "Eight CTRIA3 elements with eight materials in the YZ plane, based on case 43 with increased bending.",
+        "note": "Multi-material skewed mesh under an out-of-plane 3D load; K6ROT=100 and MID3/E=0.0.",
         
         "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
@@ -1924,7 +1884,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             3: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.381678E+00,
                 "membrane_force_y":   9.223219E-01,
                 "membrane_force_xy": -8.527224E-01,
@@ -1951,7 +1911,7 @@ VALIDATION_DATA = [
                 #"minor_principal_bot": 5.365060E+03
             },
             6: {
-               # Fuerzas y Momentos
+               # Forces and moments
                 "membrane_force_x":  -1.600000E-01,
                 "membrane_force_y":  -5.333333E-01,
                 "membrane_force_xy":  7.999816E-01,
@@ -1980,15 +1940,13 @@ VALIDATION_DATA = [
 
         }
     },
-    #endregion
-
-        #region --- CASO 49: Análogo al caso 48 pero con K6ROT=23.0 ---
+    # Case 49: case 48 with K6ROT=23.0.
     {
         "case_name": "Ej49_CTRIA3_Trapezoid_MultiMat_K6ROT=23.0",
         "folder": "case_49",
         "filename": "Ej49.dat",
-        "description": "(As Case 48, but with K6ROT = 23.0) 8 CTRIA3 elements with 8 different materials in YZ plane.",
-        "note": "Multimateial, skeewe mesh anf 3D force out of membrane plane. K6ROT=23.0 & MID3/E=0.0.",
+        "description": "Eight CTRIA3 elements with eight materials in the YZ plane, based on case 48 with K6ROT=23.0.",
+        "note": "Multi-material skewed mesh under an out-of-plane 3D load; K6ROT=23.0 and MID3/E=0.0.",
         
         "rel_tol": 0.01,    
         "abs_tol_disp": 1e-5,
@@ -2071,7 +2029,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             3: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   1.381678E+00,
                 "membrane_force_y":   9.223219E-01,
                 "membrane_force_xy": -8.527224E-01,
@@ -2098,7 +2056,7 @@ VALIDATION_DATA = [
                 #"minor_principal_bot": 5.365060E+03
             },
             6: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  -1.600000E-01,
                 "membrane_force_y":  -5.333333E-01,
                 "membrane_force_xy":  7.999816E-01,
@@ -2126,12 +2084,10 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO MANUAL: Membrana Pura ---
+    # Manual case: pure membrane response.
     {
-        "case_name": "Ej_Manual_Membrana_Pura",
-        "folder": "case_manual_con_cargas", # <-- Asegúrate de que apunte a la carpeta correcta
+        "case_name": "Manual_Pure_Membrane",
+        "folder": "case_manual_con_cargas",
         "filename": "Ej_manual_Kglobal_membrana_con carga en plano.dat",
         "rel_tol": 1e-3,
         "expected_displacements": {
@@ -2143,7 +2099,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":  200.0,
                 "membrane_force_y":  -2.842171E-14,  
                 "membrane_force_xy": 0.0,
@@ -2171,29 +2127,27 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-
-    #region --- CASO MANUAL: Flexión Pura ---
+    # Manual case: pure bending.
     {
-        "case_name": "Ej_Manual_Flexion_Pura",
-        "folder": "case_manual_con_cargas", # <-- Asegúrate de que coincida con tu carpeta
+        "case_name": "Manual_Pure_Bending",
+        "folder": "case_manual_con_cargas",
         "filename": "Ej_manual_Kglobal_flexion_pura_MID3_cero_con carga.dat",
-        "rel_tol": 0.05, # Dejamos un 5% de tolerancia por diferencias sutiles entre teorías de placas
+        "rel_tol": 0.05, # Allows for small differences between plate theories.
         "expected_displacements": {
-            # Desplazamientos Rotacionales R1 (Rot-X) y R2 (Rot-Y) en el Nodo 3
+            # Rotational displacements R1 (Rot-X) and R2 (Rot-Y) at node 3.
             3: {3: 1.040000E-01,
                 4:-3.626297E-15}
         },
         "expected_reactions": {
-            # Reacción del momento puro en el Nodo 1
+            # Pure-moment reaction at node 1.
             1: {2: 8.333333E-12,
                 3: -1.000000E+03,
                 4: 3.000000E+02},
             2: {2: -1.429760E-25,
-                3: 2.440777E-11,# Prácticamente cero
+                3: 2.440777E-11, # Effectively zero.
                 4: 3-3.000000E+02},
             3:{
-                2:-8.333333E-12, # Prácticamente cero
+                2:-8.333333E-12, # Effectively zero.
                 3:0.0,
                 4:0.0,
                 5:0.0
@@ -2201,7 +2155,7 @@ VALIDATION_DATA = [
         },
         "expected_element_forces": {
             1: {
-                # Fuerzas y Momentos
+                # Forces and moments
                 "membrane_force_x":   0.0,
                 "membrane_force_y":   0.0,
                 "membrane_force_xy":  0.0,
@@ -2229,8 +2183,7 @@ VALIDATION_DATA = [
             }
         }
     },
-    #endregion
-    #region --- CASO MANUAL: Fitting L con Carga de Traccion ---
+    # Manual case: L fitting under tensile load.
     {
         "case_name": "Ej50_Fitting_L",
         "folder": "case_50",
@@ -2253,7 +2206,7 @@ VALIDATION_DATA = [
             10: {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0},
             30: {0: 0.0,           1: 0.0,          2: 0.0,           3: 0.0,           4: 0.0,          5: 0.0}
         },
-        # --- REACCIONES (SPCFORCES) ---
+        # Reactions (SPCFORCES)
         "expected_reactions": {
             4:  {0: 4.658708E+02,  1: -2.469092E+02, 2: 6.681161E-29,  3: 1.933096E-03,  4: -3.068949E-01, 5: 1.323872E-01},
             5:  {0: -5.237704E+02, 1: -2.487398E+02, 2: 1.302834E-28,  3: 4.789982E-02,  4: -4.047260E-01, 5: 1.231769E-01},
@@ -2263,16 +2216,16 @@ VALIDATION_DATA = [
             10: {0: 2.962108E+01,  1: -3.007192E+00, 2: -9.249485E+02, 3: 1.310443E+00,  4: 5.167269E+00,  5: 3.178237E-02},
             30: {0: 2.827853E+01,  1: -1.343762E+00, 2: 7.494848E+01,  3: 9.182495E-01,  4: 4.494156E+00,  5: 2.690963E-02}
         },
-        # --- FUERZAS Y TENSIONES EN ELEMENTOS ---
+        # Element forces and stresses
         "expected_element_forces": {
-            # Elementos CBAR 
+            # CBAR elements
             # ----------------------------------------------------
             201: {
                 "axial_force":   9.249485E+02,
                 "axial_stress":  9.249485E+05,
                 "torque":       -3.178237E-02,
                 
-                # Mapeo a las variables de tu funcion: forces_n1 (End A) y forces_n2 (End B)
+                # Mapping to forces_n1 (end A) and forces_n2 (end B).
                 #"forces_n1.Mz":  9.643272E+00,   # Bending Moment End-A Plane 1
                 #"forces_n1.My":  1.931528E-01,   # Bending Moment End-A Plane 2
                 "forces_n2.Mz": -5.167269E+00,   # Bending Moment End-B Plane 1
@@ -2280,23 +2233,23 @@ VALIDATION_DATA = [
                 #"forces_n1.Fy":  2.962108E+01,   # Shear Plane 1
                 #"forces_n1.Fz":  3.007192E+00,   # Shear Plane 2
                 
-                # Puntos de Tensión (CBAR 201) - End A
+                # CBAR 201 stress points at end A.
                 "stress_points.P0.sigma_bending": 0.0, # SA1
                 "stress_points.P1.sigma_bending": 0.0, # SA2
                 "stress_points.P2.sigma_bending": 0.0, # SA3
                 "stress_points.P3.sigma_bending": 0.0, # SA4
                 
-                # Tensiones Max y Min (End A y End B coinciden en tu f06)
+                # Maximum and minimum stresses (ends A and B match in the F06).
                 "max_total_stress": 9.249485E+05, # SA-MAX / SB-MAX
                 "min_total_stress": 9.249485E+05  # SA-MIN / SB-MIN
             },
-            # Elemento CBAR
+            # CBAR element
             202: {
                 "axial_force":  -7.494848E+01,
                 "axial_stress": -7.494848E+04,
                 "torque":       -2.690963E-02,
                 
-                # Mapeo a las variables de tu funcion
+                # Mapping to forces_n1 (end A) and forces_n2 (end B).
                 #"forces_n1.Mz":  9.645107E+00,
                 #"forces_n1.My": -2.463686E-01,
                 "forces_n2.Mz": -4.494156E+00,
@@ -2304,7 +2257,7 @@ VALIDATION_DATA = [
                 #"forces_n1.Fy":  2.827853E+01,
                 #"forces_n1.Fz":  1.343762E+00,
                 
-                # Puntos de Tensión (CBAR 202)
+                # CBAR 202 stress points.
                 "stress_points.P0.sigma_bending": 0.0,
                 "stress_points.P1.sigma_bending": 0.0,
                 "stress_points.P2.sigma_bending": 0.0,
@@ -2313,9 +2266,9 @@ VALIDATION_DATA = [
                 "max_total_stress": -7.494848E+04,
                 "min_total_stress": -7.494848E+04
             },
-            # Elementos CTRIA 
+            # CTRIA3 elements
             # ----------------------------------------------------
-            # Elemento 1
+            # Element 1
             1: {
                 "membrane_force_x":   2.498615E+02, "membrane_force_y":  -1.272198E+02, "membrane_force_xy": -1.546065E+02,
                 "bending_moment_x":   4.114569E-01, "bending_moment_y":   1.281887E-01, "bending_moment_xy":  1.322453E-01,
@@ -2325,7 +2278,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x": 6.321224E+03, "stress_top_fiber_y":-8.283820E+03, "tau_top_fiber_xy":  -9.714006E+03,
                 "von_mises_top":      2.107200E+04, "major_principal_top": 1.117143E+04, "minor_principal_top":-1.313402E+04
             },
-            # Elemento 2
+            # Element 2
             2: {
                 "membrane_force_x":   2.643027E+02, "membrane_force_y":  -2.882482E+02, "membrane_force_xy": -2.152652E+02,
                 "bending_moment_x":   2.061114E-01, "bending_moment_y":   1.476531E-01, "bending_moment_xy":  9.713352E-02,
@@ -2335,7 +2288,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x": 1.012346E+04, "stress_top_fiber_y":-1.662721E+04, "tau_top_fiber_xy":  -1.222026E+04,
                 "von_mises_top":      3.154802E+04, "major_principal_top": 1.486537E+04, "minor_principal_top":-2.136911E+04
             },
-            # Elemento 3
+            # Element 3
             3: {
                 "membrane_force_x":  -4.087689E+02, "membrane_force_y":  -1.039092E+02, "membrane_force_xy": -2.371936E+01,
                 "bending_moment_x":   3.176510E-01, "bending_moment_y":   2.775008E-01, "bending_moment_xy": -1.973886E-01,
@@ -2345,7 +2298,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x":-2.520321E+04, "stress_top_fiber_y":-9.357971E+03, "tau_top_fiber_xy":   1.774861E+03,
                 "von_mises_top":      2.227943E+04, "major_principal_top":-9.161599E+03, "minor_principal_top":-2.539958E+04
             },
-            # Elemento 101
+            # Element 101
             101: {
                 "membrane_force_x":   6.889222E+02, "membrane_force_y":   1.722289E+02, "membrane_force_xy":  3.444594E+02,
                 "bending_moment_x":   7.410485E-03, "bending_moment_y":   1.852621E-03, "bending_moment_xy":  3.705242E-03,
@@ -2355,7 +2308,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x": 6.844759E+04, "stress_top_fiber_y": 1.711173E+04, "tau_top_fiber_xy":   3.422363E+04,
                 "von_mises_top":      8.555933E+04, "major_principal_top": 8.555933E+04, "minor_principal_top":-3.265523E-07
             },
-            # Elemento 102
+            # Element 102
             102: {
                 "membrane_force_x":   1.810581E+01, "membrane_force_y":   3.973164E+02, "membrane_force_xy":  5.460204E+02,
                 "bending_moment_x":   3.251303E-03, "bending_moment_y":   8.287009E-03, "bending_moment_xy": -1.467831E-02,
@@ -2365,7 +2318,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x": 1.615502E+03, "stress_top_fiber_y": 3.923442E+04, "tau_top_fiber_xy":   5.548274E+04,
                 "von_mises_top":      1.035064E+05, "major_principal_top": 7.900935E+04, "minor_principal_top":-3.815942E+04
             },
-            # Elemento 103
+            # Element 103
             103: {
                 "membrane_force_x":   8.237398E+01, "membrane_force_y":   4.165969E+02, "membrane_force_xy":  1.391202E+02,
                 "bending_moment_x":   1.279500E-03, "bending_moment_y":   7.695468E-03, "bending_moment_xy":  1.483860E-02,
@@ -2375,7 +2328,7 @@ VALIDATION_DATA = [
                 "stress_top_fiber_x": 8.160628E+03, "stress_top_fiber_y": 4.119796E+04, "tau_top_fiber_xy":   1.302171E+04,
                 "von_mises_top":      4.400410E+04, "major_principal_top": 4.571334E+04, "minor_principal_top": 3.645246E+03
             },
-            # Elemento 104
+            # Element 104
             104: {
                 "membrane_force_x":   1.282722E+02, "membrane_force_y":   3.202947E+01, "membrane_force_xy":  6.409753E+01,
                 "bending_moment_x":  -7.830944E-03, "bending_moment_y":  -1.957736E-03, "bending_moment_xy": -3.915472E-03,
@@ -2388,7 +2341,6 @@ VALIDATION_DATA = [
         }
 
     },
-    #endregion
     {
         "case_name": "CTRIA3_PSHELL_TS_T_0.25_E2E",
         "folder": "case_ctria3_pshell_factors_e2e",
@@ -2516,20 +2468,11 @@ VALIDATION_DATA = [
 
 
 class TestNastranEndToEnd:
-    """
-    @class TestNastranEndToEnd
-    @brief Automated system testing using parametrization.
-    """
+    """Run the parametrized CTRIA3 validation cases."""
 
     @pytest.mark.parametrize("case_data", VALIDATION_DATA, ids=lambda x: x["case_name"])
     def test_run_nastran_case(self, case_data, validation_data_dir):
-        """
-        @brief Executes a complete analysis flow for a given Nastran case.
-        @param case_data Dictionary containing file info and expected results.
-        @param validation_data_dir Pytest fixture pointing to the data folder.
-        """
-        # 1. Resolve File Path (Supporting Subfolders)
-        # Construct path: tests/validation_cases / {folder} / {filename}
+        """Execute and validate one Nastran reference case."""
         folder = case_data.get("folder", "")
         filename = case_data["filename"]
         
@@ -2538,28 +2481,23 @@ class TestNastranEndToEnd:
         if not file_path.exists():
             pytest.fail(f"Test file not found: {file_path}")
 
-        # 2. PARSE (Implicit integration test for nastran_reader)
         try:
             model = parse_nastran_input(str(file_path))
-        except Exception as e:
-            pytest.fail(f"Parser failed on {case_data['filename']}: {e}")
+        except Exception as exc:
+            pytest.fail(f"Parser failed on {case_data['filename']}: {exc}")
 
-        # 3. SOLVE
-        # Note: We assume the .dat files are now "Python-Solver-Ready" 
-        # (containing necessary SPCs to avoid singularity), so we don't need manual stabilization here.
         try:
             solver = LinearStaticSolver(model)
             solver.assemble()
             results = solver.solve()
-        except Exception as e:
-            pytest.fail(f"Solver failed on {case_data['filename']}: {e}")
+        except Exception as exc:
+            pytest.fail(f"Solver failed on {case_data['filename']}: {exc}")
 
         # Unpack results
         displacements = results["displacements"]
         reactions = results["reactions"]
         elem_stresses = results["stresses"]
 
-        # 4. COMPARE RESULTS
         fallback_rel_tol = case_data.get("rel_tol", 1e-2)
         rel_tol = case_data.get("rel_tol", 1e-2)
         rel_tol_disp = case_data.get("rel_tol_disp", fallback_rel_tol)
@@ -2570,12 +2508,9 @@ class TestNastranEndToEnd:
         abs_tol_force = case_data.get("abs_tol_force", 1e-3)
         abs_tol_shear = case_data.get("abs_tol_shear", abs_tol_force)
 
-        # 4. VERIFY DISPLACEMENTS
-
         expected_disp = case_data.get("expected_displacements", {})
         
         for nid, dofs_dict in expected_disp.items():
-            # Get Global Indices
             try:
                 global_indices = solver.dof_mapper.get_dof_indices(nid)
             except ValueError:
@@ -2585,14 +2520,11 @@ class TestNastranEndToEnd:
                 idx = global_indices[local_dof]
                 val_calc = displacements[idx]
                 
-                # Check with tolerance (0.1% relative error is generous but safe for FEM)
-                # Absolute tolerance 1e-9 handles near-zero values.
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol_disp, abs=abs_tol_disp), \
                     f"Mismatch in {case_data['case_name']}, Node {nid}, DOF {local_dof}. " \
                     f"Expected {val_ref}, Got {val_calc}"
 
         
-        # 5. VERIFY REACTIONS
         expected_react = case_data.get("expected_reactions", {})
         
         for nid, dofs_dict in expected_react.items():
@@ -2600,52 +2532,46 @@ class TestNastranEndToEnd:
                 # Nastran reports reactions only for constrained nodes.
                 pytest.fail(f"Reaction for Node {nid} expected but not found in results.")
             
-            # Reactions are stored as a numpy array of 6 floats per node [Fx, Fy, Fz, Mx, My, Mz]
             reac_vec = reactions[nid] 
             
             for local_dof, val_ref in dofs_dict.items():
                 val_calc = reac_vec[local_dof]
                 
-                # Tolerancia: 0.1% o 1e-4 absoluto para valores cercanos a cero
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol_force, abs=abs_tol_force), \
                     f"Reaction Mismatch {case_data['case_name']}, Node {nid}, DOF {local_dof}"
 
         
-        # 6. VERIFY ELEMENT STRESSES / FORCES
         expected_forces = case_data.get("expected_element_forces", {})
         
         for eid, quantities in expected_forces.items():
             if eid not in elem_stresses:
                 pytest.fail(f"Stresses for Element {eid} expected but not found in results.")
             
-            calc_data = elem_stresses[eid] # Dictionary {'axial_force': ..., 'axial_stress': ...}
+            calc_data = elem_stresses[eid]
             
             for qty_name, val_ref in quantities.items():
              
-                #--- UPDATE FOR NESTED DICTIONARIES (CBAR) ---
                 val_calc = calc_data
                 try:
                     if "." in qty_name:
                         keys = qty_name.split(".")
                         for k in keys:
-                            # Verificamos si es indexable (dict o list) antes de acceder
                             if not hasattr(val_calc, '__getitem__'):
                                 raise ValueError(f"Cannot access key '{k}' in scalar value: {val_calc}")
                             val_calc = val_calc[k]
                     else:
                         val_calc = calc_data[qty_name]
-                except (KeyError, IndexError, ValueError, TypeError) as e:
-                    pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {e}")
+                except (KeyError, IndexError, ValueError, TypeError) as exc:
+                    pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {exc}")
 
-                # La recuperación centroidal Q del CTRIA3 tiene una tolerancia
-                # independiente, documentada por la discrepancia frente a MSC.
+                # CTRIA3 centroidal shear recovery has a separate tolerance for
+                # the documented difference from the MSC reference.
                 quantity_rel_tol = rel_tol
                 quantity_abs_tol = abs_tol_force
                 if qty_name.startswith("shear_force_"):
                     quantity_rel_tol = rel_tol_shear
                     quantity_abs_tol = abs_tol_shear
 
-                # Verificamos que sea un número (float o numpy scalar)
                 assert val_calc == pytest.approx(
                     val_ref,
                     rel=quantity_rel_tol,

@@ -1,158 +1,123 @@
-# Hoja de ruta
+# Roadmap
 
-## Estado de base
+## Verified baseline
 
-El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
-operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `703 passed, 6 xfailed`; los seis límites corresponden a CQUAD4.
+The DAT/BDF to data model to sparse assembly to solution to report workflow is
+operational for CROD, CBAR, CTRIA3, and coplanar CQUAD4. The complete suite
+reported `718 passed, 6 xfailed, 2 warnings` on 19 September 2026. The six
+strict expected failures are documented CQUAD4 scope limits.
 
-La semántica PSHELL del CTRIA3 ya no usa herencias de materiales: MID1, MID2 y
-MID3 permanecen independientes, se admite MID2 sin MID1 y se rechaza MID3 sin
-MID2. Siete decks mínimos ejecutados con MSC Nastran 2026.1 conservan las DMIG
-y los dos F06 de rechazo. Este cierre corrige la activación de los bloques sin
-reformular la placa CTRIA3 ni anunciar equivalencia de su recuperación M/Q.
+The linear implementation currently includes:
 
-Los factores PSHELL del CTRIA3 ya están conectados con la formulación:
-`12I/T^3` escala flexión y `TS/T` escala el término de cortante en lugar del
-antiguo `5/6` fijo. Cuatro controles DMIG y tres modelos E2E de cuatro
-triángulos verifican factores no predeterminados con `AUTOSPC=NO`.
+- independent PSHELL `MID1`, `MID2`, and `MID3` semantics for CTRIA3 and
+  CQUAD4;
+- CTRIA3 application of `12I/T^3` to bending and `TS/T` to transverse
+  shear;
+- validated coplanar CQUAD4 stiffness through cases 90 and 91;
+- report generation isolated in `src/postprocessing/report_writer.py`;
+- two large linear integration models and one targeted CTRIA3 shear
+  diagnostic.
 
-La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
-planifica extenderla a elementos alabeados en la siguiente fase.
+The first integration model, `case_linear_test_final`, contains 384 shell
+elements, 76 CBAR, and 4 CROD. Its unmodified deck completed in MSC Nastran
+2026.1, and full-field relative L2 errors remain below `1.5e-5`.
 
-Desde ese cierre se separó la escritura del informe en
-`src/postprocessing/report_writer.py`, se añadieron sus pruebas y se verificó
-el caso mixto 80 con CBAR, CTRIA3 y CQUAD4. `requirements.txt` declara
-dependencias mínimas, aunque todavía falta un bloqueo reproducible.
+`case_linear_test_final_T` extends the model to a three-dimensional T frame
+with 417 GRID and 506 elements. Global response, shell membrane resultants,
+and fibre stresses correlate with MSC Nastran. Centroidal CTRIA3 moments and
+shears do not: their L2 errors are `0.682` and `17.30`. This is an explicit
+recovery limitation and must not be hidden by changing stiffness or relaxing a
+tolerance.
 
-El modelo `case_linear_test_final` añade una demostración lineal a escala de
-integración para la defensa: 384 shells, 76 CBAR, 4 CROD, FORCE/MOMENT, seis
-empotramientos nodales y un SPC impuesto. Su control automatizado cubre
-integridad, solución y equilibrio. La validación cruzada quedó cerrada con una
-ejecución sin `FATAL` de MSC Nastran 2026.1 y referencias transcritas de todas
-las familias; el mayor error relativo L2 de los campos completos es `1.450e-5`
-en las reacciones SPC.
+`case_linear_test_final_T_no_CTRIA_MID3` changes only the CTRIA3 transverse
+shear material to `E=1e-20`. It reduces the full-field CTRIA3 moment error to
+`7.106e-5`, but produces a nearly singular physical model with
+`cond(K)=5.660208e28`. The case is a diagnostic, not an alternative validated
+structure.
 
-`case_linear_test_final_T` extiende esa demostración a una sección espacial de
-frame en T: 417 GRID y 506 elementos, incluidos un ala CQUAD4 perpendicular,
-tres nervios simétricos formados por 12 CBAR y cuatro apoyos puntuales que
-idealizan remaches. MSC Nastran 2026.1 termina el deck con `AUTOSPC=NO`; el E2E
-compara ambos CROD y 15 elementos de cada otra familia. La respuesta global,
-la membrana y las tensiones de fibra se aceptan. Los momentos/cortantes
-centroidales CTRIA3 no correlacionan (`0.682/17.30` L2), sin alterar la
-rigidez para forzar el ajuste.
+The nonlinear implementation distinguishes `SOL 101` from `SOL 400`,
+normalizes `NLSTEP`/`NLPARM`, `LGDISP`, `FOLLOWK`, and relevant
+`PBARN1` fields, and solves geometric nonlinearity for `MAT1` CROD/CBAR
+models. The audited MSC campaigns cover CROD cases 92--127, CBAR cases
+128--166, mixed cases 167--176, and two final bridge models.
 
-La investigación causal se considera cerrada con
-`case_linear_test_final_T_no_CTRIA_MID3`, que cambia únicamente
-`PSHELL 11.MID3` a `MAT1 99`, `E=1e-20`. MSC alcanza `END OF JOB` con
-`AUTOSPC=NO`; el error L2 completo de momentos CTRIA3 cae a `7.106e-5` y los
-cortantes son cero ingenieril (normas menores que `4.1e-11` local y
-`8.7e-24` MSC). La sonda no valida una estructura física: tiene
-`cond(K)=5.660208e28` y un casi-mecanismo `T3` que no correlaciona
-(`7.3586e10 mm` local frente a `-0.3421 mm` de MSC en GRID 203). Reproducir
-físicamente la recuperación `M/Q` de Nastran permanece fuera de alcance.
+## Completed: geometric nonlinear CROD
 
-El modelo `case_nonlinear_test_final` aporta la demostración equivalente para
-`SOL 400`: un puente espacial de 48 CBAR y 30 CROD sometido a 15 fuerzas, 3
-momentos y asientos diferenciales. La regresión local converge en 50
-incrementos sin recortes y muestra una diferencia del `1.97 %` frente a
-`LGDISP=-1`. MSC Nastran 2026.1 reproduce el estado completo con errores L2
-`8.238e-5` en desplazamientos y `1.619e-4` en reacciones; la referencia ya
-forma parte del E2E mixto con una envolvente del `2 %` gobernada por una fibra
-CBAR al `1.36 %`.
+1. Preserved auditable MSC results for cases 92--127.
+2. Transcribed intermediate states, tangent probes, and final results.
+3. Implemented `CRODNonlinear` and `NonlinearStaticSolver` without changing
+   the linear formulation.
+4. Integrated CLI routing, recovery, and nonlinear report history.
+5. Documented the force-controlled limit point in case 120 and the absence of
+   arc-length control.
 
-`case_nonlinear_test_final_updated` amplía ese cierre a una geometría de tres
-vanos, 202 GRID y 572 elementos con bases de pilas/estribos explícitas. Ambos
-códigos completan 20 incrementos sin recortes. La respuesta global y axial
-mantiene errores L2 del orden de `10^-5`; la recuperación completa de fibras
-CBAR da `1.673 %` L2 y un máximo significativo del `11.57 %` en los largueros
-continuos. El E2E separa las tolerancias de desplazamientos, reacciones,
-estados centroidales y fibras para no ocultar esa diferencia localizada.
+## Completed: geometric nonlinear CBAR
 
-El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
-`NLPARM`, `LGDISP`, `FOLLOWK` y los campos relevantes de `PBARN1`.
-`NonlinearStaticSolver` resuelve MAT1 con CROD o CBAR mediante Newton completo,
-stepping fijo/adaptativo y recortes. CROD dispone de 36 casos (92--127), CBAR
-de 39 (128--166) y la integración mixta de doce referencias (167--176 más los
-dos puentes finales), todas con resultados MSC auditables.
+1. Implemented a corotational `CBARNonlinear` without modifying the linear
+   path.
+2. Integrated `I12`, `K1/K2`, offsets, releases, `G0` orientation, loads,
+   and prescribed displacements.
+3. Identified logarithmic axial strain with cases 130/131 and checked the
+   tangent with cases 137--139.
+4. Added 39 explicit CBAR end-to-end references; all pass.
+5. Validated `INT2=LC` as Euler--Bernoulli and `INT2=LS` as one-point
+   linear shear interpolation with cases 154--160.
+6. Added converged geometry, end actions, and C--F stresses to the report
+   without changing the linear tables.
 
-## Prioridad 0 completada: no linealidad geométrica CROD
+Some near-neutral fibres and severe combined-rotation segments in cases
+165/166 remain diagnostics. They do not invalidate the closed global response
+and centroidal axial-stress scope.
 
-1. Completada la campaña MSC y conservadas sus salidas auditables.
-2. Transcritos estados intermedios, tangente por sonda y resultados finales.
-3. Implementados `CRODNonlinear` y `NonlinearStaticSolver` sin modificar la
-   formulación lineal.
-4. Integrados CLI, recuperación e informe con configuración, historial de
-   incrementos, correcciones de Newton y estado final diferenciado.
-5. Documentado el punto límite 120 y el alcance sin arco de longitud.
+## Priority 1: public-release consolidation
 
-## Prioridad 0 completada: no linealidad geométrica CBAR
+The preprocessing and linear-analysis cleanup is the first publication pass.
+It covers active-module naming, removal of disconnected prototypes, English
+comments/docstrings, and English documentation checked against code and tests.
+The nonlinear implementation will receive the same focused cleanup in a later
+pass.
 
-1. Implementado `CBARNonlinear` corrotacional sin modificar la ruta lineal.
-2. Integrados `I12`, `K1/K2`, offsets, releases, orientación `G0`, cargas y
-   SPC impuestos.
-3. Identificada la deformación axial logarítmica con 130/131 y validada la
-   tangente mediante las sondas 137--139.
-4. Transcritos 39 E2E explícitos; todos pasan, incluido 142.
-5. Identificadas y validadas las interpolaciones `INT2=LC` Euler--Bernoulli e
-   `INT2=LS` lineal-cortante mediante los diagnósticos 154--160. Queda abierta
-   la convención de tensión de fibra bajo rotación 3D combinada.
-6. Integrada la recuperación CBAR en el `.rpt`: respuesta axial/torsional,
-   longitud y energía del estado no lineal, acciones A/B y tensiones C--F, sin
-   alterar las tablas lineales existentes.
+Remaining consolidation work:
 
-### Cierre externo ejecutado
+1. add continuous integration for the full pytest suite;
+2. add `pyproject.toml` and/or a reproducible dependency lock;
+3. add mesh-refinement convergence tests in addition to DMIG and E2E checks;
+4. decide whether batch mode stops on the first error or accumulates failures;
+5. complete a public-release audit of nonlinear code and its dedicated
+   documentation;
+6. choose and add a repository license before public release.
 
-Los seis diagnósticos 161--166, los diez modelos mixtos CROD/CBAR 167--176
-(de 2 a 30 elementos) y los puentes finales de 78 y 572 elementos terminan sin
-`FATAL` y alcanzan factor 1.0 en MSC. Las referencias finales están
-transcritas: 161--166 amplían el E2E CBAR; 167--176 y ambos puentes usan un
-módulo E2E mixto independiente. La respuesta global y la tensión axial
-centroidal quedan cerradas; sigue abierta la reproducción estricta de algunas
-fibras casi neutras y del reparto de momentos en los tramos más rotados de
-165/166. El informe presenta esas fibras con los nombres C--F de Nastran y
-documenta qué magnitudes tienen correspondencia directa o reconstruida en F06.
+The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
+a formulation/recovery limit. It is not a consolidation task and does not
+justify recalibrating validated stiffness.
 
-## Prioridad 1: consolidación
+## Priority 2: performance
 
-1. Añadir integración continua para ejecutar pytest en cada cambio.
-2. Añadir `pyproject.toml` o un fichero de bloqueo con versiones reproducibles.
-3. Añadir pruebas de convergencia sobre mallas refinadas, además de DMIG/E2E.
-4. Definir una política de ejecución por lotes: detenerse o continuar y
-   acumular errores por modelo.
-5. Revisar y aislar los módulos y scripts antiguos o exploratorios antes de
-   ampliar el alcance físico.
+1. assemble from vectorized COO triplets;
+2. cache transformations and element solver objects between assembly and
+   recovery;
+3. measure parsing, element stiffness, assembly, solution, and recovery on
+   increasing mesh sizes;
+4. investigate reordering and iterative solvers when model size warrants it.
 
-El desacuerdo centroidal `M/Q` CTRIA3 del frame T ya está aislado como límite
-de formulación mediante la sonda sin MID3 efectivo. No queda como tarea de
-consolidación ni justifica recalibrar la rigidez validada.
+## Priority 3: new capabilities
 
-## Prioridad 2: rendimiento
+Every physical extension must include a minimal model, an auditable external
+reference, and an end-to-end test before it is advertised as supported.
+Candidates include:
 
-1. Ensamblar mediante tripletas COO vectorizadas.
-2. Cachear transformaciones y objetos de elemento entre ensamblaje y
-   recuperación.
-3. Medir lectura, rigidez elemental, ensamblaje, solución y postproceso sobre
-   familias de mallas crecientes.
-4. Estudiar reordenamientos y solvers iterativos cuando el tamaño lo justifique.
+- shell pressure, gravity, and other distributed loads;
+- MPC and rigid elements;
+- advanced beam properties;
+- orthotropic and laminated materials;
+- higher-order and solid elements;
+- export to visualization formats.
 
-## Prioridad 3: nuevas capacidades
+## Optional CQUAD4 work
 
-Cada ampliación debe incorporar un caso mínimo, una referencia externa y una
-prueba E2E antes de anunciarse como soportada. Candidatos:
-
-- presión de lámina, gravedad y otras cargas distribuidas;
-- MPC y elementos rígidos;
-- propiedades avanzadas de vigas;
-- materiales ortótropos y laminados;
-- elementos de mayor orden y sólidos;
-- exportación a formatos de visualización.
-
-## Mejoras opcionales de CQUAD4
-
-- Investigar la recuperación centroidal propietaria de `Qx/Qy` sin tocar la
-  rigidez validada.
-- Añadir resultados en más estaciones o vértices.
-- Implementar `SNORM` sólo si aparecen modelos facetados que lo requieran.
-- Mantener el rechazo de nodos no coplanares. Una futura formulación alabeada
-  sería un elemento nuevo, no una relajación de la tolerancia actual.
+- Investigate MSC Nastran's centroidal `Qx/Qy` reporting convention without
+  changing validated stiffness.
+- Add recovery at additional stations or corners.
+- Implement `SNORM` only if a supported faceted model requires it.
+- Keep rejecting warped quadrilaterals. A future warped formulation would be a
+  new element, not a relaxed tolerance in the current coplanar one.

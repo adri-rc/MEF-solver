@@ -237,7 +237,7 @@ orientación.
 - `NonlinearStepControl` normalizado desde `NLSTEP` o `NLPARM`.
 
 pyNastran 1.4.1 no implementa la entrada Bulk Data `NLSTEP`. La conserva en
-`reject_lines`; `nastran_reader_v2.py` interpreta allí sus filas libres o de
+`reject_lines`; `nastran_reader.py` interpreta allí sus filas libres o de
 campo pequeño y aplica validación estricta. Una continuación desconocida no se
 ignora: detiene el preproceso.
 

@@ -1,57 +1,60 @@
-# Documentación de MEF-solver
+# MEF-solver documentation
 
-MEF-solver es un solver académico de elementos finitos orientado al análisis estructural estático y a la comparación con modelos de MSC Nastran. Incluye estática lineal para CROD, CBAR, CTRIA3 y CQUAD4 coplanar, y estática no lineal geométrica `SOL 400` para MAT1 con CROD o CBAR. El proyecto no es un sustituto general de Nastran: implementa un subconjunto deliberadamente pequeño de tarjetas. La rigidez CQUAD4 se considera cerrada para cuadriláteros coplanares.
+MEF-solver is an academic finite element solver for static structural analysis
+and comparison with MSC Nastran models. It includes linear statics for CROD,
+CBAR, CTRIA3, and coplanar CQUAD4, plus geometric nonlinear `SOL 400` for
+`MAT1` models made of CROD and/or CBAR. The project implements a deliberately
+small subset of Nastran and is not a general replacement for it.
 
-Esta documentación describe el estado verificado en el repositorio el **3 de septiembre de 2026**. La colección completa termina con `703 passed, 6 xfailed`.
+This documentation describes the repository state verified on
+**19 September 2026**. The complete suite reports
+`718 passed, 6 xfailed`.
 
-## Índice
+## Contents
 
-- [Documento de traspaso](TRASPASO.md): contexto autocontenido para continuar el proyecto en otra sesión u ordenador.
-- [Uso del programa](uso.md): entorno, ejecución, formato de entrada y resultados.
-- [Guía del informe RPT](result_report.md): significado de cada tabla, correspondencia F06 e historial de Newton.
-- [Arquitectura](arquitectura.md): módulos, modelo de datos y flujo del análisis.
-- [Formulación matemática](formulacion.md): ecuaciones, convenciones y formulación de los elementos.
-- [Estado y validación](validacion.md): cobertura real, resultados de pruebas y casos Nastran.
-- [Desarrollo y validación de CQUAD4](cquad4.md): estado detallado del elemento cuadrilateral.
-- [Formulación completa de CQUAD4](cquad4_tesis.md): desarrollo matemático, parámetros, correspondencia con el código, evidencia y limitaciones.
-- [Análisis no lineal de CROD](nonlinear_crod.md): formulación, tarjetas SOL 400, solver incremental y referencias 92--127.
-- [Análisis no lineal de CBAR](nonlinear_cbar.md): formulación corrotacional,
-  límites y campaña 128--166, con integración mixta CROD/CBAR 167--176.
-- [Puente no lineal final](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md):
-  modelo mixto de defensa correlacionado con MSC Nastran 2026.1.
-- [Puente no lineal final actualizado](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md):
-  modelo de tres vanos, 202 GRID, bases explícitas y correlación detallada.
-- [Limitaciones y hoja de ruta](roadmap.md): deuda técnica y evolución propuesta hacia elementos 3D.
+- [Usage](usage.md): environment, execution, supported input, and results.
+- [Result report](result_report.md): report tables, F06 correspondence, and
+  Newton history.
+- [Architecture](architecture.md): modules, data model, and analysis flow.
+- [Mathematical formulation](formulation.md): equations, conventions, and
+  element formulations.
+- [Validation](validation.md): actual coverage, test results, and Nastran
+  references.
+- [CQUAD4 development and validation](cquad4.md): detailed element status.
+- [Complete CQUAD4 formulation](cquad4_formulation.md): mathematical
+  derivation, parameters, code correspondence, evidence, and limitations.
+- [Nonlinear CROD analysis](nonlinear_crod.md): formulation, `SOL 400`
+  entries, incremental solver, and cases 92--127.
+- [Nonlinear CBAR analysis](nonlinear_cbar.md): corotational formulation,
+  limitations, cases 128--166, and mixed CROD/CBAR cases 167--176.
+- [Roadmap](roadmap.md): consolidation work and possible future extensions.
+- [Technical handover](HANDOVER.md): verified state and continuation context.
 
-## Estado funcional resumido
+## Capability summary
 
-| Capacidad | Lectura | Matriz de rigidez | Solución global | Recuperación de resultados | Validación observada |
+| Capability | Read | Stiffness/tangent | Global solution | Recovery | Validation |
 |---|---:|---:|---:|---:|---|
-| CROD + PROD + MAT1 | Sí | Sí | Sí | Axil y torsión | Unitaria y casos Nastran de extremo a extremo |
-| CBAR + PBAR + MAT1 | Sí | Sí | Sí | Fuerzas de extremo y tensiones simplificadas | Unitaria y casos Nastran de extremo a extremo |
-| CTRIA3 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión y cortante | Amplia comparación de extremo a extremo y de `K_global` |
-| CQUAD4 + PSHELL + MAT1 | Sí | Sí | Sí | Membrana, flexión, cortante y fibras | DMIG hasta alta oblicuidad y E2E; sólo coplanar |
-| SOL 400 + NLSTEP/NLPARM | Sí | Sí, tangente CROD/CBAR | Sí | Historial incremental y resultados CROD/CBAR | Campañas MSC 92--176 y dos puentes finales E2E |
-| FORCE / MOMENT / LOAD | Sí | Sí | Sí | Sistemas de entrada transformados | Cubierto por pruebas |
-| SPC / SPC1 / SPCADD | Sí | Sí | Sí | Reacciones y valores impuestos | Cubierto por pruebas |
-| Sólidos 3D | No | No | No | No | Trabajo futuro |
+| CROD + PROD + MAT1 | Yes | Yes | Yes | Axial and torsional | Unit and Nastran E2E |
+| CBAR + PBAR + MAT1 | Yes | Yes | Yes | End forces and fibre stresses | Unit and Nastran E2E |
+| CTRIA3 + PSHELL + MAT1 | Yes | Yes | Yes | Membrane, bending, and shear | DMIG and Nastran E2E |
+| CQUAD4 + PSHELL + MAT1 | Yes | Yes | Yes | Membrane, bending, shear, and fibres | DMIG and E2E; coplanar only |
+| SOL 400 + NLSTEP/NLPARM | Yes | CROD/CBAR tangent | Yes | Increment history and CROD/CBAR results | MSC campaigns 92--176 and two integration bridges |
+| FORCE / MOMENT / LOAD | Yes | N/A | Yes | Loads transformed from CID | Automated tests |
+| SPC / SPC1 / SPCADD | Yes | N/A | Yes | Reactions and prescribed values | Automated tests |
+| 3D solid elements | No | No | No | No | Outside scope |
 
-CQUAD4 dispone de una reconstrucción Nastran y una formulación clásica Reissner-Mindlin en módulos separados. La primera incorpora estabilización *hourglass*, cortante de MacNeal y `K6ROT`; rechaza explícitamente el alabeo. Véanse [cquad4.md](cquad4.md) y el [documento de traspaso](TRASPASO.md).
+## Current physical scope
 
-## Alcance físico actual
+- Small-deformation linear statics.
+- Geometric nonlinear CROD/CBAR statics with `SOL 400`, `LGDISP`, full
+  Newton, and `FIXED`/`ADAPT` controls.
+- Isotropic linear elastic `MAT1`.
+- Six DOFs per node: `[Tx, Ty, Tz, Rx, Ry, Rz]`.
+- Sparse global assembly and direct SciPy solution.
+- Nodal loads and single-point constraints.
+- No dynamics, material nonlinearity, contact, follower or distributed loads,
+  MPC/RBE, warped CQUAD4, or solid elements.
 
-- Solución estática lineal de pequeñas deformaciones.
-- Estática no lineal geométrica CROD/CBAR con `SOL 400`, `LGDISP`, Newton completo y controles `FIXED`/`ADAPT`.
-- Material elástico lineal isótropo (`MAT1`).
-- Seis grados de libertad por nodo: `[Tx, Ty, Tz, Rx, Ry, Rz]`.
-- Matriz global dispersa y resolución directa mediante SciPy.
-- Cargas nodales y restricciones de punto único.
-- Sin dinámica, no linealidad material, contacto, cargas seguidoras, cargas distribuidas, MPC/RBE ni sólidos.
-
-## Lectura recomendada
-
-Para ejecutar el programa, comenzar por [uso.md](uso.md). Para continuar el
-proyecto desde el punto actual, empezar por [TRASPASO.md](TRASPASO.md), seguir
-el contexto técnico que allí se recomienda y respetar las reglas generales de
-[`AGENTS.md`](../AGENTS.md). La [hoja de ruta](roadmap.md) recoge el trabajo
-pendiente sin reabrir la rigidez CQUAD4 coplanar ya cerrada.
+Start with [usage.md](usage.md) to run the program. Read
+[HANDOVER.md](HANDOVER.md) before continuing development, and follow the
+repository rules in [AGENTS.md](../AGENTS.md).

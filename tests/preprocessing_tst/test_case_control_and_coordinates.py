@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 

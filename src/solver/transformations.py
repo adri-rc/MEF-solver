@@ -1,61 +1,46 @@
+"""Coordinate-system utilities for element matrices and vectors."""
+
 import numpy as np
 
-"""
-@file transformations.py
-@brief Geometric transformation utilities for Finite Element Analysis.
-@details
-This module handles the linear algebra required to transform stiffness matrices
-and vectors between Local and Global coordinate systems.
-
-Key functionalities:
-    1. Local Axis Computation: Generates an orthonormal basis (vx, vy, vz)
-       given two nodes and an optional orientation vector.
-    2. Rotation Matrix (R): Constructs the 3x3 matrix where v_local = R * v_global.
-    3. System Transformation (T): Expands the 3x3 rotation matrix into a full
-       block-diagonal matrix (e.g., 12x12 for a 2-node beam) suitable for
-       transforming the element stiffness matrix.
-"""
 
 class CoordinateTransformation:
-    """
-    @class CoordinateTransformation
-    @brief Calculation of local coordinate systems and transformations to global ones.
-    """
+    """Build orthonormal element frames and block transformations."""
     
     @staticmethod
-    def compute_local_axes_triangle(node1_coords: np.ndarray, node2_coords: np.ndarray, node3_coords: np.ndarray):
+    def compute_local_axes_triangle(
+        node1_coords: np.ndarray,
+        node2_coords: np.ndarray,
+        node3_coords: np.ndarray,
+    ):
+        """Return a right-handed local basis for a triangular element.
+
+        The origin is node 1, local x follows node 1 to node 2, and local z is
+        normal to the element plane.
         """
-        @brief Computes local axes for a triangular element (CTRIA3).
-        @details
-        Origin at Node 1.
-        X-axis: Along N1->N2.
-        Z-axis: Normal to the plane N1-N2-N3.
-        Y-axis: Complete RHS (in the plane).
-        """
-        # 1. Vector N1->N2 (Local X)
+        # Local x follows node 1 to node 2.
         v12 = node2_coords - node1_coords
         L = np.linalg.norm(v12)
         if L < 1e-12:
              raise ValueError("Zero length edge N1-N2")
         x_axis = v12 / L
 
-        # 2. Vector N1->N3 (For Plane definition)
+        # Node 1 to node 3 defines the element plane.
         v13 = node3_coords - node1_coords
         
-        # 3. Normal to Plane (Local Z)
+        # Local z is normal to the element plane.
         z_axis = np.cross(x_axis, v13)
         norm_z = np.linalg.norm(z_axis)
         if norm_z < 1e-12:
             raise ValueError("Nodes are collinear, cannot define a triangle plane.")
         z_axis = z_axis / norm_z
 
-        # 4. Local Y (In Plane, orthogonal to X)
+        # Local y completes the in-plane right-handed triad.
         y_axis = np.cross(z_axis, x_axis) 
 
-        # Comprobar dirección de v13 proyectada en Y
+        # Keep node 3 on the positive side of local y.
         if np.dot(v13, y_axis) < 0:
              y_axis = -y_axis
-             # Y si invertimos Y, debemos invertir Z para mantener mano derecha
+             # Flip z as well to preserve a right-handed basis.
              z_axis = -z_axis
 
         
@@ -63,31 +48,31 @@ class CoordinateTransformation:
     
 
     @staticmethod
-    def compute_local_axes(node1_coords: np.ndarray, node2_coords: np.ndarray, orientation_vector: np.ndarray = None):
+    def compute_local_axes(
+        node1_coords: np.ndarray,
+        node2_coords: np.ndarray,
+        orientation_vector: np.ndarray = None,
+    ):
+        """Return the local basis for a two-node element.
+
+        ``orientation_vector`` is the Nastran orientation vector for CBAR. A
+        stable auxiliary axis is generated automatically for CROD.
         """
-        @brief Generate the 3 unit vectors (vx, vy, vz) of the local system.
-        
-        @param orientation_vector: Nastran vector 'v' for CBAR. 
-                                   If it is None (CROD case), one is generated automatically.
-        @return (vx, vy, vz) Unitary vectors numpy arrays (3,)
-        """
-        # 1. Local X-axis (Longitudinal)
+        # Local x is the longitudinal direction.
         diff = node2_coords - node1_coords
         L = np.linalg.norm(diff)
         if L == 0:
             raise ValueError(f"Element with zero length between node1 ({node1_coords})  and node2 ({node2_coords})")
         vx = diff / L
 
-        #2. Orientation Vector (Auxiliary)
-        v_aux = orientation_vector # if provided
+        # Auxiliary orientation vector.
+        v_aux = orientation_vector
         
         if v_aux is None:
-            # logic for CROD (Standard convention), try to use the Global Axis Y [0, 1, 0]
+            # Prefer basic y, except when the element is almost parallel to it.
             v_aux = np.array([0.0, 1.0, 0.0])
             
-            # Check if the bar is parallel to Y, the cross product would be 0. 
-            # and Global X axis is used in that case. 
-            if np.abs(np.dot(vx, v_aux)) > 0.99: # ~parallel
+            if np.abs(np.dot(vx, v_aux)) > 0.99:
                 v_aux = np.array([1.0, 0.0, 0.0])
         else:
             # For CBAR: Use the given vector, normalized
@@ -97,7 +82,7 @@ class CoordinateTransformation:
                 raise ValueError("The orientation vector must be finite and non-zero.")
             v_aux = v_aux / norm_aux
 
-        # 3. Local Z axis (Normal to the X-Aux plane)
+        # Local z is normal to the x/auxiliary plane.
         # v_z = x CROSS v_aux
         vz = np.cross(vx, v_aux)
         norm_z = np.linalg.norm(vz)
@@ -107,32 +92,22 @@ class CoordinateTransformation:
         
         vz = vz / norm_z
 
-        # 4. Local Y-axis (Completes the trihedron)
+        # Local y completes the right-handed triad.
         # v_y = z CROSS x
         vy = np.cross(vz, vx)
-        # vy ya es unitario
+        # vy is already normalized because vx and vz are orthonormal.
         
         return vx, vy, vz
 
     @staticmethod
     def get_rotation_matrix_3x3(vx, vy, vz):
-        """
-        @brief Construct the rotation matrix R (3x3) where v_local = R * v_global
-        @details The rows are the unit vectors expressed in globals."""
+        """Return ``R`` such that ``v_local = R @ v_global``."""
         return np.array([vx, vy, vz])
 
     @staticmethod
     def build_full_transformation_matrix(R_3x3: np.ndarray, nodes_count: int = 2, dofs_per_node: int = 6):
-        """
-        Expand the 3x3 rotation matrix to the complete matrix of the element (T).
-        For a beam element with 2 nodes and 6 DOFs/node, it generates a 12x12 diagonal by blocks.
-        
-        T = [ R  0  0  0 ]
-            [ 0  R  0  0 ]
-            [ 0  0  R  0 ]
-            [ 0  0  0  R ]
-        """
-        # size: (nodos * dofs) x (nodos * dofs)
+        """Expand a 3x3 rotation into the element block-diagonal matrix."""
+        # Matrix size: (nodes * DOFs) x (nodes * DOFs).
         size = nodes_count * dofs_per_node
         T = np.zeros((size, size))
         
@@ -141,7 +116,8 @@ class CoordinateTransformation:
         # Therefore, R applies to [Tx, Ty, Tz] and also to [Rx, Ry, Rz].
         
         # num_blocks: Number of 3x3 blocks fitting
-        # Para 2 nodos y 6 dofs: 12 dofs total -> 4 bloques de 3x3 (Trans1, Rot1, Trans2, Rot2)
+        # Two six-DOF nodes require four 3x3 blocks: translation and rotation
+        # for each node.
         num_blocks = size // 3
         
         for i in range(num_blocks):

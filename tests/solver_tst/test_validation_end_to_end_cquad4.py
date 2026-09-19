@@ -1,19 +1,19 @@
-"""Validacion E2E de CQUAD4 con referencias copiadas de MSC Nastran.
+"""CQUAD4 end-to-end validation against transcribed MSC Nastran references.
 
-Los valores esperados de los casos 56-68 y 76-80 estan escritos explicitamente en
-este archivo. El test no lee los F06 durante la ejecucion: los F06 quedan
-unicamente como trazabilidad de las referencias introducidas manualmente.
+The expected values for cases 56-68 and 76-80 are embedded explicitly. Tests
+do not read F06 files at runtime; those files remain as auditable provenance
+for the transcribed values.
 """
 
 import numpy as np
 import pytest
 
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 
 VALIDATION_DATA = [
-    # region --- CASO 56: Carga de membrana ---
+    # region --- Case 56: membrane load ---
     {
         "case_name": "Ej56_CQUAD4_MembraneLoad",
         "folder": "case_56",
@@ -59,14 +59,14 @@ VALIDATION_DATA = [
             }
         },
     },
-    # region --- CASOS 84-89: cierre de validacion CQUAD4 plano ---
+    # region --- Cases 84-89: planar CQUAD4 validation closure ---
     {
         "case_name":"Ej84_InclinedPlanarCQUAD4_MultiProperty","folder":"case_84","filename":"ej84_inclined_planar_cquad4_patch_multi_property_k6rot_100.dat",
         "rel_tol_disp":2e-4,"abs_tol_disp":1e-6,"rel_tol_load":1e-6,"abs_tol_load":2e-8,"rel_tol_reaction":2e-4,"abs_tol_reaction":2e-5,
-        # La solucion y los resultantes N/M coinciden estrechamente. La
-        # recuperacion centroidal QX/QY es la unica discrepancia material:
-        # un QX pequeno llega al 72 % relativo (0.00977 absoluto), aun con
-        # solo 1.2e-5 de error vectorial en U.
+        # The solution and N/M resultants correlate closely. Centroidal QX/QY
+        # recovery is the only material discrepancy: one small QX reaches
+        # 72 % relative error (0.00977 absolute) despite a 1.2e-5 vector error
+        # in U.
         "rel_tol_element":1e-3,"abs_tol_element":5e-3,
         "element_tolerances":{"shear_force_x":{"rel_tol":1e-1,"abs_tol":1.1e-2},"shear_force_y":{"rel_tol":3e-2,"abs_tol":2e-3}},
         "expected_displacement_rows":{1:(0,0,0,0,0,0),
@@ -179,8 +179,8 @@ VALIDATION_DATA = [
     },
     {
         "case_name":"Ej88_FacetedPlanarCQUAD4_SNORM0","folder":"case_88","filename":"ej88_faceted_planar_cquads_snorm0_k6rot_100.dat",
-        # Control plano facetado con SNORM desactivado: la formulacion de
-        # normales independientes del solver coincide sin implementar SNORM.
+        # Faceted planar control with SNORM disabled: independent element
+        # normals correlate without implementing SNORM smoothing.
         "rel_tol_disp":1e-6,"abs_tol_disp":1e-9,"rel_tol_load":1e-6,"abs_tol_load":2e-8,"rel_tol_reaction":1e-6,"abs_tol_reaction":2e-7,"rel_tol_element":1e-6,"abs_tol_element":3e-6,
         "expected_displacement_rows":{1:(0,0,0,0,0,0),2:(0,0,0,0,0,0),3:(0,0,0,0,0,0),4:(-.000280188804,.00210330216,-.00375616271,.00356988632,.00481633702,.00281169824),5:(.000313142838,4.17347437e-5,-.000817899418,.00171307859,.00137663027,.000254633604),6:(-.000349698705,.000650171016,4.5739358e-5,.000766580808,.000386043015,.000378900033),7:(-.000364806969,.00684177224,-.0121236769,.0109407008,.00539384643,.00301405136),8:(.000412615569,9.56518415e-5,-.00250197691,.00693169748,.000837316038,-.000931557326),9:(-.000453044689,.000704392442,-.00162058033,-.00357324071,.00174267415,-.000380160054)},
         "expected_load_rows":{7:(.075000003,.0299999993,-.287999988,0,0,0),8:(0,0,0,.0715000033,.0219999999,-.0494999997),9:(-.0480000004,.0359999985,-.232800007,0,0,0)},
@@ -236,7 +236,7 @@ VALIDATION_DATA = [
         },
     },
     # endregion
-    # region --- CASO 57: Carga de flexion ---
+    # region --- Case 57: bending load ---
     {
         "case_name": "Ej57_CQUAD4_BendingLoad",
         "folder": "case_57",
@@ -247,18 +247,18 @@ VALIDATION_DATA = [
         "abs_tol_reaction": 8.0e-2,
         "rel_tol_element": 0.04,
         "abs_tol_element": 1.0e-1,
-        # Nastran informa cond(K)=2.902931e25 porque el MID3 de este deck
-        # usa E=1e-20. Diagnostico actual: error vectorial U=1.72e-3,
-        # R=4.07e-3 y resultantes/tensiones=9.28e-4. La excepcion relativa
-        # es R1 en GRID 2: cambia de 4.21e-6 a -1.75e-5 (2.17e-5 absoluto),
-        # una componente casi nula dominada por el mal condicionamiento.
+        # Nastran reports cond(K)=2.902931e25 because this deck gives MID3
+        # E=1e-20. Current vector errors are U=1.72e-3, R=4.07e-3, and
+        # resultants/stresses=9.28e-4. The relative outlier is GRID 2 R1,
+        # which moves from 4.21e-6 to -1.75e-5 (2.17e-5 absolute): a nearly
+        # zero component dominated by ill-conditioning.
         "expected_displacements": {
             1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
             2: {
                 0: 0.0,
                 1: 0.0,
                 2: 6.931606e21,  # Solver: 6.941459e21 (+0.142 %).
-                3: 4.214435e-6,  # Solver: -1.749584e-5; casi nulo/sensible.
+                3: 4.214435e-6,  # Solver: -1.749584e-5; nearly zero and sensitive.
                 4: -1.103275e-3,  # Solver: -1.088881e-3 (-1.30 %).
                 5: 0.0,
             },
@@ -273,12 +273,12 @@ VALIDATION_DATA = [
             4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
         },
         "expected_reactions": {
-            # Maximo en GRID 1: R1 difiere 4.13 % (0.0315 absoluto).
+            # GRID 1 maximum: R1 differs by 4.13 % (0.0315 absolute).
             1: {0: 0.0, 1: 0.0, 2: -8.414907, 3: -0.7621872, 4: 19.42530, 5: 0.0},
-            # R3 esta restringido explicitamente y su reaccion es nula.
+            # R3 is explicitly constrained and its reaction is zero.
             2: {5: 0.0},
             3: {5: 0.0},
-            # Maximo en GRID 4: R1 difiere 2.85 % (0.0415 absoluto).
+            # GRID 4 maximum: R1 differs by 2.85 % (0.0415 absolute).
             4: {0: 0.0, 1: 0.0, 2: -11.58509, 3: 1.456845, 4: 21.41619, 5: 0.0},
         },
         "expected_element_forces": {
@@ -307,7 +307,7 @@ VALIDATION_DATA = [
         },
     },
     # endregion
-    # region --- CASO 58: Carga combinada ---
+    # region --- Case 58: combined load ---
     {
         "case_name": "Ej58_CQUAD4_CombinedLoad",
         "folder": "case_58",
@@ -318,25 +318,24 @@ VALIDATION_DATA = [
         "abs_tol_reaction": 1.6,
         "rel_tol_element": 0.05,
         "abs_tol_element": 1.8,
-        # Nastran informa cond(K)=8.522115e26 porque MID3 usa E=1e-20.
-        # Diagnostico actual: U=2.29e-3, R=8.92e-2 y resultados de elemento
-        # =2.94e-2 en norma relativa. Las traslaciones coinciden al 0.3 %;
-        # las rotaciones pequenas, reacciones de momento y QY son las partes
-        # sensibles. Las tolerancias absolutas ya no ocultan diferencias de
-        # orden 10 como ocurria con los comentarios/tolerancias anteriores.
+        # Nastran reports cond(K)=8.522115e26 because MID3 uses E=1e-20.
+        # Current relative vector errors are U=2.29e-3, R=8.92e-2, and element
+        # results=2.94e-2. Translations correlate within 0.3 %; small rotations,
+        # moment reactions, and QY are sensitive. The absolute tolerances no
+        # longer hide order-10 differences as older tolerances did.
         "expected_displacements": {
             1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
-            # R1/R2 difieren 25.1 % y 9.52 %; T1/T2 quedan por debajo de 0.2 %.
+            # R1/R2 differ by 25.1 % and 9.52 %; T1/T2 remain below 0.2 %.
             2: {0: 1.151044e-4, 1: 3.654687e-4, 2: 5.189510e21, 3: -1.607513e-3, 4: -4.052964e-4, 5: 0.0},
-            # R1/R2 difieren 24.5 % y 13.4 %; T1/T2 quedan por debajo de 0.2 %.
+            # R1/R2 differ by 24.5 % and 13.4 %; T1/T2 remain below 0.2 %.
             3: {0: -2.610253e-4, 1: 4.615864e-4, 2: 6.088115e21, 3: -2.197732e-3, 4: -3.058746e-3, 5: 0.0},
             4: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
         },
         "expected_reactions": {
             # Solver: T3=-2.417488 (-6.06 %) y R1=3.646075 (+73.8 %,
-            # 1.548 absoluto); T1/T2 siguen coincidiendo estrechamente.
+            # 1.548 absolute); T1/T2 still correlate closely.
             1: {0: -5.794931, 1: -9.486944, 2: -2.573412, 3: 2.097789, 4: 10.42758, 5: 0.0},
-            # R3 esta restringido explicitamente y su reaccion es nula.
+            # R3 is explicitly constrained and its reaction is zero.
             2: {5: 0.0},
             3: {5: 0.0},
             # Solver: T3=-7.582512 (+2.10 %), R1=-7.547061 (+22.0 %) y
@@ -348,20 +347,20 @@ VALIDATION_DATA = [
                 "membrane_force_x": 5.602411,
                 "membrane_force_y": 2.082026,
                 "membrane_force_xy": -0.3579090,
-                "bending_moment_x": 9.361070,  # Coincide a menos de 0.1 %.
+                "bending_moment_x": 9.361070,  # Correlates within 0.1 %.
                 "bending_moment_y": 0.3111569,  # Solver: 0.022504 (-92.8 %).
-                "bending_moment_xy": 0.08446512,  # Solver: -0.082161; cambia signo.
+                "bending_moment_xy": 0.08446512,  # Solver: -0.082161; sign differs.
                 "shear_force_x": 6.011618,  # Solver: 5.512658 (-8.30 %).
                 "shear_force_y": -0.7310049,  # Solver: -1.691621 (+131.4 %).
-                "stress_bot_fiber_x": 61.76883,  # Coincide a menos de 0.1 %.
+                "stress_bot_fiber_x": 61.76883,  # Correlates within 0.1 %.
                 "stress_bot_fiber_y": 3.948968,  # Solver: 2.216779 (-43.9 %).
-                "tau_bot_fiber_xy": 0.1488817,  # Solver: -0.850883; cambia signo.
-                "major_principal_bot": 61.76922,  # Coincide a menos de 0.1 %.
+                "tau_bot_fiber_xy": 0.1488817,  # Solver: -0.850883; sign differs.
+                "major_principal_bot": 61.76922,  # Correlates within 0.1 %.
                 "minor_principal_bot": 3.948584,  # Solver: 2.204614 (-44.2 %).
                 "von_mises_bot": 59.89263,  # Solver: 60.658783 (+1.28 %).
-                "stress_top_fiber_x": -50.56401,  # Coincide a menos de 0.1 %.
+                "stress_top_fiber_x": -50.56401,  # Correlates within 0.1 %.
                 "stress_top_fiber_y": 0.2150847,  # Solver: 1.946735.
-                "tau_top_fiber_xy": -0.8646997,  # Solver: +0.135052; cambia signo.
+                "tau_top_fiber_xy": -0.8646997,  # Solver: +0.135052; sign differs.
                 "major_principal_top": 0.2298051,  # Solver: 1.947083.
                 "minor_principal_top": -50.57873,  # Solver: -50.514396.
                 "von_mises_top": 50.69403,  # Solver: 51.515542 (+1.62 %).
@@ -369,7 +368,7 @@ VALIDATION_DATA = [
         },
     },
     # endregion
-    # region --- CASO 59: CQUAD4 3D con carga combinada ---
+    # region --- Case 59: warped 3D CQUAD4 under combined load ---
     pytest.param(
         {
         "case_name": "Ej59_CQUAD4_WarpedCombinedLoad",
@@ -381,13 +380,13 @@ VALIDATION_DATA = [
         "abs_tol_reaction": 3.5,
         "rel_tol_element": 0.05,
         "abs_tol_element": 3.0,
-        # Caso historico alabeado, conservado solo como caracterizacion y no
-        # como alcance soportado. Diagnostico actual: U=1.15e-2, R=2.51e-2 y
-        # resultados de elemento=4.14e-2 en norma relativa. La mayor
-        # discrepancia de U es R2 en GRID 3 (28.9 %, 8.70e-5 absoluto); en
-        # reacciones es R1 de GRID 1 (53.2 %, 3.318 absoluto). Estas
-        # diferencias no se corregiran: CQUAD4 queda limitado a nodos
-        # coplanares y el solver debe rechazar geometria alabeada.
+        # Historical warped case retained only for characterization, not as a
+        # supported capability. Current relative errors are U=1.15e-2,
+        # R=2.51e-2, and element results=4.14e-2. The largest U discrepancy is
+        # GRID 3 R2 (28.9 %, 8.70e-5 absolute); the largest reaction discrepancy
+        # is GRID 1 R1 (53.2 %, 3.318 absolute). These differences will not be
+        # calibrated: CQUAD4 is limited to coplanar nodes and must reject warped
+        # geometry.
         "expected_displacements": {
             1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
             2: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
@@ -441,7 +440,7 @@ VALIDATION_DATA = [
         ),
     ),
     # endregion
-    # region --- CASO 60: Un CQUAD4 3D, carga combinada ---
+    # region --- Case 60: one 3D CQUAD4 under combined load ---
     pytest.param(
         {
             "case_name": "Ej60_CQUAD4_3D_MembraneCombined_K6ROT100",
@@ -503,7 +502,7 @@ VALIDATION_DATA = [
         },
     ),
     # endregion
-    # region --- CASO 61: Un CQUAD4 3D, flexion y cortante ---
+    # region --- Case 61: one 3D CQUAD4 in bending and shear ---
     pytest.param(
         {
             "case_name": "Ej61_CQUAD4_3D_BendingShear_K6ROT100",
@@ -564,7 +563,7 @@ VALIDATION_DATA = [
         },
     ),
     # endregion
-    # region --- CASO 62: Un CQUAD4 3D alabeado ---
+    # region --- Case 62: one warped 3D CQUAD4 ---
     pytest.param(
         {
             "case_name": "Ej62_CQUAD4_Warped3D_K6ROT100",
@@ -626,7 +625,7 @@ VALIDATION_DATA = [
         ),
     ),
     # endregion
-    # region --- CASO 63: Dos CQUAD4 3D heterogeneos alabeados ---
+    # region --- Case 63: two heterogeneous warped 3D CQUAD4 elements ---
     pytest.param(
         {
             "case_name": "Ej63_TwoCQUAD4_3D_MultiProperty_K6ROT100",
@@ -686,7 +685,7 @@ VALIDATION_DATA = [
         ),
     ),
     # endregion
-    # region --- CASO 64: Cuatro CQUAD4 3D heterogeneos alabeados---
+    # region --- Case 64: four heterogeneous warped 3D CQUAD4 elements ---
     pytest.param(
         {
             "case_name": "Ej64_FourCQUAD4_3D_MultiProperty_K6ROT50",
@@ -769,7 +768,7 @@ VALIDATION_DATA = [
         ),
     ),
     # endregion
-    # region --- CASO 66: Cortante transversal aislado, K6ROT=0 ---
+    # region --- Case 66: isolated transverse shear, K6ROT=0 ---
     {
             "case_name": "Ej66_CQUAD4_TransverseShearLoad_K6ROT0",
             "folder": "case_66",
@@ -782,11 +781,10 @@ VALIDATION_DATA = [
             "abs_tol_reaction": 1.0e-5,
             "rel_tol_element": 0.01,
             "abs_tol_element": 1.0e-5,
-            # Las traslaciones T3 del orden de 6e4 son consecuencia de la
-            # flexibilidad residual de QUAD4 cuando MID3 esta vacio. Este
-            # caso evita que se vuelva a sustituir silenciosamente MID3 por
-            # MID2, lo que haria el elemento varios millones de veces mas
-            # rigido a cortante.
+            # T3 translations of order 6e4 follow from residual QUAD4
+            # flexibility when MID3 is blank. This case prevents silently
+            # replacing MID3 with MID2, which would make transverse shear
+            # several million times stiffer.
             "expected_displacements": {
                 1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
                 2: {0: 0.0, 1: 0.0, 2: 6.042769e4, 3: 0.0, 4: 0.0, 5: 0.0},
@@ -829,7 +827,7 @@ VALIDATION_DATA = [
             },
     },
     # endregion
-    # region --- CASO 68: Respuesta combinada con MID1/MID2/MID3 y K6ROT=100 ---
+    # region --- Case 68: combined MID1/MID2/MID3 response, K6ROT=100 ---
     {
             "case_name": "Ej68_CQUAD4_FullResponseShear_K6ROT100",
             "folder": "case_68",
@@ -842,8 +840,8 @@ VALIDATION_DATA = [
             "abs_tol_reaction": 1.0e-4,
             "rel_tol_element": 0.01,
             "abs_tol_element": 1.0e-4,
-            # Regresion combinada: ejercita simultaneamente membrana,
-            # flexion, cortadura fisica MID3 y la penalizacion K6ROT.
+            # Combined regression of membrane, bending, physical MID3 shear,
+            # and the K6ROT penalty.
             "expected_displacements": {
                 1: {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0},
                 2: {
@@ -898,7 +896,7 @@ VALIDATION_DATA = [
             },
     },
     # endregion
-    # region --- CASOS 76-80: CQUAD4 planos multielemento y modelo mixto ---
+    # region --- Cases 76-80: planar multi-element CQUAD4 and mixed model ---
     pytest.param(
         {
             "case_name": "Ej76_InclinedPlanarCQUAD4_MultiProperty",
@@ -987,7 +985,7 @@ VALIDATION_DATA = [
             reason=(
                 "MSC's default SNORM averages shell normals at shared GRID points, "
                 "while current solver implmentation just consider each shell normal defined element. "
-                "To make a valid comparison 'PARAM   SNORM   0.0' must be addded, that is what case 82 shows."
+                "A valid comparison requires 'PARAM   SNORM   0.0', as shown by case 82."
                 "As the solver uses independent element normals, adding the mentioned parameter as defined in case 82, "
                 "witch has the same .dat except form the mentioned parametert addition. All case_82 results pass"
             ),
@@ -1114,7 +1112,7 @@ SHELL_RESULT_KEYS = (
 def _assert_close(calculated, expected, *, rel_tol, abs_tol, location):
     assert np.isclose(calculated, expected, rtol=rel_tol, atol=abs_tol), (
         f"{location}: solver={calculated:.9e}, Nastran={expected:.9e}, "
-        f"diferencia={abs(calculated - expected):.9e}, "
+        f"difference={abs(calculated - expected):.9e}, "
         f"rtol={rel_tol:.3e}, atol={abs_tol:.3e}"
     )
 
@@ -1128,7 +1126,7 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
         / case_data["folder"]
         / case_data["filename"]
     )
-    assert dat_path.is_file(), f"Falta el input Nastran: {dat_path}"
+    assert dat_path.is_file(), f"Nastran input file not found: {dat_path}"
 
     model = parse_nastran_input(str(dat_path))
     solver = LinearStaticSolver(model)
@@ -1180,7 +1178,7 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
                 rel_tol=case_data["rel_tol_load"],
                 abs_tol=case_data["abs_tol_load"],
                 location=(
-                    f"{case_data['case_name']} carga GRID {node_id} "
+                    f"{case_data['case_name']} load GRID {node_id} "
                     f"DOF {dof + 1}"
                 ),
             )
@@ -1205,7 +1203,7 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
                 rel_tol=case_data["rel_tol_reaction"],
                 abs_tol=case_data["abs_tol_reaction"],
                 location=(
-                    f"{case_data['case_name']} reaccion GRID {node_id} "
+                    f"{case_data['case_name']} reaction GRID {node_id} "
                     f"DOF {dof + 1}"
                 ),
             )
@@ -1215,7 +1213,7 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
         element_results = calculated["stresses"][element_id]
         for quantity, expected in expected_quantities.items():
             assert quantity in element_results, (
-                f"El solver no devuelve '{quantity}' para elemento {element_id}"
+                f"Solver did not return '{quantity}' for element {element_id}"
             )
             quantity_tolerance = case_data.get(
                 "element_tolerances", {}
@@ -1230,7 +1228,7 @@ def test_cquad4_results_against_nastran(case_data, validation_data_dir):
                     "abs_tol", case_data["abs_tol_element"]
                 ),
                 location=(
-                    f"{case_data['case_name']} elemento {element_id} {quantity}"
+                    f"{case_data['case_name']} element {element_id} {quantity}"
                 ),
             )
 
