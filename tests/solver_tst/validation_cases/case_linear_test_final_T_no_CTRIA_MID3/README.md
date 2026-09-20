@@ -58,8 +58,6 @@ identical to the original model.
 should hide the deliberately introduced transverse stiffness loss through
 automatic stabilization.
 
-![A/B control with unchanged loads and boundary conditions](tfm_final_airframe_frame_T_no_CTRIA_MID3_patran_loads_spc.png)
-
 ## MSC Nastran reference
 
 [tfm_final_airframe_frame_T_no_CTRIA_MID3.dat](tfm_final_airframe_frame_T_no_CTRIA_MID3.dat)

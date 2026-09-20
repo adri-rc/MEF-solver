@@ -1,167 +1,191 @@
-# Campaña MSC Nastran SOL 400 para CBAR
+# MSC Nastran SOL 400 campaign for CBAR
 
-## Objetivo
+## Purpose
 
-Los decks 128--160 generan las referencias externas del CBAR corrotacional.
-La campaña contiene 33 casos: los 21 casos iniciales 128--148, cinco modelos
-mayores 149--153 y siete diagnósticos de interpolación 154--160.
+Decks 128--166 provide the external references for the corotational CBAR.
+The campaign contains 39 cases: the 21 initial cases 128--148, five larger
+models 149--153, seven interpolation diagnostics 154--160, and six fibre
+recovery diagnostics 161--166.
 
-Cada carpeta contiene un único `.dat`. Todas las tarjetas Bulk Data presentes
-van precedidas por comentarios con sus campos para que el deck pueda auditarse
-sin consultar otro archivo. Los modelos usan unidades coherentes N-mm-MPa.
+Each folder contains one `.dat` file. Every Bulk Data card is preceded by
+comments naming its fields so the deck can be audited without consulting
+another file. The models use consistent N-mm-MPa units.
 
-## Matriz de casos
+## Case matrix
 
-| Caso | Modelo o variación | Comprobación principal |
+| Case | Model or variation | Main check |
 |---:|---|---|
-| 128 | CBAR axial pequeño, `LGDISP=-1` | referencia SOL 400 en límite lineal |
-| 129 | flexión pequeña, `LGDISP=-1` | referencia lineal de flexión y signos |
-| 130 | tracción axial finita | extensión, fuerza axial y rigidez material |
-| 131 | compresión subcrítica | rigidez geométrica de compresión |
-| 132 | fuerza grande en Y local | flexión sobre `I1`, giro y efecto P-delta |
-| 133 | fuerza grande en Z local | flexión sobre `I2` y convención de signos |
-| 134 | momento puro sobre Z local | curvatura constante en el primer plano |
-| 135 | momento puro sobre Y local | curvatura constante en el segundo plano |
-| 136 | torsión pura | `GJ`, giro relativo y momento torsor |
-| 137 | carga combinada base | estado finito axial/biaxial/torsional |
-| 138 | base más sonda `+100 N` en Y | diferencia positiva de flexibilidad tangente |
-| 139 | base más sonda `-100 N` en Y | diferencia central de flexibilidad tangente |
-| 140 | CBAR 3D inclinado, `G0`, cargas en `CID` | objetividad, orientación y transformación de cargas |
-| 141 | sección asimétrica, `I12 != 0` | acoplamiento de los dos planos de flexión |
-| 142 | viga corta, `K1/K2`, `INT2=LS` | interpolación lineal-cortante de un punto |
-| 143 | desplazamiento transversal impuesto | SPC no nulo, reacción sin carga externa |
-| 144 | desplazamiento/giro impuestos y FORCE | varios SPC no nulos combinados con carga |
-| 145 | dos elementos, MAT1/PBAR distintos | ensamblaje e interfaz entre propiedades |
-| 146 | voladizo refinado a cuatro elementos | convergencia de malla frente al caso 132 |
-| 147 | marco rectangular con `PB=6` | condensación estable de un release de extremo |
-| 148 | marco espacial con offsets | integración de materiales, cargas, SPC y `LROFF` |
-| 149 | pórtico plano de dos plantas, 15 CBAR | ensamblaje de tres propiedades y efecto P-delta global |
-| 150 | pórtico espacial de dos niveles, 20 CBAR | cargas rotadas, arriostramiento 3D y paso adaptativo |
-| 151 | arco semicircular, 20 CBAR | geometría curva, cuatro propiedades y asiento impuesto |
-| 152 | nave espacial arriostrada, 20 CBAR | offsets `LROFF`, carga combinada y desplazamiento impuesto |
-| 153 | brazo 3D en zigzag, 15 CBAR | cinco secciones, tres materiales, `I12`, cortante y giro impuesto |
+| 128 | small axial CBAR, `LGDISP=-1` | SOL 400 reference in the linear limit |
+| 129 | small bending, `LGDISP=-1` | linear bending and sign reference |
+| 130 | finite axial tension | extension, axial force, and material stiffness |
+| 131 | subcritical compression | geometric stiffness in compression |
+| 132 | large force in local Y | bending about `I1`, rotation, and P-delta effect |
+| 133 | large force in local Z | bending about `I2` and sign convention |
+| 134 | pure moment about local Z | constant curvature in the first plane |
+| 135 | pure moment about local Y | constant curvature in the second plane |
+| 136 | pure torsion | `GJ`, relative twist, and torque |
+| 137 | base combined load | finite axial/biaxial/torsional state |
+| 138 | base plus a `+100 N` Y probe | positive tangent-compliance difference |
+| 139 | base plus a `-100 N` Y probe | central tangent-compliance difference |
+| 140 | inclined 3D CBAR, `G0`, loads in `CID` | objectivity, orientation, and load transformation |
+| 141 | asymmetric section, `I12 != 0` | coupling between the two bending planes |
+| 142 | short beam, `K1/K2`, `INT2=LS` | one-point linear shear interpolation |
+| 143 | prescribed transverse displacement | nonzero SPC and reaction without external load |
+| 144 | prescribed displacement/rotation and FORCE | multiple nonzero SPCs combined with a load |
+| 145 | two elements with different MAT1/PBAR | assembly and interface between properties |
+| 146 | cantilever refined to four elements | mesh convergence relative to case 132 |
+| 147 | rectangular frame with `PB=6` | stable condensation of an end release |
+| 148 | spatial frame with offsets | integration of materials, loads, SPC, and `LROFF` |
+| 149 | two-story planar frame, 15 CBAR | three-property assembly and global P-delta effect |
+| 150 | two-level spatial frame, 20 CBAR | rotated loads, 3D bracing, and adaptive stepping |
+| 151 | semicircular arch, 20 CBAR | curved geometry, four properties, and imposed settlement |
+| 152 | braced spatial building, 20 CBAR | `LROFF` offsets, combined load, and prescribed displacement |
+| 153 | 3D zigzag boom, 15 CBAR | five sections, three materials, `I12`, shear, and imposed rotation |
 
-## Cierre de INT2=LC/LS: casos 154--160
+## Closing `INT2=LC/LS`: cases 154--160
 
-La implementación inicial reveló que el caso 142 no podía reproducirse
-sustituyendo la integración `LS` de MSC por la matriz Timoshenko cerrada de
-`PBAR`. Los siete decks mínimos aíslan la ley correcta:
+The initial implementation showed that case 142 could not be reproduced by
+replacing MSC's `LS` integration with the closed Timoshenko matrix of `PBAR`.
+Seven minimal decks isolate the correct law:
 
-| Caso | INT2 | K1/K2 | Carga | Comparación |
+| Case | INT2 | K1/K2 | Load | Comparison |
 |---:|---|---|---|---|
-| 154 | LC | 0.75/0.50 | Y + 0.5 Z | pareja directa de 142 |
-| 155 | LS | 0.75/0.50 | Y | cortante/plano K1 |
-| 156 | LC | 0.75/0.50 | Y | pareja de 155 |
-| 157 | LS | 0.75/0.50 | Z | cortante/plano K2 |
-| 158 | LC | 0.75/0.50 | Z | pareja de 157 |
-| 159 | LS | 0/0 | Y + 0.5 Z | efecto LS sin factores PBAR |
-| 160 | LC | 0/0 | Y + 0.5 Z | pareja de 159 |
+| 154 | LC | 0.75/0.50 | Y + 0.5 Z | direct counterpart to 142 |
+| 155 | LS | 0.75/0.50 | Y | shear/K1 plane |
+| 156 | LC | 0.75/0.50 | Y | counterpart to 155 |
+| 157 | LS | 0.75/0.50 | Z | shear/K2 plane |
+| 158 | LC | 0.75/0.50 | Z | counterpart to 157 |
+| 159 | LS | 0/0 | Y + 0.5 Z | LS effect without PBAR factors |
+| 160 | LC | 0/0 | Y + 0.5 Z | counterpart to 159 |
 
-Todos conservan 30 incrementos comunes y `OUTCTRL=(SOLUTION,INTERM)`. Sus F06
-terminan sin `FATAL` y alcanzan factor de carga 1.0. Los casos 154/160 prueban
-que `LC` ignora `K1/K2`; 155/157 identifican la ley lineal-cortante, y 159
-identifica el factor unitario usado por `LS` cuando `K1/K2=0`.
+All use the same 30 increments and `OUTCTRL=(SOLUTION,INTERM)`. Their F06
+files end without `FATAL` and reach load factor 1.0. Cases 154/160 demonstrate
+that `LC` ignores `K1/K2`; 155/157 identify the linear shear law; and 159
+identifies the unit factor used by `LS` when `K1/K2=0`.
 
-Las referencias finales están transcritas en
-`test_nonlinear_CBAR_validation_E2E_.py`. Los estados 0.2, 0.5 y 0.8 de
-155--159 se conservan además en
-`test_nonlinear_CBAR_intermediate_validation.py`. Ninguna prueba lee los
-resultados Nastran durante su ejecución.
+Final references are transcribed in
+`test_nonlinear_cbar_validation_end_to_end.py`. States 0.2, 0.5, and 0.8 from
+155--159 are also retained in
+`test_nonlinear_cbar_intermediate_states.py`. No test reads Nastran output
+at runtime.
 
-## Auditoría de la primera ejecución (2026-08-20)
+## Closing CBAR fibre recovery: cases 161--166
 
-Los F06 originales de los casos 128--148 terminaron normalmente: no contienen
-mensajes `USER/SYSTEM FATAL`, todos completan el paso 1 y alcanzan factor de
-carga 1.0. Sin embargo, esa ejecución no constituye una referencia CBAR no
-lineal válida. Los DAT originales sólo contenían `PBAR`; en SOL 400 es necesario
-asociar `PBARN1` para activar la formulación avanzada de CBAR. La respuesta de
-los casos perturbados 137--139 resultó exactamente lineal y los F06/OP2 no
-incluyeron resultados de elemento CBAR, lo que permitió detectar el problema.
+These six decks progressively isolate operations that can alter the sign
+convention or the axes at which MSC evaluates recovery points C--F:
 
-Los DAT 128--148 se corrigieron con `PBARN1` (`BEH2=BAR`, `INT2=LC`, salvo
-`INT2=LS` en el caso 142) y con `NLSTRESS`/`BOUTPUT`, además de solicitudes
-explícitas de `STRAIN` y `ELFORCE`. La ejecución corregida cerró 23 de los 26
-casos a factor de carga 1.0. Los tres restantes se auditaron así:
+| Case | Model | Main check |
+|---:|---|---|
+| 161 | one X-aligned CBAR with symmetric C--F points | combined axial/biaxial bending/torsion signs |
+| 162 | one CBAR inclined in 3D | transport of fibres with the corotated triad |
+| 163 | asymmetric section and `I12 != 0` | biaxial coupling without inferring the centroid from C--F |
+| 164 | `G0` orientation and loads in `CORD2R` | orientation, load transformation, and finite rotation |
+| 165 | two-member spatial elbow with two MAT1/PBAR pairs | A/B end convention and continuity between distinct triads |
+| 166 | three CBAR, `LROFF`, and prescribed rotation | fibres with offsets, multiple elements, and a nonzero SPC |
 
-- 140 y 150 resolvían el primer incremento, pero la exportación intermedia
-  terminaba con `USER FATAL 2025`: los ficheros incrementales de SOL 400 no
-  conservaban el `CORD2R` usado por `GRID.CD`. Sus DAT dejan ahora los
-  resultados en el sistema básico y mantienen `FORCE/MOMENT.CID` para validar
-  la transformación de entrada.
-- 148 convergía cada incremento, pero el control adaptativo agotaba
-  `MAXINC=400` en el factor 0.775568. Su DAT usa ahora 100 incrementos fijos.
+Their F06/PCH references end without `FATAL`, reach load factor 1.0, and are
+transcribed into `test_nonlinear_cbar_validation_end_to_end.py`. The end-to-end
+checks include C--F values at both ends as well as nodal response, centroidal
+axial state, and selected end actions. Nearly neutral fibres and the moment
+distribution in the second segment of case 165 and third segment of case 166
+remain explicit diagnostics rather than broadly tolerated or expected
+failures. The wider 161--176 closure campaign is described in
+[`NONLINEAR_FINAL_CLOSURE_CASES.md`](NONLINEAR_FINAL_CLOSURE_CASES.md).
 
-Los casos 140, 148 y 150 se relanzaron posteriormente. Sus F06/PCH actuales
-alcanzan factor 1.0 y sustituyen las versiones fallidas descritas arriba.
+## Audit of the first run (2026-08-20)
 
-Los casos 137--139 deben ejecutarse sin modificar ningún otro dato. En el
-estado final, una aproximación de la flexibilidad tangente en Y del extremo es:
+The original F06 files for cases 128--148 ended normally: they contain no
+`USER/SYSTEM FATAL` messages, complete step 1, and reach load factor 1.0.
+However, that run is not a valid nonlinear CBAR reference. The original DAT
+files contained only `PBAR`; SOL 400 requires an associated `PBARN1` to enable
+the advanced CBAR formulation. The response of perturbed cases 137--139 was
+exactly linear, and the F06/OP2 files contained no CBAR element results,
+revealing the problem.
+
+DAT files 128--148 were corrected with `PBARN1` (`BEH2=BAR`, `INT2=LC`, except
+for `INT2=LS` in case 142), `NLSTRESS`/`BOUTPUT`, and explicit `STRAIN` and
+`ELFORCE` requests. The corrected run closed 23 of the 26 cases at load factor
+1.0. The remaining three were audited as follows:
+
+- Cases 140 and 150 solved the first increment, but intermediate export ended
+  with `USER FATAL 2025`: SOL 400 incremental files did not retain the
+  `CORD2R` used by `GRID.CD`. Their DAT files now output results in the basic
+  system while retaining `FORCE/MOMENT.CID` to validate the input
+  transformation.
+- Case 148 converged at every increment, but adaptive control exhausted
+  `MAXINC=400` at load factor 0.775568. Its DAT now uses 100 fixed increments.
+
+Cases 140, 148, and 150 were subsequently rerun. Their current F06/PCH files
+reach load factor 1.0 and replace the failed versions described above.
+
+Cases 137--139 must be run without modifying any other input. At the final
+state, the Y-direction tangent compliance at the free end can be approximated
+as:
 
 ```text
 d(uy)/d(Fy) ~= (uy_138 - uy_139) / 200 N
 ```
 
-El caso 137 permite comprobar que la media de las dos soluciones perturbadas
-permanece próxima al estado base.
+Case 137 checks that the mean of the two perturbed solutions remains close to
+the base state.
 
-## Referencias intermedias para implementar la tangente
+## Intermediate references for implementing the tangent
 
-Todos los decks solicitan `NLOPRM OUTCTRL=(SOLUTION,INTERM) NLDBG=ADVDBG`.
-Nastran escribe por cada incremento convergido desplazamientos, cargas,
-reacciones, trabajo/energía, tensiones y deformaciones no lineales de CBAR,
-además del historial de iteraciones y residuos. Los casos 132 y 133 aíslan los
-dos planos de flexión; 136 aísla torsión; 145--146 aíslan ensamblaje y
-refinamiento; 149--153 comprueban ensamblajes mayores.
+All decks request `NLOPRM OUTCTRL=(SOLUTION,INTERM) NLDBG=ADVDBG`. For each
+converged increment, Nastran writes displacements, loads, reactions,
+work/energy, nonlinear CBAR stresses and strains, and the iteration and
+residual history. Cases 132 and 133 isolate the two bending planes; 136
+isolates torsion; 145--146 isolate assembly and refinement; and 149--153 check
+larger assemblies.
 
-Los casos 137--139 son especialmente útiles porque comparten exactamente 40
-incrementos fijos. Como Nastran multiplica también la sonda por el factor de
-carga `lambda`, en cualquier incremento común distinto de cero puede
-calcularse:
+Cases 137--139 are especially useful because they share exactly 40 fixed
+increments. Because Nastran also multiplies the probe by load factor `lambda`,
+the following can be evaluated at any common nonzero increment:
 
 ```text
 d(uy)/d(Fy) | lambda ~= (uy_138(lambda) - uy_139(lambda)) / (200*lambda N)
 ```
 
-Así se dispone de una referencia externa de flexibilidad tangente a lo largo
-de toda la trayectoria, no sólo al final. El F06 no imprime la matriz tangente
-global completa ni, con `PBARN1`, la tabla clásica `FORCES IN BAR ELEMENTS`;
-para depurar se combinarán esta sonda, las reacciones nodales y las tablas
-`NLSTRESS/BOUTPUT`. La implementación usa esas sondas en el test intermedio.
-Los diagnósticos 155--159 aportan también referencias intermedias específicas
-para detectar una regresión en la interpolación `LC/LS` sin depender sólo del
-estado final.
+This provides an external tangent-compliance reference along the whole path,
+not only at the final state. The F06 does not print the complete global
+tangent matrix or, with `PBARN1`, the classic `FORCES IN BAR ELEMENTS` table.
+Debugging therefore combines this probe with nodal reactions and the
+`NLSTRESS/BOUTPUT` tables. The implementation uses these probes in the
+intermediate test. Diagnostics 155--159 also provide interpolation-specific
+intermediate references that detect an `LC/LS` regression without relying
+only on the final state.
 
-## Qué conservar de la ejecución
+## Evidence retained from the runs
 
-Para la auditoría inicial devolver al menos `.f06` y `.pch` junto a cada
-`.dat`. El `.pch` simplifica la transcripción de vectores; el `.f06` conserva
-la convergencia, los avisos y las tablas de elemento. Antes de incorporar otros
-artefactos grandes, se decidirá cuáles aportan información irreemplazable.
+At least the `.f06` and `.pch` files should be returned with each `.dat` for
+an initial audit. The `.pch` simplifies vector transcription; the `.f06`
+retains convergence, warnings, and element tables. Any additional large
+artifact must provide information that cannot be reconstructed from these
+sources before it is added to the repository.
 
-En cada F06 revisar:
+Check the following in every F06:
 
-- `FATAL MESSAGE`, `USER FATAL MESSAGE`, `WARNING MESSAGE` y terminación del
-  trabajo;
-- `NON-LINEAR ITERATION MODULE OUTPUT` y el porcentaje/factor de carga final;
+- `FATAL MESSAGE`, `USER FATAL MESSAGE`, `WARNING MESSAGE`, and job
+  termination;
+- `NON-LINEAR ITERATION MODULE OUTPUT` and the final load percentage/factor;
 - `D I S P L A C E M E N T   V E C T O R`;
 - `F O R C E S   O F   S I N G L E - P O I N T   C O N S T R A I N T`;
-- tablas no lineales CBAR con `STRESS`, `TOTAL STRAIN` y estaciones C--F;
-- energía de deformación y cualquier tabla intermedia solicitada por
+- nonlinear CBAR tables with `STRESS`, `TOTAL STRAIN`, and C--F stations;
+- strain energy and any intermediate table requested by
   `OUTCTRL=(SOLUTION,INTERM)`.
 
-La salida de CBAR de SOL 400 usa ejes locales corrotados. Al transcribirla hay
-que anotar si una columna es esfuerzo interno de sección o acción nodal del
-elemento; sus signos no tienen por qué coincidir directamente con
-`forces_n1/forces_n2` del código.
+SOL 400 CBAR output uses corotated local axes. When transcribing it, record
+whether a column is an internal section resultant or an element nodal action;
+its sign need not match the code's `forces_n1/forces_n2` directly.
 
-## Orden de lanzamiento recomendado
+## Recommended run order
 
-Relanzar primero 128--136 y comprobar que aparecen resultados de `BOUTPUT` o
-`NLSTRESS` para CBAR. Si terminan normalmente, seguir con 137--146, después
-147--148 y finalmente 149--153. Un fallo aislado en 141, 142, 147, 148, 151 o
-152 apunta respectivamente a `I12`, integración `LS`, releases, offsets,
-asiento impuesto u offsets con una malla mayor, sin invalidar los casos básicos.
+Run 128--136 first and verify that `BOUTPUT` or `NLSTRESS` results appear for
+CBAR. If they end normally, continue with 137--146, then 147--148, 149--153,
+154--160, and finally 161--166. An isolated failure in 141, 142, 147, 148,
+151, or 152 points respectively to `I12`, `LS` integration, releases, offsets,
+an imposed settlement, or offsets in a larger mesh, without invalidating the
+basic cases.
 
-No renombrar los jobs ni sus carpetas: el número del caso coincide con los SID
-de `SPC`, `LOAD` y `NLSTEP`, salvo conjuntos auxiliares documentados en el
-propio deck.
+Do not rename jobs or their folders: the case number matches the `SPC`, `LOAD`,
+and `NLSTEP` SIDs, except for auxiliary sets documented in the deck itself.

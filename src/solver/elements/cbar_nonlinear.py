@@ -544,9 +544,3 @@ class CBARNonlinear:
         if not np.all(np.isfinite(vector)):
             raise ValueError("CBAR nonlinear displacement contains NaN/Inf values.")
         return vector
-
-    def get_tangent_stiffness(self, displacement: np.ndarray) -> np.ndarray:
-        return self.evaluate(displacement).tangent_stiffness
-
-    def get_internal_force(self, displacement: np.ndarray) -> np.ndarray:
-        return self.evaluate_internal_force(displacement)

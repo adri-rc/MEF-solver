@@ -53,8 +53,8 @@ class CRODNonlinear:
 
     CROD torsion remains uncoupled and is measured about the reference axis.
     This reproduces cases 116/117, including the fact that axial extension
-    does not change ``GJ/L0``.  General finite-rotation beam kinematics belong
-    to the future nonlinear CBAR implementation, not to this CROD.
+    does not change ``GJ/L0``. Finite-rotation beam kinematics are implemented
+    separately by the nonlinear CBAR formulation and are not part of CROD.
     """
 
     DOFS_PER_NODE = 6
@@ -195,8 +195,3 @@ class CRODNonlinear:
         matrix[second:second + 3, first:first + 3] -= block
         matrix[second:second + 3, second:second + 3] += block
 
-    def get_tangent_stiffness(self, element_displacements_basic: np.ndarray) -> np.ndarray:
-        return self.evaluate(element_displacements_basic).tangent_stiffness
-
-    def get_internal_force(self, element_displacements_basic: np.ndarray) -> np.ndarray:
-        return self.evaluate(element_displacements_basic).internal_force

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from src.preprocessing.data_model import IsotropicMaterial, Node, RodProperty
-from src.solver.elements.crod_non_linear import CRODNonlinear
+from src.solver.elements.crod_nonlinear import CRODNonlinear
 
 
 def _node(nid, xyz):

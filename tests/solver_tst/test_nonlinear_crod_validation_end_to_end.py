@@ -1,49 +1,47 @@
-"""Validación final CROD SOL 400 contra valores explícitos de MSC Nastran.
+"""Validate nonlinear CROD results against explicit MSC Nastran references.
 
-El test no lee el F06/PCH: las referencias se transcriben para que una prueba
-sea reproducible sin disponer de Nastran. Para añadir un caso, buscar primero
-el último bloque ``LOAD STEP = 1.00000E+00`` de su F06 y usar estas tablas:
+The test does not read F06/PCH files at runtime. Values are transcribed so the
+suite remains reproducible without Nastran. Use the final
+``LOAD STEP = 1.00000E+00`` block when adding a case:
 
 * ``DISPLACEMENT VECTOR`` -> ``expected_displacements``;
 * ``FORCES OF SINGLE-POINT CONSTRAINT`` -> ``expected_reactions``;
-* ``NONLINEAR STRESSES IN ROD ELEMENTS (CROD)`` ->
-  ``expected_element_results``;
+* ``NONLINEAR STRESSES IN ROD ELEMENTS (CROD)`` -> element results;
 * ``GLOBAL WORKS & ENERGIES / TOT STRAIN ENERGY`` ->
   ``expected_strain_energy``.
 
-Las claves de cada referencia son:
+Each reference uses these keys:
 
 ``case_name``
-    Identificador único y legible utilizado también como ID de pytest.
-``folder`` y ``filename``
-    Subcarpeta de ``validation_cases`` y nombre exacto del DAT de entrada.
-``description`` y ``note``
-    Objetivo físico y, sólo cuando sea necesario, una advertencia importante.
-``rel_tol`` y ``abs_tol``
-    Única tolerancia relativa y absoluta aplicadas a todas las magnitudes.
-``expected_displacements`` y ``expected_reactions``
-    ``{grid_id: {dof_index: value}}``. El índice es cero basado:
-    0=T1, 1=T2, 2=T3, 3=R1, 4=R2 y 5=R3.
+    Unique readable identifier, also used as the pytest ID.
+``folder`` and ``filename``
+    Subdirectory below ``validation_cases`` and exact input DAT filename.
+``description`` and ``note``
+    Physical purpose and, only when necessary, an important qualification.
+``rel_tol`` and ``abs_tol``
+    Relative and absolute tolerances applied to all case quantities.
+``expected_displacements`` and ``expected_reactions``
+    ``{grid_id: {dof_index: value}}`` with zero-based indices:
+    0=T1, 1=T2, 2=T3, 3=R1, 4=R2, and 5=R3.
 ``expected_element_results``
-    ``{element_id: {result_name: value}}``. Los nombres disponibles son
+    ``{element_id: {result_name: value}}``. Available fields are
     ``axial_stress`` (AXIAL STRESS), ``axial_strain`` (TOTAL STRAIN),
     ``torsional_stress`` (LIN. TORSIONAL STRESS), ``axial_force`` y
-    ``torque``. Si el F06 no imprime las dos últimas directamente, usar
+    ``torque``. If the F06 does not print the last two directly, use
     ``axial_force = area * axial_stress`` y
-    ``torque = J/C * torsional_stress`` con la PROD del elemento.
+    ``torque = J/C * torsional_stress`` with the element PROD.
 ``expected_strain_energy``
-    Valor ``TOT STRAIN ENERGY``. Sólo se compara en trayectorias donde ese
-    acumulado representa la energía elástica del estado final.
+    ``TOT STRAIN ENERGY`` value. It is checked only on paths where the
+    accumulated value represents the final state's elastic energy.
 ``expected_increments``
-    Número de incrementos convergidos, contando los mensajes
-    ``JOB CONVERGES FOR THE CURRENT STEP``; puede diferir del FIXED solicitado
-    cuando se usa ADAPT o hay cutbacks.
+    Converged increment count from ``JOB CONVERGES FOR THE CURRENT STEP``;
+    this can differ from the requested FIXED value under ADAPT or cutbacks.
 ``expected_load_factors``
-    Secuencia opcional de factores convergidos para auditar un control ADAPT.
+    Optional converged-factor sequence for auditing ADAPT control.
 
-Las entradas históricas 92--122 conservan internamente los alias compactos
-``case/u/r/s/energy/increments``. Para cualquier caso nuevo debe usarse el
-formato descriptivo documentado arriba y ejemplificado en 123--127.
+Historical entries 92--122 retain the compact
+``case/u/r/s/energy/increments`` aliases. New cases must use the descriptive
+format documented above and demonstrated by 123--127.
 """
 
 from pathlib import Path
@@ -56,25 +54,25 @@ from src.solver.nonlinear_analysis import NonlinearStaticSolver
 
 VALIDATION_ROOT = Path(__file__).parent / "validation_cases"
 
-# Ejemplo del caso 112, siempre tomando el bloque final LOAD STEP = 1.0:
+# Case 112 example, always using the final LOAD STEP = 1.0 block:
 #
 # * DISPLACEMENT VECTOR, GRID 3, T2 = -1.538383E+01
 #     -> "u": {3: {1: -15.38383}}
 # * FORCES OF SINGLE-POINT CONSTRAINT, GRID 1, T1/T2 = 1.181807E+06/1.E+06
 #     -> "r": {1: {0: 1.181807e6, 1: 1.0e6}}
-# * NONLINEAR STRESSES..., CROD 1: AXIAL STRESS = -1.548118E+04 y
-#   TOTAL STRAIN = -7.371989E-02; con A=100, N=A*sigma=-1.548118E+06
+# * NONLINEAR STRESSES..., CROD 1: AXIAL STRESS = -1.548118E+04 and
+#   TOTAL STRAIN = -7.371989E-02; with A=100, N=A*sigma=-1.548118E+06
 #     -> "s": {1: {"axial_force": -1.548118e6,
 #                    "axial_stress": -15481.18,
 #                    "axial_strain": -0.07371989}}
 #
-# Formato recomendado para introducir un nuevo caso:
+# Recommended format for a new case:
 # {
 #     "case_name": "case_NNN_short_unique_name",
 #     "folder": "case_NNN",
 #     "filename": "ejNNN_model.dat",
-#     "description": "Qué fenómeno físico y resultados valida.",
-#     "note": "Sólo para una salvedad importante; puede omitirse.",
+#     "description": "Physical behavior and results validated by the case.",
+#     "note": "Optional important qualification.",
 #     "rel_tol": 1.0e-5,
 #     "abs_tol": 1.0e-5,
 #     "expected_displacements": {grid_id: {dof_index: value}},
@@ -82,9 +80,9 @@ VALIDATION_ROOT = Path(__file__).parent / "validation_cases"
 #     "expected_element_results": {
 #         element_id: {"axial_stress": value, "axial_strain": value}
 #     },
-#     "expected_strain_energy": value,  # Opcional.
-#     "expected_increments": integer,   # Opcional.
-#     "expected_load_factors": [value, ...],  # Opcional para ADAPT.
+#     "expected_strain_energy": value,  # Optional.
+#     "expected_increments": integer,   # Optional.
+#     "expected_load_factors": [value, ...],  # Optional for ADAPT.
 # }
 NONLINEAR_VALIDATION_DATA = [
     {"case": 92, "u": {2: {0: 1.0}}, "r": {1: {0: -2.1e5}}},

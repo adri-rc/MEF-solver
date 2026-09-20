@@ -4,7 +4,7 @@
 
 The DAT/BDF to data model to sparse assembly to solution to report workflow is
 operational for CROD, CBAR, CTRIA3, and coplanar CQUAD4. The complete suite
-reported `718 passed, 6 xfailed, 2 warnings` on 19 September 2026. The six
+reported `714 passed, 6 xfailed, 2 warnings` on 19 September 2026. The six
 strict expected failures are documented CQUAD4 scope limits.
 
 The linear implementation currently includes:
@@ -39,7 +39,7 @@ The nonlinear implementation distinguishes `SOL 101` from `SOL 400`,
 normalizes `NLSTEP`/`NLPARM`, `LGDISP`, `FOLLOWK`, and relevant
 `PBARN1` fields, and solves geometric nonlinearity for `MAT1` CROD/CBAR
 models. The audited MSC campaigns cover CROD cases 92--127, CBAR cases
-128--166, mixed cases 167--176, and two final bridge models.
+128--166, mixed cases 167--176, and the final three-span bridge model.
 
 ## Completed: geometric nonlinear CROD
 
@@ -71,11 +71,11 @@ and centroidal axial-stress scope.
 
 ## Priority 1: public-release consolidation
 
-The preprocessing and linear-analysis cleanup is the first publication pass.
-It covers active-module naming, removal of disconnected prototypes, English
-comments/docstrings, and English documentation checked against code and tests.
-The nonlinear implementation will receive the same focused cleanup in a later
-pass.
+The preprocessing, linear-analysis, and nonlinear-analysis publication passes
+are complete. They cover active-module naming, removal of disconnected or
+superseded artifacts, English comments/docstrings, and English documentation
+checked against code and tests. The nonlinear pass also retains only the final
+three-span bridge referenced by the submitted thesis.
 
 Remaining consolidation work:
 
@@ -83,9 +83,7 @@ Remaining consolidation work:
 2. add `pyproject.toml` and/or a reproducible dependency lock;
 3. add mesh-refinement convergence tests in addition to DMIG and E2E checks;
 4. decide whether batch mode stops on the first error or accumulates failures;
-5. complete a public-release audit of nonlinear code and its dedicated
-   documentation;
-6. choose and add a repository license before public release.
+5. choose and add a repository license before public release.
 
 The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
 a formulation/recovery limit. It is not a consolidation task and does not

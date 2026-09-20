@@ -1,110 +1,114 @@
-# Cierre SOL 400: fibras CBAR y modelos mixtos CBAR/CROD
+# SOL 400 closure: CBAR fibres and mixed CBAR/CROD models
 
-## Objetivo y estado
+## Objective and status
 
-Los casos 161--176 forman la campaña final de validación geométrica no lineal.
-Los DAT pasan el preprocesado, la comprobación de rango y el solver local. Sus
-F06/PCH de MSC Nastran terminan sin `FATAL`, alcanzan factor de carga 1.0 y sus
-referencias finales ya están transcritas a los E2E CBAR y mixto.
+Cases 161--176 form the final geometric-nonlinear validation campaign. The
+DAT decks pass preprocessing, rank checks, and the local solver. Their MSC
+Nastran F06/PCH runs finish without a `FATAL` message, reach load factor 1.0,
+and their final references are transcribed into the CBAR and mixed end-to-end
+tests.
 
-Las referencias 161--166 están en
-`test_nonlinear_CBAR_validation_E2E_.py`. Las 167--176 están separadas en
-`test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`; cada una compara al menos
-un resultado de elemento CBAR y otro CROD además de la respuesta nodal.
+References for cases 161--166 are in
+`test_nonlinear_cbar_validation_end_to_end.py`. Cases 167--176 are kept
+separately in `test_nonlinear_mixed_validation_end_to_end.py`; each compares
+at least one CBAR result and one CROD result in addition to the nodal response.
 
-Todos los modelos usan unidades coherentes N-mm-MPa, `SOL 400`,
-`ANALYSIS=NLSTAT`, `PARAM,LGDISP,1`, cargas nodales conservativas y pasos fijos.
-Cada tarjeta Bulk Data va precedida por un comentario con sus campos. Los decks
-solicitan `OUTCTRL=(SOLUTION,INTERM)` y las tablas `NLSTRESS`, `BOUTPUT`,
-`ELFORCE`, `STRAIN`, desplazamientos, reacciones y energía.
+All models use consistent N-mm-MPa units, `SOL 400`, `ANALYSIS=NLSTAT`,
+`PARAM,LGDISP,1`, conservative nodal loads, and fixed load increments. Each
+Bulk Data card is preceded by a comment identifying its fields. The decks
+request `OUTCTRL=(SOLUTION,INTERM)` and the `NLSTRESS`, `BOUTPUT`, `ELFORCE`,
+`STRAIN`, displacement, reaction, and energy tables.
 
-## Diagnóstico de tensiones de fibra CBAR: 161--166
+## CBAR fibre-stress diagnostics: cases 161--166
 
-Esta primera familia separa las operaciones que pueden cambiar la convención
-de signo o el eje en que MSC evalúa los puntos C--F.
+This first family isolates the operations that can change the sign convention
+or the axis on which MSC evaluates the C--F recovery points.
 
-| Caso | Modelo | Qué permite identificar |
+| Case | Model | Identified behaviour |
 |---:|---|---|
-| 161 | un CBAR sobre X, puntos C--F simétricos | referencia de signos con axial, flexión biaxial y torsión combinados |
-| 162 | un CBAR inclinado en 3D | transporte de las fibras con la terna corrotada |
-| 163 | sección asimétrica e `I12 != 0` | acoplamiento biaxial sin inferir el centroide promediando C--F |
-| 164 | orientación `G0` y cargas en `CORD2R` | composición de orientación, transformación de carga y rotación finita |
-| 165 | codo espacial de dos CBAR, dos MAT1/PBAR | convención de extremos A/B y continuidad entre ternas distintas |
-| 166 | tres CBAR, `LROFF` y giro impuesto | fibras con offsets, varios elementos y SPC no nulo de rotación |
+| 161 | one CBAR along X, symmetric C--F points | sign reference under combined axial load, biaxial bending, and torsion |
+| 162 | one CBAR inclined in 3D | transport of the fibres with the corotated frame |
+| 163 | asymmetric section and `I12 != 0` | biaxial coupling without inferring the centroid by averaging C--F |
+| 164 | `G0` orientation and loads in `CORD2R` | composition of orientation, load transformation, and finite rotation |
+| 165 | two-CBAR spatial elbow, two MAT1/PBAR definitions | A/B end convention and continuity between different frames |
+| 166 | three CBAR elements, `LROFF`, and imposed rotation | fibres with offsets, multiple elements, and a nonzero rotational SPC |
 
-Para cerrar la recuperación no basta con el máximo/mínimo. Del último estado y
-de, al menos, dos estados intermedios hay que conservar para cada CBAR:
+Closing the recovery requires more than the maximum and minimum values. The
+last state and at least two intermediate states must retain the following for
+every CBAR:
 
-- las tensiones normales C, D, E y F en los extremos A y B;
-- fuerza axial, momentos locales 1/2, cortantes y torsor;
-- deformación axial y curvaturas o deformaciones de sección disponibles;
-- desplazamientos y rotaciones nodales globales;
-- identificación inequívoca del factor de carga de cada bloque.
+- C, D, E, and F normal stresses at ends A and B;
+- axial force, local moments 1/2, shear forces, and torque;
+- axial strain and the available curvatures or section strains;
+- global nodal displacements and rotations;
+- an unambiguous load-factor identifier for every result block.
 
-Los casos 161 y 162 fijan primero los signos. El 163 decide cómo actúa `I12` y
-los puntos asimétricos. Sólo después deben interpretarse 164--166; así un error
-de transformación no puede compensar por casualidad un error de signo.
+Cases 161 and 162 establish the signs first. Case 163 determines how `I12` and
+the asymmetric points operate. Cases 164--166 must be interpreted only after
+those results, so a transformation error cannot accidentally compensate for a
+sign error.
 
-## Modelos mixtos CBAR/CROD: 167--176
+## Mixed CBAR/CROD models: cases 167--176
 
-| Caso | Nodos | CBAR | CROD | Configuración principal |
+| Case | Nodes | CBAR | CROD | Main configuration |
 |---:|---:|---:|---:|---|
-| 167 | 3 | 1 | 1 | voladizo con tirante, FORCE y MOMENT |
-| 168 | 4 | 3 | 1 | pórtico arriostrado, dos materiales |
-| 169 | 6 | 2 | 3 | mástil espacial con tres vientos y propiedades CROD distintas |
-| 170 | 6 | 5 | 4 | pórtico de dos vanos con cruces, varias cargas nodales |
-| 171 | 8 | 8 | 6 | plataforma espacial con columnas, anillo y diagonales |
-| 172 | 9 | 10 | 8 | pórtico de dos plantas y asiento vertical impuesto |
-| 173 | 9 | 12 | 10 | cubierta piramidal, varias secciones e integración `LC/LS` |
-| 174 | 12 | 16 | 8 | marco espacial de dos niveles, cargas en `CORD2R` y desplazamiento impuesto |
-| 175 | 10 | 13 | 15 | nave espacial con offsets, tres materiales y desplazamiento impuesto |
-| 176 | 12 | 20 | 10 | torre arriostrada de tres niveles, varias FORCE/MOMENT y asiento impuesto |
+| 167 | 3 | 1 | 1 | cantilever with tie, FORCE, and MOMENT |
+| 168 | 4 | 3 | 1 | braced frame with two materials |
+| 169 | 6 | 2 | 3 | spatial mast with three guy rods and distinct CROD properties |
+| 170 | 6 | 5 | 4 | two-bay cross-braced frame with several nodal loads |
+| 171 | 8 | 8 | 6 | spatial platform with columns, ring members, and diagonals |
+| 172 | 9 | 10 | 8 | two-storey frame with imposed vertical settlement |
+| 173 | 9 | 12 | 10 | pyramidal roof with several sections and `LC/LS` integration |
+| 174 | 12 | 16 | 8 | two-level space frame with loads in `CORD2R` and imposed displacement |
+| 175 | 10 | 13 | 15 | spatial building with offsets, three materials, and imposed displacement |
+| 176 | 12 | 20 | 10 | three-level braced tower with several FORCE/MOMENT loads and imposed settlement |
 
-La secuencia incrementa deliberadamente el número de elementos hasta 30 y
-combina `MAT1`, `PBAR/PBARN1`, `PROD`, `CBAR`, `CROD`, `FORCE`, `MOMENT`,
-`LOAD`, `SPC1`, `SPC`, `SPCADD`, sistemas de carga, offsets y propiedades
-distintas. No se usa `K6ROT`: ese parámetro estabiliza los giros de láminas y no
-forma parte de la formulación de CROD/CBAR.
+The sequence deliberately increases the model size to 30 elements and
+combines `MAT1`, `PBAR/PBARN1`, `PROD`, `CBAR`, `CROD`, `FORCE`, `MOMENT`,
+`LOAD`, `SPC1`, `SPC`, `SPCADD`, load coordinate systems, offsets, and
+different properties. It does not use `K6ROT`: that parameter stabilizes shell
+rotations and is not part of the CROD/CBAR formulation.
 
-## Modelos finales de integración
+## Final integration model
 
-La campaña numerada culmina en dos modelos estructurales no numerados que se
-mantienen en el mismo E2E mixto:
+The numbered campaign culminates in the unnumbered structural model retained
+in the same mixed end-to-end test:
 
-| Caso | GRID | CBAR | CROD | Acción y propósito |
+| Case | GRID | CBAR | CROD | Action and purpose |
 |---|---:|---:|---:|---|
-| `case_nonlinear_test_final` | 32 | 48 | 30 | puente arco de un vano, 50 incrementos y asiento diferencial |
-| `case_nonlinear_test_final_updated` | 202 | 144 | 428 | puente de tres vanos, bases explícitas, 44 FORCE, 3 MOMENT y 20 incrementos |
+| `case_nonlinear_test_final_updated` | 202 | 144 | 428 | three-span bridge, explicit bases, 44 FORCE cards, 3 MOMENT cards, and 20 increments |
 
-El caso actualizado correlaciona las familias completas con errores L2 del
-orden de `10^-5` en desplazamientos, reacciones y axiles. Las fibras CBAR del
-tablero continuo requieren una lectura separada: `1.673 %` L2 y `11.57 %`
-máximo significativo. El test conserva por ello tolerancias distintas para
-respuesta global, reacciones, estados centroidales y rutas
-`stress_points_*`; la envolvente de fibras no se aplica al resto de resultados.
+The final model correlates the complete result families with L2 errors of
+approximately `10^-5` for displacements, reactions, and axial results. CBAR
+fibres in the continuous deck require separate interpretation: `1.673 %` L2
+error and `11.57 %` maximum significant error. The test therefore retains
+separate tolerances for the global response, reactions, centroidal states,
+and `stress_points_*` paths; the fibre envelope does not apply to the other
+results.
 
-## Orden de ejecución y auditoría
+## Execution order and audit
 
-Ejecutar primero 161--163. Si aparecen `NLSTRESS/BOUTPUT` para CBAR y todos
-alcanzan factor 1.0, continuar con 164--166. Después lanzar 167--171 y, por
-último, 172--176. No cambiar el nombre del job: carpeta, número de caso y SID
-principal coinciden.
+Run cases 161--163 first. If `NLSTRESS/BOUTPUT` results are present for CBAR
+and every case reaches load factor 1.0, continue with 164--166. Then run
+167--171 and finally 172--176. Do not change the job name: the directory,
+case number, and main SID agree.
 
-Devolver al menos `.f06` y `.pch` junto al DAT. Conservar también `.itr` y
-`.sts` durante la auditoría inicial, porque pueden aclarar un fallo incremental;
-se decidirá después si merecen versionarse.
+Retain at least the `.f06` and `.pch` files alongside each DAT deck. Also keep
+the `.itr` and `.sts` files during the initial audit because they can clarify
+an incremental failure; decide afterwards whether they warrant versioning.
 
-En cada F06 comprobar:
+Check the following in every F06 file:
 
-1. ausencia de `USER FATAL MESSAGE` y `SYSTEM FATAL MESSAGE`;
-2. terminación normal y factor de carga final 1.0;
-3. número real de incrementos convergidos y posibles bisecciones;
-4. `DISPLACEMENT VECTOR` y `FORCES OF SINGLE-POINT CONSTRAINT`;
-5. tablas no lineales de CBAR y CROD, incluidos C--F en 161--166;
-6. equilibrio entre cargas externas, reacciones y acciones de elemento;
-7. resultados intermedios de `OUTCTRL=(SOLUTION,INTERM)`.
+1. no `USER FATAL MESSAGE` or `SYSTEM FATAL MESSAGE`;
+2. normal termination and a final load factor of 1.0;
+3. the actual number of converged increments and any bisections;
+4. `DISPLACEMENT VECTOR` and `FORCES OF SINGLE-POINT CONSTRAINT`;
+5. nonlinear CBAR and CROD tables, including C--F values in cases 161--166;
+6. equilibrium among external loads, reactions, and element actions;
+7. intermediate results requested by `OUTCTRL=(SOLUTION,INTERM)`.
 
-Un F06 que termina normalmente pero no contiene resultados CBAR no valida el
-modelo: debe comprobarse que MSC reconoce `PBARN1`. Si un caso complejo falla,
-no relanzar toda la campaña; devolver el F06 fallido para aislar si se trata de
-convergencia, formato de una tarjeta o una combinación no admitida.
+An F06 file that terminates normally but contains no CBAR results does not
+validate the model: confirm that MSC recognizes `PBARN1`. If a complex case
+fails, do not rerun the entire campaign; retain the failed F06 file to
+determine whether the cause is convergence, card formatting, or an unsupported
+combination.

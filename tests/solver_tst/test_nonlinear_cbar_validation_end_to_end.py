@@ -1,41 +1,41 @@
-"""Validación final CBAR SOL 400 contra referencias explícitas de MSC Nastran.
+"""Validate nonlinear CBAR results against explicit MSC Nastran references.
 
-El test no lee los F06/PCH/OP2: los resultados se transcriben para que sea
-reproducible sin una instalación de Nastran. Para añadir un caso se utiliza el
-último bloque ``LOAD STEP = 1.00000E+00`` del F06:
+The test does not read F06, PCH, or OP2 files at runtime. Reference values are
+transcribed so the suite remains reproducible without a Nastran installation.
+Use the final ``LOAD STEP = 1.00000E+00`` F06 block when adding a case:
 
 * ``DISPLACEMENT VECTOR`` -> ``expected_displacements``;
 * ``FORCES OF SINGLE-POINT CONSTRAINT`` -> ``expected_reactions``;
-* ``NONLINEAR STRESSES IN BAR ELEMENTS (CBAR)`` -> resultados de elemento;
-* ``GLOBAL WORKS & ENERGIES / TOT STRAIN ENERGY`` -> energía, sólo cuando el
-  estado permite compararla directamente con la energía elástica recuperada.
+* ``NONLINEAR STRESSES IN BAR ELEMENTS (CBAR)`` -> element results;
+* ``GLOBAL WORKS & ENERGIES / TOT STRAIN ENERGY`` -> energy, only when it is
+  directly comparable with the recovered elastic state energy.
 
-Claves del diccionario de cada caso:
+Each case dictionary uses these keys:
 
 ``case_name``
-    ID único que también aparece como identificador de pytest.
-``folder`` y ``filename``
-    Subcarpeta dentro de ``validation_cases`` y DAT exacto que se resuelve.
-``description`` y ``note``
-    Fenómeno validado y, opcionalmente, una salvedad relevante.
-``rel_tol`` y ``abs_tol``
-    Una tolerancia relativa y otra absoluta para todas las magnitudes.
-``expected_displacements`` y ``expected_reactions``
+    Unique identifier, also used as the pytest ID.
+``folder`` and ``filename``
+    Subdirectory below ``validation_cases`` and exact DAT file to solve.
+``description`` and ``note``
+    Validated behavior and an optional qualification.
+``rel_tol`` and ``abs_tol``
+    Relative and absolute tolerances shared by the case quantities.
+``expected_displacements`` and ``expected_reactions``
     ``{grid_id: {dof_index: value}}``; 0=T1, 1=T2, 2=T3, 3=R1, 4=R2,
-    5=R3. Sólo es necesario transcribir los GDL relevantes para el caso.
+    5=R3. Only the relevant degrees of freedom need to be transcribed.
 ``expected_element_results``
-    ``{element_id: {result_name: value}}``. Entre las claves disponibles están
+    ``{element_id: {result_name: value}}``. Available fields include
     ``axial_stress``, ``axial_strain``, ``axial_force``, ``torque``,
-    ``twist_rate``, ``max_element_stress`` y ``min_element_stress``. Para una
-    sección simétrica, ``axial_stress`` es la media de C/D/E/F de una estación;
-    con puntos no simétricos debe obtenerse como la ordenada en el centroide
-    del plano de tensiones, no como la media aritmética. Las claves con puntos,
-    por ejemplo ``stress_points_end_a.P0.sigma_total``, recorren diccionarios
-    anidados; P0/P1/P2/P3 corresponden respectivamente a C/D/E/F.
-``expected_strain_energy`` y ``expected_increments``
-    Referencias opcionales de energía y número de incrementos convergidos.
+    ``twist_rate``, ``max_element_stress``, and ``min_element_stress``. For a
+    symmetric section, ``axial_stress`` is the C/D/E/F mean at one station;
+    for asymmetric recovery points it must be evaluated at the centroid of
+    the stress plane instead of using an arithmetic mean. Nested paths such
+    as ``stress_points_end_a.P0.sigma_total`` address recovery dictionaries;
+    P0/P1/P2/P3 correspond to C/D/E/F.
+``expected_strain_energy`` and ``expected_increments``
+    Optional energy and converged-increment references.
 
-Ejemplo de alta rápida de una nueva referencia::
+Example entry::
 
     {
         "case_name": "case_NNN_short_name",

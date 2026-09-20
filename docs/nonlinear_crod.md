@@ -1,36 +1,39 @@
-# Análisis no lineal geométrico de CROD
+# Geometrically nonlinear CROD analysis
 
-## Estado y alcance
+## Status and scope
 
-Esta fase incorpora el contrato de entrada, el elemento corrotacional y un
-solver incremental para estática no lineal geométrica con CROD.
-`LinearStaticSolver` permanece sin cambios físicos; `main.py` dirige SOL 400 a
-`src/solver/nonlinear_analysis.py` y SOL 101 a su ruta lineal.
+This document describes the input contract, the corotational element in
+`src/solver/elements/crod_nonlinear.py`, and the incremental solver for
+geometrically nonlinear static analysis with CROD. `LinearStaticSolver`
+remains physically unchanged; `main.py` routes SOL 400 to
+`src/solver/nonlinear_analysis.py` and SOL 101 to the linear path.
 
-El alcance implementado es:
+The CROD scope implemented is:
 
-- `MAT1` elástico isótropo, `PROD` y `CROD`;
-- grandes desplazamientos y rotaciones con deformación axial finita;
-- cargas nodales conservativas `FORCE`/`MOMENT` y combinaciones `LOAD`;
-- restricciones `SPC`, `SPC1`, `SPCADD` y `GRID.PS` ya normalizadas,
-  incluidos valores no nulos de `SPC` aplicados de forma incremental;
-- incremento `FIXED`/`ADAPT`, Newton-Raphson completo, residuo, recortes y
-  tangente consistente;
-- sin plasticidad, contacto, arc-length, cargas seguidoras ni CBAR.
+- isotropic elastic `MAT1`, `PROD`, and `CROD`;
+- large displacements and rotations with finite axial strain;
+- conservative nodal `FORCE`/`MOMENT` loads and `LOAD` combinations;
+- normalized `SPC`, `SPC1`, `SPCADD`, and `GRID.PS` constraints, including
+  nonzero `SPC` values applied incrementally;
+- `FIXED`/`ADAPT` stepping, full Newton-Raphson, residual evaluation,
+  cutbacks, and a consistent tangent;
+- no plasticity, contact, arc-length control, or follower loads.
 
-La ampliación a CBAR será posterior y no debe reutilizar el CROD como si ya
-incluyera flexión o una cinemática de sección.
+CBAR is also supported by the nonlinear solver through its own corotational
+formulation and validation campaign. It is documented separately in
+[`nonlinear_cbar.md`](nonlinear_cbar.md); CROD must not be treated as if it
+included bending or beam-section kinematics.
 
-La guía de SOL 400 indica que sus elementos 1D admiten grandes desplazamientos
-y rotaciones. La gran deformación material es una opción distinta y no se ha
-activado en esta primera fase. Los resultados 94--96 observados con `LGDISP=1`
-dan `epsilon=(L-L0)/L0`, `sigma=E*epsilon` y `N=A*sigma` usando el área de
-referencia; no muestran una actualización isócora de `A`. Esa es la ley que
-reproduce el solver, limitado a no linealidad geométrica.
+The SOL 400 guide states that its 1D elements support large
+displacements and rotations. Large material strain is a separate option and
+is not enabled here. Results from cases 94--96 with `LGDISP=1` give
+`epsilon=(L-L0)/L0`, `sigma=E*epsilon`, and `N=A*sigma` using the reference
+area; they do not show an isochoric update of `A`. This is the law reproduced
+by the solver, which is limited to geometric nonlinearity.
 
-## Tarjetas principales de MSC Nastran
+## Main MSC Nastran entries
 
-### Selección de análisis
+### Analysis selection
 
 ```text
 SOL 400
@@ -42,72 +45,72 @@ SUBCASE 1
   NLSTEP = 30
 ```
 
-- `SOL 400` selecciona el solver implícito no lineal de MSC Nastran.
-- `ANALYSIS=NLSTAT` identifica una etapa estática no lineal. El lector
-  normaliza también los alias `NLSTATIC` y `NLSTATICS`.
-- `SPC` y `LOAD` seleccionan las condiciones de contorno y el valor **total**
-  de carga de la etapa. `NLSTEP` define cómo se alcanza ese valor.
-- El entero de Case Control `NLSTEP=30` debe coincidir con el `SID` de una
-  entrada `NLSTEP` de Bulk Data.
+- `SOL 400` selects MSC Nastran's implicit nonlinear solver.
+- `ANALYSIS=NLSTAT` identifies a nonlinear static step. The reader also
+  normalizes the `NLSTATIC` and `NLSTATICS` aliases.
+- `SPC` and `LOAD` select the boundary conditions and the **total** load value
+  for the step. `NLSTEP` defines how that value is reached.
+- The `NLSTEP=30` Case Control integer must match the `SID` of an `NLSTEP`
+  Bulk Data entry.
 
-### No linealidad geométrica
+### Geometric nonlinearity
 
 ```text
 PARAM,LGDISP,1
 PARAM,FOLLOWK,NO
 ```
 
-`PARAM,LGDISP,1` activa grandes desplazamientos. Esto obliga a actualizar la
-geometría, las fuerzas internas y la rigidez tangente; no equivale a resolver
-repetidamente la matriz elástica lineal sin término geométrico.
+`PARAM,LGDISP,1` activates large displacements. This requires updating the
+geometry, internal forces, and tangent stiffness; it is not equivalent to
+repeatedly solving the linear elastic matrix without a geometric term.
 
-El preproceso conserva el valor completo: `-1` desactiva no linealidad
-geométrica, `0` conserva sólo rigidez diferencial, `1` activa grandes
-desplazamientos y cargas seguidoras, y `2` activa grandes desplazamientos sin
-cargas seguidoras. Los casos usan `-1` en los controles 92/121 y `1` en los
-restantes salvo el control 118, que usa `2`.
+Preprocessing preserves the complete value: `-1` disables geometric
+nonlinearity, `0` retains differential stiffness only, `1` activates large
+displacements and follower loads, and `2` activates large displacements
+without follower loads. The campaign uses `-1` in control cases 92/121 and
+`1` in the remaining cases except control case 118, which uses `2`.
 
-MSC activa también tratamiento de cargas seguidoras al usar grandes
-desplazamientos. La campaña inicial fija `PARAM,FOLLOWK,NO` para excluir la
-rigidez de carga seguidora y aislar la tangente estructural. Las `FORCE` se
-definen en el sistema básico o en un `CID` fijo. La primera implementación del
-proyecto se limitará a cargas nodales conservativas; cualquier ampliación a
-cargas seguidoras necesitará referencias independientes.
+MSC also enables follower-load treatment when large displacements are used.
+The initial campaign sets `PARAM,FOLLOWK,NO` to exclude follower-load
+stiffness and isolate the structural tangent. `FORCE` entries are defined in
+the basic system or in a fixed `CID`. The project implementation remains
+limited to conservative nodal loads; any extension to follower loads requires
+independent references.
 
-### Desplazamientos impuestos
+### Prescribed displacements
 
-El preprocesador y `NonlinearStaticSolver` admiten desplazamientos impuestos
-mediante un valor no nulo en una entrada `SPC`. Por ejemplo:
+The preprocessor and `NonlinearStaticSolver` support prescribed displacements
+through a nonzero value in an `SPC` entry. For example:
 
 ```text
 SPC1,124,23456,5
 SPC,124,5,1,-4.0
 ```
 
-El GRID 5 queda restringido en los seis GDL y alcanza `T1=-4.0` cuando el
-factor de carga llega a uno. Durante la solución se prescribe
-`T1(lambda)=-4.0*lambda`, de manera coherente con el resto de acciones de la
-etapa. Los casos 124 y 126 ejercitan conjuntamente fuerzas nodales y este tipo
-de movimiento. La tarjeta de carga `SPCD` no forma parte todavía del
-subconjunto leído; usarla no debe confundirse con el valor no nulo de `SPC`.
+GRID 5 is constrained in all six DOFs and reaches `T1=-4.0` when the load
+factor reaches one. During the solution, `T1(lambda)=-4.0*lambda` is
+prescribed consistently with the other actions in the step. Cases 124 and
+126 exercise nodal forces together with this type of motion. The `SPCD` load
+entry is not part of the supported reader subset; it must not be confused
+with a nonzero `SPC` value.
 
-### Por qué `K6ROT` no aparece en los casos CROD
+### Why `K6ROT` does not appear in the CROD cases
 
-`PARAM,K6ROT` es una rigidez numérica para el giro de perforación, es decir,
-la rotación alrededor de la normal de elementos de lámina como CTRIA3 y
-CQUAD4. No añade rigidez física ni estabilización a un CROD. En una cercha de
-CROD con `J=0`, los GDL rotacionales nodales no intervienen en la energía y se
-restringen explícitamente con `SPC`; dejarlos libres sería un mecanismo real
-del modelo discreto. Si `PROD.J>0`, sólo la rotación relativa proyectada sobre
-el eje de la barra produce torsión, como comprueban los casos 116/117.
+`PARAM,K6ROT` is numerical stiffness for the drilling rotation, namely the
+rotation about the normal of shell elements such as CTRIA3 and CQUAD4. It
+does not add physical stiffness or stabilization to a CROD. In a CROD truss
+with `J=0`, nodal rotational DOFs do not contribute to the energy and are
+constrained explicitly with `SPC`; leaving them free would create a real
+mechanism in the discrete model. If `PROD.J>0`, only the relative rotation
+projected onto the rod axis produces torsion, as verified by cases 116/117.
 
-Por esa razón añadir `K6ROT` a un deck compuesto únicamente por CROD sería
-inerte y podría ocultar la razón de las restricciones `456`. Los cinco decks
-123--127 incluyen además un comentario explícito recordándolo.
+Adding `K6ROT` to a CROD-only deck would therefore have no effect and could
+obscure the reason for the `456` constraints. The five decks in cases
+123--127 also include an explicit comment stating this point.
 
-### Control incremental e iterativo
+### Increment and iteration control
 
-Ejemplo con incrementos fijos:
+Example with fixed increments:
 
 ```text
 NLSTEP,30,1.0,MILDLY
@@ -116,7 +119,7 @@ NLSTEP,30,1.0,MILDLY
 ,MECH,PV,1.E-8,1.E-8,1.E-8,PFNT
 ```
 
-Ejemplo adaptativo:
+Adaptive example:
 
 ```text
 NLSTEP,30,1.0,SEVERELY
@@ -125,35 +128,33 @@ NLSTEP,30,1.0,SEVERELY
 ,MECH,PV,1.E-9,1.E-9,1.E-9,PFNT
 ```
 
-El subconjunto leído por el preproceso es:
+The subset read during preprocessing is:
 
-- cabecera: `ID`, tiempo total y `CTRLDEF` (`QLINEAR`, `MILDLY` o
+- header: `ID`, total time, and `CTRLDEF` (`QLINEAR`, `MILDLY`, or
   `SEVERELY`);
-- `GENERAL`: `MAXITER`, `MINITER` y `MAXBIS`;
-- `FIXED`: número `NINC` de incrementos iguales;
-- `ADAPT`: fracciones inicial/mínima/máxima, iteraciones deseadas, factor de
-  crecimiento, intervalos de salida y máximo de incrementos;
-- `MECH`: criterios `U/P/W/V/N/A`, tolerancias y política de actualización de
-  rigidez.
+- `GENERAL`: `MAXITER`, `MINITER`, and `MAXBIS`;
+- `FIXED`: the number `NINC` of equal increments;
+- `ADAPT`: initial/minimum/maximum fractions, desired iterations, growth
+  factor, output intervals, and maximum number of increments;
+- `MECH`: `U/P/W/V/N/A` criteria, tolerances, and stiffness-update policy.
 
-`PFNT` solicita Newton-Raphson completo y es la opción usada en la campaña.
-En `ADAPT`, `INTOUT=0` solicita salida en cada incremento convergido y `-1`
-sólo al final; los casos de diagnóstico usan `0` para alimentar los OP2
-intermedios de `NLOPRM`.
-`ITER,KSTEP=1` se normaliza también, pero no se usa como referencia principal.
-Los métodos de arco `ARCLN`, control térmico y acoplamiento se rechazan porque
-están fuera del alcance acordado.
+`PFNT` requests full Newton-Raphson and is the option used throughout the
+campaign. For `ADAPT`, `INTOUT=0` requests output at every converged increment
+and `-1` only at the end; diagnostic cases use `0` to populate the
+intermediate OP2 files requested by `NLOPRM`.
+`ITER,KSTEP=1` is also normalized, but is not used as the primary reference.
+The `ARCLN` arc-length methods, thermal control, and coupling are rejected
+because they are outside the defined scope.
 
-El solver implementado exige `PFNT` y que `MECH` incluya el criterio de residuo
-de fuerzas `P`. Las banderas adicionales se conservan en el modelo, pero la
-aceptación del incremento se decide por ese residuo; una entrada sin `P` se
-rechaza en lugar de ignorar silenciosamente su criterio.
+The implemented solver requires `PFNT` and requires `MECH` to include the
+force-residual criterion `P`. Additional flags are retained in the model, but
+increment acceptance is decided by this residual; input without `P` is
+rejected instead of silently ignoring its criterion.
 
-El lector admite además `NLPARM` como alternativa heredada y lo convierte al
-mismo modelo de datos. Los nuevos decks utilizan `NLSTEP`, que es el control
-preferido para SOL 400.
+The reader also accepts legacy `NLPARM` input and converts it to the same data
+model. New decks use `NLSTEP`, which is the preferred SOL 400 control.
 
-### Salida y diagnóstico
+### Output and diagnostics
 
 ```text
 NLOPRM OUTCTRL = (SOLUTION,INTERM) NLDBG = ADVDBG
@@ -164,86 +165,83 @@ STRESS(PRINT,PUNCH) = ALL
 FORCES(PRINT,PUNCH) = ALL
 ```
 
-`NLOPRM` debe aparecer una sola vez por caso de control; sus opciones se
-yuxtaponen en la misma sentencia. `NLOPRM` y las solicitudes anteriores no
-cambian la física. Permiten conservar
-los estados convergidos, la tabla de iteraciones/residuos y los balances en
-puntos de malla. `NLOUT` se reserva normalmente para seleccionar resultados no
-lineales avanzados; no es necesario para las tablas convencionales de CROD de
-esta campaña.
+`NLOPRM` must appear only once per control case; its options are placed next
+to one another in the same statement. `NLOPRM` and the requests above do not
+change the physics. They preserve converged states, the iteration/residual
+table, and grid-point balances. `NLOUT` is normally reserved for selecting
+advanced nonlinear results and is not required for the conventional CROD
+tables in this campaign.
 
-#### Cómo localizar los resultados finales en el F06
+#### Locating final results in the F06
 
-Un F06 de SOL 400 repite las tablas para cada estado convergido. Antes de
-transcribir una referencia E2E hay que localizar el último bloque
-`LOAD STEP = 1.00000E+00` y confirmar el mensaje
-`JOB CONVERGES FOR THE CURRENT STEP`. Dentro de ese bloque:
+A SOL 400 F06 repeats its tables for every converged state. Before
+transcribing an end-to-end reference, locate the final
+`LOAD STEP = 1.00000E+00` block and confirm the message
+`JOB CONVERGES FOR THE CURRENT STEP`. Within that block:
 
-- `DISPLACEMENT VECTOR` contiene `T1 T2 T3 R1 R2 R3` por `POINT ID`;
-- `FORCES OF SINGLE-POINT CONSTRAINT` contiene las reacciones con las mismas
-  seis columnas;
-- `NONLINEAR STRESSES IN ROD ELEMENTS (CROD)` contiene por `ELEMENT ID`
-  `AXIAL STRESS`, `TOTAL STRAIN` y `LIN. TORSIONAL STRESS`;
-- `GLOBAL WORKS & ENERGIES` contiene `TOT STRAIN ENERGY`;
-- las líneas `FORCE RESIDUAL CONVERGENCE RATIO` y los mensajes de convergencia
-  permiten auditar iteraciones, residuos y número de incrementos.
+- `DISPLACEMENT VECTOR` contains `T1 T2 T3 R1 R2 R3` for each `POINT ID`;
+- `FORCES OF SINGLE-POINT CONSTRAINT` contains the reactions in the same six
+  columns;
+- `NONLINEAR STRESSES IN ROD ELEMENTS (CROD)` contains `AXIAL STRESS`,
+  `TOTAL STRAIN`, and `LIN. TORSIONAL STRESS` for each `ELEMENT ID`;
+- `GLOBAL WORKS & ENERGIES` contains `TOT STRAIN ENERGY`;
+- the `FORCE RESIDUAL CONVERGENCE RATIO` lines and convergence messages allow
+  the iterations, residuals, and number of increments to be audited.
 
-Por ejemplo, en el bloque final del caso 112, GRID 3 imprime
-`T2=-1.538383E+01`; GRID 1 imprime reacciones
-`T1=1.181807E+06`, `T2=1.000000E+06`; y CROD 1 imprime
-`AXIAL STRESS=-1.548118E+04` y `TOTAL STRAIN=-7.371989E-02`.
-Esos valores se convierten respectivamente en las claves `u`, `r` y `s` de
-`test_nonlinear_validation_end_to_end.py`. La fuerza axial se obtiene como
-`N=A*sigma` si no aparece directamente, y el par como
-`T=(J/C)*tau_torsion`. El propio módulo de test contiene el ejemplo completo
-y la correspondencia de todas sus claves.
+For example, in the final block for case 112, GRID 3 reports
+`T2=-1.538383E+01`; GRID 1 reports reactions `T1=1.181807E+06` and
+`T2=1.000000E+06`; and CROD 1 reports `AXIAL STRESS=-1.548118E+04` and
+`TOTAL STRAIN=-7.371989E-02`. These values become the `u`, `r`, and `s` keys,
+respectively, in `test_nonlinear_crod_validation_end_to_end.py`. Axial force is
+obtained as `N=A*sigma` when it is not reported directly, and torque as
+`T=(J/C)*tau_torsion`. The test module contains the complete example and the
+mapping for all its keys.
 
-No existe una salida estándar equivalente a una DMIG de **cada** tangente de
-Newton. Por ello la primera auditoría de rigidez se apoya en:
+There is no standard output equivalent to a DMIG for **every** Newton
+tangent. The initial stiffness audit therefore relies on:
 
-1. el par 92/93 para el límite de carga pequeña;
-2. equilibrio `F_ext - F_int` mediante `GPFORCE`, reacciones y fuerzas CROD;
-3. factores de convergencia y peor residuo de `.f06`/`.sts`;
-4. sensibilidad a discretización incremental en 94/95 y 104/109/110.
+1. the 92/93 pair for the small-load limit;
+2. `F_ext - F_int` equilibrium through `GPFORCE`, reactions, and CROD forces;
+3. convergence factors and the worst residual from `.f06`/`.sts`;
+4. sensitivity to increment discretization in 94/95 and 104/109/110.
 
-Si estas capas no bastan, se preparará una extracción DMAP específica para la
-versión de MSC Nastran usada; no debe asumirse que una DMIG lineal representa
-la tangente convergida.
+If these layers are insufficient, a dedicated DMAP extraction must be
+prepared for the MSC Nastran version in use; a linear DMIG must not be assumed
+to represent the converged tangent.
 
-La auditoría de MSC Nastran 2026.1 confirmó además que 114/115 pueden usarse
-como sonda numérica: la diferencia central de desplazamientos ante cargas
-horizontales `+/-1000` aproxima la flexibilidad tangente alrededor del estado
-deformado de 112. Los casos 116/117 separan torsión pura y tracción+torsión;
-119 fija una referencia estable anterior al salto observado en 102, 120
-ejercita de forma deliberada el control adaptativo a través de ese salto y el
-par 121/122 comprueba el límite lineal en una estructura que cambia de
-orientación.
+The MSC Nastran 2026.1 audit also confirmed that 114/115 can be used as a
+numerical probe: the central difference in displacements under `+/-1000`
+horizontal loads approximates the tangent compliance around the deformed
+state of 112. Cases 116/117 separate pure torsion from combined tension and
+torsion; 119 defines a stable reference before the jump observed in 102; 120
+deliberately exercises adaptive control through that jump; and the 121/122
+pair verifies the linear limit in a structure whose orientation changes.
 
-## Referencias primarias
+## Primary references
 
-- [MSC Nastran 2021.1 Nonlinear User's Guide SOL 400](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2021.1_Nonlinear_SOL_400_User_Guide/raw/resource/enus/MSC_Nastran_2021.1_Nonlinear_SOL_400_User_Guide.pdf): tipos de análisis, `NLSTEP`, convergencia y `LGDISP`.
-- [MSC Nastran 2021.3 SOL 400 Getting Started Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2021.3_SOL_400_Getting_Started_Guide/raw/resource/enus/MSC_Nastran_2021.3_SOL_400_Getting_Started_Guide.pdf): elementos 1D, diagnóstico e intermedios `NLOPRM`.
-- [MSC Nastran 2020 Reference Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2020_Reference_Guide/raw/resource/enus/MSC_Nastran_2020_Reference_Guide.pdf): ejemplos de análisis geométrico `SOL 400` con `PARAM,LGDISP`.
-- [MSC Nastran 2023.4 Reference Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2023.4_Reference_Guide/raw/resource/enus/MSC_Nastran_2023.4_Reference_Guide.pdf): alcance de `K6ROT` como rigidez numérica del giro de perforación de láminas.
+- [MSC Nastran 2021.1 Nonlinear User's Guide SOL 400](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2021.1_Nonlinear_SOL_400_User_Guide/raw/resource/enus/MSC_Nastran_2021.1_Nonlinear_SOL_400_User_Guide.pdf): analysis types, `NLSTEP`, convergence, and `LGDISP`.
+- [MSC Nastran 2021.3 SOL 400 Getting Started Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2021.3_SOL_400_Getting_Started_Guide/raw/resource/enus/MSC_Nastran_2021.3_SOL_400_Getting_Started_Guide.pdf): 1D elements, diagnostics, and intermediate `NLOPRM` output.
+- [MSC Nastran 2020 Reference Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2020_Reference_Guide/raw/resource/enus/MSC_Nastran_2020_Reference_Guide.pdf): geometrically nonlinear `SOL 400` examples with `PARAM,LGDISP`.
+- [MSC Nastran 2023.4 Reference Guide](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2023.4_Reference_Guide/raw/resource/enus/MSC_Nastran_2023.4_Reference_Guide.pdf): scope of `K6ROT` as numerical stiffness for shell drilling rotation.
 
-## Contrato del preproceso
+## Preprocessing contract
 
-`FEMModel.analysis` contiene un `AnalysisConfiguration` con:
+`FEMModel.analysis` contains an `AnalysisConfiguration` with:
 
-- secuencia de solución y tipo de análisis;
-- palabra `ANALYSIS` activa;
-- valor `LGDISP`, activación derivada de grandes desplazamientos y rigidez de
-  carga seguidora;
-- `NonlinearStepControl` normalizado desde `NLSTEP` o `NLPARM`.
+- solution sequence and analysis type;
+- active `ANALYSIS` keyword;
+- `LGDISP` value, derived large-displacement activation, and follower-load
+  stiffness;
+- `NonlinearStepControl` normalized from `NLSTEP` or `NLPARM`.
 
-pyNastran 1.4.1 no implementa la entrada Bulk Data `NLSTEP`. La conserva en
-`reject_lines`; `nastran_reader.py` interpreta allí sus filas libres o de
-campo pequeño y aplica validación estricta. Una continuación desconocida no se
-ignora: detiene el preproceso.
+pyNastran 1.4.1 does not implement the `NLSTEP` Bulk Data entry. It preserves
+it in `reject_lines`; `nastran_reader.py` interprets its free-field or
+small-field rows there and applies strict validation. An unknown continuation
+is not ignored: it stops preprocessing.
 
-## Formulación implementada
+## Implemented formulation
 
-En cada incremento de factor de carga `lambda`, el solver busca:
+At every load-factor increment `lambda`, the solver seeks:
 
 ```text
 r(u, lambda) = lambda F_ext - F_int(u) = 0
@@ -251,7 +249,7 @@ K_T(u) Delta_u = r(u, lambda)
 u_(i+1) = u_i + Delta_u
 ```
 
-Para una cuerda actual `d`, longitud `l` y dirección `n`, usa:
+For a current chord `d`, length `l`, and direction `n`, it uses:
 
 ```text
 epsilon = (l-L0)/L0
@@ -260,53 +258,53 @@ f_int = [-N*n, +N*n]
 k = E*A/L0*(n outer n) + N/l*(I - n outer n)
 ```
 
-El primer término es material y el segundo geométrico. El test elemental
-compara la matriz analítica con la derivada central de `f_int`; el test global
-compara la flexibilidad deformada `K_T^-1[ux,ux]` con la sonda Nastran 114/115.
-La torsión usa `GJ/L0` sobre el eje de referencia, reproduce `R1`, par y
-`tau=T*C/J` de 116/117 y permanece desacoplada de la extensión axial.
+The first term is material and the second is geometric. The element test
+compares the analytical matrix with the central derivative of `f_int`; the
+global test compares the deformed compliance `K_T^-1[ux,ux]` with the Nastran
+114/115 probe. Torsion uses `GJ/L0` about the reference axis, reproduces `R1`,
+torque, and `tau=T*C/J` from 116/117, and remains uncoupled from axial
+extension.
 
-## Estado de validación
+## Validation status
 
-Los 35 casos que alcanzan carga completa (92--119 y 121--127) se resuelven de
-extremo a extremo y se comparan contra valores Nastran escritos explícitamente
-en `test_nonlinear_validation_end_to_end.py`. Se cubren desplazamientos,
-reacciones, tensión/deformación axial, torsión, sistemas CD/CID, LOAD,
-ensamblajes 2D/3D, desplazamientos impuestos y controles fijos/adaptativos.
-Las entradas nuevas usan claves descriptivas (`case_name`, `folder`,
-`filename`, `description`, tolerancias y resultados esperados) documentadas en
-el propio módulo de test.
+The 35 cases that reach full load (92--119 and 121--127) are solved end to end
+and compared with explicit Nastran values in
+`test_nonlinear_crod_validation_end_to_end.py`. They cover displacements,
+reactions, axial stress/strain, torsion, CD/CID systems, `LOAD`, 2D/3D
+assemblies, prescribed displacements, and fixed/adaptive
+controls. New entries use descriptive keys (`case_name`, `folder`, `filename`,
+`description`, tolerances, and expected results) documented in the test module
+itself.
 
-El historial de 112 coincide en 25, 50, 75 y 100 % de carga. La flexibilidad
-tangente horizontal obtenida en el estado final es `6.127186e-6`, igual a la
-diferencia central de 114/115. Los controles adaptativos 95, 104 y 111
-reproducen 9, 14 y 15 incrementos, respectivamente.
+The history for 112 matches at 25, 50, 75, and 100 percent load. The
+horizontal tangent compliance obtained at the final state is `6.127186e-6`,
+equal to the central difference from 114/115. Adaptive controls 95, 104, and
+111 reproduce 9, 14, and 15 increments, respectively.
 
-El informe `.rpt` del proyecto conserva ahora ese tipo de trazabilidad durante
-una ejecución ordinaria. Distingue SOL 400 en el cabecero, imprime la
-configuración normalizada y separa el historial de incrementos convergidos del
-historial de correcciones de Newton. Los desplazamientos, reacciones y estados
-CROD bajo `FINAL CONVERGED STATE RESULTS` pertenecen exclusivamente al último
-equilibrio convergido; los dos historiales se imprimen después. La guía
-[`result_report.md`](result_report.md) explica cada columna y su localización
-en F06.
+The project's `.rpt` report preserves this type of traceability during a
+normal run. It identifies SOL 400 in the header, prints the normalized
+configuration, and separates the converged-increment history from the Newton
+correction history. Displacements, reactions, and CROD states under
+`FINAL CONVERGED STATE RESULTS` belong exclusively to the final converged
+equilibrium; the two histories follow. The [`result_report.md`](result_report.md)
+guide explains every column and its location in the F06.
 
-Los casos estructurales 123--127 reproducen `25/30/30/40/14` incrementos; la
-secuencia completa de factores adaptativos de 127 también coincide. La
-auditoría completa de sus F06 obtuvo errores relativos máximos de `3.77e-7` en
-desplazamientos, `3.76e-7` en reacciones y `3.72e-7` en resultados CROD. En
-125, MSC salta de `T3=-13.5215` a `-69.40416` entre factores `0.533333` y
-`0.566667`; por ello su `TotStrEn` acumulado no se usa como energía elástica
-final, aunque todo el estado mecánico final coincide.
+Structural cases 123--127 reproduce `25/30/30/40/14` increments; the complete
+adaptive load-factor sequence for 127 also matches. The complete audit of
+their F06 files obtained maximum relative errors of `3.77e-7` in
+displacements, `3.76e-7` in reactions, and `3.72e-7` in CROD results. In 125,
+MSC jumps from `T3=-13.5215` to `-69.40416` between factors `0.533333` and
+`0.566667`; its accumulated `TotStrEn` is therefore not used as final elastic
+strain energy, although the entire final mechanical state matches.
 
-El caso 120 no alcanza carga completa bajo control de fuerza: tanto MSC como
-el solver se detienen alrededor de `lambda=0.98387`, al aproximarse al punto
-límite. El número exacto de recortes no se iguala porque la heurística interna
-de adaptación de MSC no está publicada; el fenómeno y el último estado estable
-sí coinciden. No se implementa arco de longitud.
+Case 120 does not reach full load under force control: both MSC and the solver
+stop near `lambda=0.98387` while approaching the limit point. The exact number
+of cutbacks is not matched because MSC's internal adaptation heuristic is not
+published; the phenomenon and the final stable state do match. Arc-length
+control is not implemented.
 
-La energía devuelta por el proyecto es la energía elástica del estado actual.
-En ramas continuas coincide con Nastran salvo el error de integración
-incremental. En 102/105, el campo global `TotStrEn` de Nastran acumula trabajo
-a través del salto y no representa esa misma magnitud; por ello no se usa como
-referencia final en esos dos casos.
+The energy returned by the project is the elastic strain energy of the current
+state. Along continuous branches it agrees with Nastran apart from incremental
+integration error. In 102/105, Nastran's global `TotStrEn` field accumulates
+work across the jump and does not represent the same quantity; it is therefore
+not used as a final reference in those two cases.

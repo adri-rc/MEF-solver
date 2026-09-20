@@ -14,7 +14,7 @@ class checks the distance of all four nodes from the local plane and raises
 greatest side length. The geometry is neither projected nor corrected for
 warping.
 
-The complete-suite baseline observed on 19 September 2026 was `718 passed,
+The complete-suite baseline observed on 19 September 2026 was `714 passed,
 6 xfailed, 2 warnings`. All six `xfail` cases concern this formulation: warped
 cases 54, 59, and 62--64, and case 78 with default `SNORM` smoothing. The
 equivalent faceted cases with `SNORM,0` pass. The two warnings were local

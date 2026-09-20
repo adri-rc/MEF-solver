@@ -8,7 +8,7 @@ small subset of Nastran and is not a general replacement for it.
 
 This documentation describes the repository state verified on
 **19 September 2026**. The complete suite reports
-`718 passed, 6 xfailed`.
+`714 passed, 6 xfailed`.
 
 ## Contents
 
@@ -38,7 +38,7 @@ This documentation describes the repository state verified on
 | CBAR + PBAR + MAT1 | Yes | Yes | Yes | End forces and fibre stresses | Unit and Nastran E2E |
 | CTRIA3 + PSHELL + MAT1 | Yes | Yes | Yes | Membrane, bending, and shear | DMIG and Nastran E2E |
 | CQUAD4 + PSHELL + MAT1 | Yes | Yes | Yes | Membrane, bending, shear, and fibres | DMIG and E2E; coplanar only |
-| SOL 400 + NLSTEP/NLPARM | Yes | CROD/CBAR tangent | Yes | Increment history and CROD/CBAR results | MSC campaigns 92--176 and two integration bridges |
+| SOL 400 + NLSTEP/NLPARM | Yes | CROD/CBAR tangent | Yes | Increment history and CROD/CBAR results | MSC campaigns 92--176 and the final three-span bridge |
 | FORCE / MOMENT / LOAD | Yes | N/A | Yes | Loads transformed from CID | Automated tests |
 | SPC / SPC1 / SPCADD | Yes | N/A | Yes | Reactions and prescribed values | Automated tests |
 | 3D solid elements | No | No | No | No | Outside scope |

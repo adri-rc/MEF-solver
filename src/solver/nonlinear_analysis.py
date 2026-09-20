@@ -25,8 +25,8 @@ from src.preprocessing.data_model import (
     SPCConstraint,
 )
 
-from .elements.crod_non_linear import CRODNonlinear, CRODNonlinearState
-from .elements.cbar_non_linear import CBARNonlinear, CBARNonlinearState
+from .elements.cbar_nonlinear import CBARNonlinear, CBARNonlinearState
+from .elements.crod_nonlinear import CRODNonlinear, CRODNonlinearState
 from .utilities import DofMapper
 
 
@@ -104,9 +104,6 @@ class NonlinearStaticSolver:
         )
         self.n_dofs = self.dof_mapper.total_dofs
         self.external_load = np.zeros(self.n_dofs)
-        # Compatibility names ease diagnostics shared with the linear solver.
-        self.F_global = self.external_load
-        self.K_global = lil_matrix((self.n_dofs, self.n_dofs))
         self.displacements = np.zeros(self.n_dofs)
         self.element_solvers: dict[int, CRODNonlinear | CBARNonlinear] = {}
         self.increment_history: list[NonlinearIncrementResult] = []
@@ -320,7 +317,6 @@ class NonlinearStaticSolver:
             strain_energy += element_state.strain_energy
 
         tangent_csr = tangent.tocsr()
-        self.K_global = tangent
         return NonlinearAssemblyState(
             tangent_stiffness=tangent_csr,
             internal_force=internal,

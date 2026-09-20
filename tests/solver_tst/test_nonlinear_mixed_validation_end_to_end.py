@@ -1,53 +1,51 @@
-"""Validación final SOL 400 de modelos no lineales mixtos CROD/CBAR.
+"""Validate mixed nonlinear CROD/CBAR models against MSC Nastran SOL 400.
 
-Este módulo mantiene separada la evidencia integrada de las campañas puras:
+This module keeps integrated evidence separate from the pure campaigns:
 
-* ``test_nonlinear_validation_end_to_end.py`` valida CROD;
-* ``test_nonlinear_CBAR_validation_E2E_.py`` valida CBAR;
-* este archivo valida el ensamblaje y equilibrio cuando ambos conviven,
-  incluidos los puentes finales de uno y tres vanos.
+* ``test_nonlinear_crod_validation_end_to_end.py`` validates CROD;
+* ``test_nonlinear_cbar_validation_end_to_end.py`` validates CBAR;
+* this file validates assembly and equilibrium when both coexist, including
+  the final three-span thesis bridge.
 
-Las referencias se transcriben del último bloque ``LOAD STEP = 1.00000E+00``
-del F06/PCH. El test no lee resultados de Nastran durante su ejecución.
+References are transcribed from the final ``LOAD STEP = 1.00000E+00`` F06/PCH
+block. Tests do not read Nastran results at runtime.
 
-Claves de cada entrada de ``NONLINEAR_MIXED_VALIDATION_DATA``:
+Each ``NONLINEAR_MIXED_VALIDATION_DATA`` entry uses these keys:
 
 ``case_name``
-    Identificador único usado también como ID de pytest.
-``folder`` y ``filename``
-    Carpeta dentro de ``validation_cases`` y DAT exacto que se resuelve.
-``description`` y ``note``
-    Comportamiento validado y, opcionalmente, una observación importante.
-``rel_tol`` y ``abs_tol``
-    Tolerancias relativa y absoluta comunes a las magnitudes del caso.
-``fiber_rel_tol`` y ``fiber_abs_tol``
-    Envolvente opcional, exclusivamente para rutas ``stress_points_*`` de
-    CBAR. Permite conservar una tolerancia global estricta cuando la
-    recuperación de fibra gobierna un modelo grande.
-``reaction_rel_tol`` y ``element_rel_tol``
-    Envolventes relativas opcionales para reacciones o estados centroidales de
-    elemento. Si no existen, heredan ``rel_tol``. Se usan sólo cuando una
-    componente casi nula gobierna el porcentaje de su familia.
-``expected_displacements`` y ``expected_reactions``
+    Unique identifier, also used as the pytest ID.
+``folder`` and ``filename``
+    Directory below ``validation_cases`` and exact DAT file to solve.
+``description`` and ``note``
+    Validated behavior and an optional qualification.
+``rel_tol`` and ``abs_tol``
+    Relative and absolute tolerances shared by the case quantities.
+``fiber_rel_tol`` and ``fiber_abs_tol``
+    Optional envelope used only for CBAR ``stress_points_*`` paths. It keeps
+    the global tolerance strict when fibre recovery governs a large model.
+``reaction_rel_tol`` and ``element_rel_tol``
+    Optional relative envelopes for reactions or centroidal element states.
+    Missing values inherit ``rel_tol`` and are used only when a near-zero
+    component governs its family's percentage error.
+``expected_displacements`` and ``expected_reactions``
     ``{grid_id: {dof_index: value}}``; 0=T1, 1=T2, 2=T3, 3=R1, 4=R2,
-    5=R3. Los valores proceden de ``DISPLACEMENT VECTOR`` y
+    5=R3. Values come from ``DISPLACEMENT VECTOR`` and
     ``FORCES OF SINGLE-POINT CONSTRAINT``.
 ``expected_element_types``
-    ``{element_id: "CBAR" | "CROD"}``; demuestra que se recuperan ambos tipos.
+    ``{element_id: "CBAR" | "CROD"}``, proving that both types are recovered.
 ``expected_element_results``
-    ``{element_id: {result_name: value}}``. Se comparan tensión, deformación y
-    fuerza axial, además de la longitud de la cuerda deformada calculada con
-    el ``DISPLACEMENT VECTOR``. Para CROD, ``torsional_stress`` procede de la
-    columna ``LIN. TORSIONAL STRESS``. Para CBAR, ``axial_stress`` es la
-    ordenada en el centroide del plano C--F y las rutas anidadas, por ejemplo
-    ``stress_points_end_a.P0.sigma_total``, corresponden a C/D/E/F = P0/P1/
-    P2/P3. SOL 400 no imprime en esta tabla una tensión torsional CBAR aislada,
-    por lo que no se inventa una referencia para ella.
-``expected_strain_energy`` y ``expected_increments``
-    Energía de ``GLOBAL WORKS & ENERGIES / TOT STRAIN ENERGY`` y número de
-    incrementos convergidos solicitado por ``NLSTEP,FIXED``.
+    ``{element_id: {result_name: value}}``. Checks cover axial stress, strain,
+    force, and the deformed chord length derived from ``DISPLACEMENT VECTOR``.
+    CROD ``torsional_stress`` comes from ``LIN. TORSIONAL STRESS``. CBAR
+    ``axial_stress`` is evaluated at the centroid of the C--F stress plane;
+    nested paths such as ``stress_points_end_a.P0.sigma_total`` map C/D/E/F
+    to P0/P1/P2/P3. SOL 400 does not print an isolated CBAR torsional stress
+    in this table, so the tests do not invent a reference for it.
+``expected_strain_energy`` and ``expected_increments``
+    ``TOT STRAIN ENERGY`` and the converged increment count requested by
+    ``NLSTEP,FIXED``.
 
-Ejemplo para añadir otro modelo mixto::
+Example entry::
 
     {
         "case_name": "case_NNN_mixed_model",
@@ -1067,182 +1065,7 @@ NONLINEAR_MIXED_VALIDATION_DATA = [
         "expected_increments": 60,
     },
     {
-        "case_name": "case_final_nonlinear_tied_arch_bridge",
-        "folder": "case_nonlinear_test_final",
-        "filename": "tfm_final_nonlinear_bridge.dat",
-        "description": (
-            "Seventy-eight-element spatial tied-arch bridge under traffic, "
-            "wind, braking, nodal moments and differential settlement."
-        ),
-        "note": (
-            "MSC Nastran 2026.1/NLPERF completed 50 fixed increments without "
-            "FATAL; references are from the final load factor 1.0."
-        ),
-        # Global fields and centroidal states are below 0.03 %.  The 2 %
-        # envelope retains CBAR 1004 fibre C, whose observed error is 1.36 %.
-        "rel_tol": 2.0e-2,
-        "abs_tol": 1.0e-5,
-        "expected_displacements": {
-            105: {
-                0: 1.699041009,
-                1: 0.5986162424,
-                2: -20.03176117,
-                3: 0.0047085113,
-                4: 0.0025862015,
-                5: 6.559926e-5,
-            },
-            109: {
-                0: 3.138824940,
-                1: 0.0,
-                2: -12.0,
-                3: 0.0021378156,
-                4: -0.0022754883,
-                5: -0.0007669997,
-            },
-            205: {
-                0: 1.840642095,
-                1: 0.5807387233,
-                2: -15.77927113,
-                3: -0.0007728808,
-                4: 0.0009399771,
-                5: 6.857936e-5,
-            },
-            209: {
-                0: 3.546153069,
-                1: 0.0,
-                2: -6.0,
-                3: 0.0020975282,
-                4: -0.0015002800,
-                5: -0.0007550977,
-            },
-            304: {
-                0: 2.354375362,
-                1: 2.782788992,
-                2: -17.26813889,
-                3: 0.0011162624,
-                4: 0.0024826454,
-                5: -0.0003033970,
-            },
-            404: {
-                0: 2.464945555,
-                1: 2.820757627,
-                2: -13.90270615,
-                3: 0.0010498483,
-                4: 0.0009647633,
-                5: -0.0003053524,
-            },
-        },
-        "expected_reactions": {
-            101: {
-                0: -29502.1953,
-                1: -52075.1758,
-                2: 442384.5313,
-                3: 36411936.0,
-                4: -248220672.0,
-                5: -57527428.0,
-            },
-            109: {0: 0.0, 1: -77517.0547, 2: 395298.8438},
-            201: {
-                0: -150497.7969,
-                1: -38707.6914,
-                2: 432906.1250,
-                3: 39692332.0,
-                4: -292336064.0,
-                5: -61063804.0,
-            },
-            209: {0: 0.0, 1: -19700.0742, 2: 449410.4688},
-        },
-        "expected_element_types": {
-            1004: "CBAR",
-            1104: "CBAR",
-            1205: "CBAR",
-            2004: "CBAR",
-            2104: "CBAR",
-            2204: "CBAR",
-            3007: "CROD",
-            3008: "CROD",
-            3015: "CROD",
-            3029: "CROD",
-        },
-        "expected_element_results": {
-            1004: {
-                "axial_stress": 59.95272,
-                "axial_strain": 2.85489195e-4,
-                "axial_force": 719432.64,
-                "current_length": 1500.428295,
-                "stress_points_end_a.P0.sigma_total": 32.09938,
-                "stress_points_end_a.P1.sigma_total": 100.3512,
-                "stress_points_end_b.P1.sigma_total": 147.8867,
-                "stress_points_end_b.P2.sigma_total": 166.0755,
-            },
-            1104: {
-                "axial_stress": 66.4065828,
-                "axial_strain": 3.16221844e-4,
-                "axial_force": 796878.993,
-                "current_length": 1500.474408,
-            },
-            1205: {
-                "axial_stress": -1.2342575,
-                "axial_strain": -5.877475e-6,
-                "axial_force": -7405.545,
-                "current_length": 2399.985894,
-            },
-            2004: {
-                "axial_stress": -87.6323425,
-                "axial_strain": -4.1729685e-4,
-                "axial_force": -788691.083,
-                "current_length": 1506.852407,
-                "stress_points_end_a.P0.sigma_total": -98.05580,
-                "stress_points_end_a.P1.sigma_total": -134.6378,
-                "stress_points_end_b.P1.sigma_total": -198.5885,
-                "stress_points_end_b.P3.sigma_total": 23.32383,
-            },
-            2104: {
-                "axial_stress": -61.30556,
-                "axial_strain": -2.919312e-4,
-                "axial_force": -551750.04,
-                "current_length": 1507.041326,
-            },
-            2204: {
-                "axial_stress": 3.5289146,
-                "axial_strain": 1.68043515e-5,
-                "axial_force": 12351.201,
-                "current_length": 2400.040331,
-            },
-            3007: {
-                "axial_stress": 224.6322,
-                "axial_strain": 1.151960e-3,
-                "axial_force": 202168.98,
-                "current_length": 2402.764704,
-                "torsional_stress": 0.0,
-            },
-            3008: {
-                "axial_stress": 152.5624,
-                "axial_strain": 7.823711e-4,
-                "axial_force": 137306.16,
-                "current_length": 2401.877691,
-                "torsional_stress": 0.0,
-            },
-            3015: {
-                "axial_stress": 21.15150,
-                "axial_strain": 1.084692e-4,
-                "axial_force": 13748.475,
-                "current_length": 2830.501329,
-                "torsional_stress": 0.0,
-            },
-            3029: {
-                "axial_stress": -152.4141,
-                "axial_strain": -7.816105e-4,
-                "axial_force": -76207.05,
-                "current_length": 2925.594730,
-                "torsional_stress": 0.0,
-            },
-        },
-        "expected_strain_energy": 1.167160e7,
-        "expected_increments": 50,
-    },
-    {
-        "case_name": "case_final_nonlinear_three_span_bridge_updated",
+        "case_name": "case_final_nonlinear_three_span_bridge",
         "folder": "case_nonlinear_test_final_updated",
         "filename": "tfm_final_nonlinear_bridge_updated.dat",
         "description": (

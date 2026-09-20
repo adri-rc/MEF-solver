@@ -11,7 +11,7 @@ The complete suite was run on 19 September 2026 with:
 Result:
 
 ```text
-718 passed, 6 xfailed, 2 warnings
+714 passed, 6 xfailed, 2 warnings
 ```
 
 Both warnings are `PytestCacheWarning` messages caused by denied write access
@@ -224,17 +224,11 @@ multi-element models reproduce global response, and unsupported geometry is
 rejected explicitly. More accurate replication of centroidal `Qx/Qy`
 printing remains optional recovery work.
 
-## Final nonlinear integration models
+## Final nonlinear integration model
 
-`case_nonlinear_test_final` is a spatial tied-arch bridge with 32 GRID,
-48 CBAR, and 30 CROD. It combines 15 forces, three moments, fixed supports,
-and `-12/-6 mm` differential settlements. Both MSC Nastran 2026.1 and the
-local solver complete 50 fixed increments without cutbacks. Relative L2
-errors are `8.238e-5` in displacements and `1.619e-4` in reactions; the
-largest selected CBAR fibre difference is 1.36%.
-
-`case_nonlinear_test_final_updated` expands this to 202 GRID and 572
-elements. Both solvers complete 20 increments without cutbacks. Relative L2
+`case_nonlinear_test_final_updated` is the final three-span bridge documented
+in the submitted thesis. It contains 202 GRID and 572 elements: 144 CBAR and
+428 CROD. Both solvers complete 20 increments without cutbacks. Relative L2
 errors are `3.280e-5` in translations, `2.416e-5` in rotations,
 `2.898e-5` in force reactions, `2.125e-5` in CROD stress, and
 `1.379e-5` in centroidal CBAR axial stress. Full CBAR fibre results have
@@ -272,7 +266,8 @@ energy.
 Cases 167--176 mix 2--30 CROD/CBAR elements. All 16 closure decks (161--176)
 pass preprocessing, have full-rank initial stiffness where applicable, reach
 full MSC/local load, and contain no MSC `FATAL`. The independent mixed E2E
-module uses a 3% relative envelope; observed preselection vector errors remain
+module covers those ten decks and the final bridge. It uses a 3% relative
+envelope for the numbered campaign; observed preselection vector errors remain
 below 0.04% in displacement, 0.03% in reaction, 2.2% in CBAR fibres, and 1.3%
 in CROD results. Near-neutral fibres and the most rotated portions of cases
 165/166 remain documented diagnostics rather than `xfail` cases.

@@ -5,7 +5,7 @@ import pytest
 
 from src.preprocessing.data_model import BarProperty, IsotropicMaterial, Node
 from src.solver.elements.bar_element import BarElementSolver
-from src.solver.elements.cbar_non_linear import CBARNonlinear
+from src.solver.elements.cbar_nonlinear import CBARNonlinear
 
 
 def _node(nid, xyz):

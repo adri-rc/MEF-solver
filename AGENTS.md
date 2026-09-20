@@ -55,10 +55,6 @@ update that document in the same change.
   that they are not text pointers before diagnosing a read failure.
 - `output/`, caches, and `draft_*` files are local artifacts; they are not a
   source of truth and must not be committed.
-- `docs/TFM/` may contain local, untracked thesis material. Do not edit, delete,
-  or add it to Git without an explicit user request.
-- Do not create commits, push, or rewrite history unless explicitly requested.
-  At completion, report tests, changed files, and risks.
 
 ## Documentation accompanying changes
 

@@ -820,7 +820,7 @@ not pending planar-CQUAD4 defects; they protect the scope boundary.
 The complete suite observed on 19 September 2026 finished with:
 
 ```text
-718 passed, 6 xfailed, 2 warnings
+714 passed, 6 xfailed, 2 warnings
 ```
 
 The warnings were local `PytestCacheWarning` messages caused by denied cache

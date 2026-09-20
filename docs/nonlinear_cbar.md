@@ -1,40 +1,40 @@
-# Análisis geométricamente no lineal de CBAR
+# Geometrically nonlinear CBAR analysis
 
-## Estado y alcance
+## Status and scope
 
-`NonlinearStaticSolver` admite modelos `MAT1/PBAR/PBARN1/CBAR` con grandes
-desplazamientos y rotaciones. La implementación vive en
-`src/solver/elements/cbar_non_linear.py` y no modifica la ruta lineal de
-`BarElementSolver`. La campaña externa CBAR comprende los casos 128--166 de MSC
-Nastran SOL 400.
+`NonlinearStaticSolver` supports `MAT1/PBAR/PBARN1/CBAR` models with large
+displacements and rotations. The implementation lives in
+`src/solver/elements/cbar_nonlinear.py` and does not modify the linear
+`BarElementSolver` path. The external CBAR campaign comprises MSC Nastran
+SOL 400 cases 128--166.
 
-La referencia funcional principal es la documentación oficial de
-[MSC Nastran SOL 400 2022.4](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2022.4_SOL_400_Getting_Started_Guide/raw/resource/enus/MSC_Nastran_2022.4_SOL_400_Getting_Started_Guide.pdf?save_local=true).
-Para CBAR/PBAR, SOL 400 admite grandes desplazamientos y rotaciones, pero no
-grandes deformaciones de sección. Las fuerzas y tensiones se expresan respecto
-a ejes que corrotan con el elemento.
+The main functional reference is the official
+[MSC Nastran SOL 400 2022.4 documentation](https://documentation-be.hexagon.com/bundle/MSC_Nastran_2022.4_SOL_400_Getting_Started_Guide/raw/resource/enus/MSC_Nastran_2022.4_SOL_400_Getting_Started_Guide.pdf?save_local=true).
+For CBAR/PBAR, SOL 400 supports large displacements and rotations but not large
+section strains. Forces and stresses are expressed in axes that corotate with
+the element.
 
-El alcance implementado es:
+The implemented scope is:
 
-- `MAT1` elástico isótropo y sección `PBAR` constante;
-- `PBARN1,SECT=S,BEH2=BAR`, con `INT2=LC` e `INT2=LS` validados;
-- axial, torsión y flexión en ambos planos, incluido `I12`;
-- interpolación lineal/cúbica Euler--Bernoulli para `LC` e interpolación
-  lineal-cortante de un punto para `LS`;
-- factores de área transversal `K1/K2` en `LS`, incluido el valor unitario
-  que SOL 400 aplica cuando el campo es cero;
-- offsets `WA/WB`, releases `PA/PB`, orientación por vector o `G0`;
-- `FORCE`, `MOMENT`, `SPC`, `SPC1`, `SPCADD` y valores impuestos;
-- cargas conservativas (`FOLLOWK=NO`) y Newton completo (`PFNT`).
+- isotropic elastic `MAT1` and a constant `PBAR` section;
+- `PBARN1,SECT=S,BEH2=BAR`, with validated `INT2=LC` and `INT2=LS`;
+- axial, torsional, and bending response in both planes, including `I12`;
+- linear/cubic Euler--Bernoulli interpolation for `LC` and one-point linear
+  shear interpolation for `LS`;
+- transverse-shear factors `K1/K2` in `LS`, including the unit value that
+  SOL 400 applies when the field is zero;
+- `WA/WB` offsets, `PA/PB` releases, and vector or `G0` orientation;
+- `FORCE`, `MOMENT`, `SPC`, `SPC1`, `SPCADD`, and prescribed values;
+- conservative loads (`FOLLOWK=NO`) and full Newton (`PFNT`).
 
-Quedan fuera plasticidad, grandes deformaciones de sección, alabeo, cargas
-distribuidas o seguidoras, PBEAM, CBARAO y control por longitud de arco.
+Plasticity, large section strains, warping, distributed or follower loads,
+PBEAM, CBARAO, and arc-length control are outside the implemented scope.
 
-## Cinemática corrotacional
+## Corotational kinematics
 
-Para cada elemento se guardan longitud y terna de referencia. Las rotaciones
-nodales totales se interpretan como vectores de rotación y se convierten a
-matrices mediante el mapa exponencial. Los offsets rotan con sus nodos:
+Each element stores its reference length and triad. Total nodal rotations are
+interpreted as rotation vectors and converted to matrices through the
+exponential map. Offsets rotate with their nodes:
 
 ```text
 xa = Xa + ua + Ra*WA
@@ -43,37 +43,37 @@ l  = ||xb-xa||
 ex = (xb-xa)/l
 ```
 
-La terna actual se construye en dos pasos. Primero se aplica la rotación más
-corta que lleva el eje de referencia a la cuerda actual. Después se añade el
-promedio del giro físico de ambas secciones alrededor de la cuerda. Esta
-descomposición *swing--twist* evita contaminar el giro de sección con las
-rotaciones de flexión.
+The current triad is constructed in two steps. First, the shortest rotation
+that maps the reference axis to the current chord is applied. The average
+physical twist of both sections about the chord is then added. This
+*swing--twist* decomposition prevents bending rotations from contaminating
+the section twist.
 
-Las orientaciones nodales relativas a esa terna proporcionan los giros locales
-de extremo. El vector deformacional básico es:
+Nodal orientations relative to this triad provide the local end rotations.
+The basic deformation vector is:
 
 ```text
 d = [L0*log(l/L0), theta_xb-theta_xa,
      theta_ya, theta_za, theta_yb, theta_zb]
 ```
 
-El primer término es la deformación logarítmica integrada en la longitud de
-referencia. Los casos axiales 130/131 la identifican directamente: para una
-tensión `sigma`, Nastran devuelve `l/L0=exp(sigma/E)`. `LGDISP=-1` conserva,
-en cambio, la formulación lineal exacta de referencia.
+The first term is the logarithmic strain integrated over the reference
+length. Axial cases 130/131 identify it directly: for a stress `sigma`,
+Nastran returns `l/L0=exp(sigma/E)`. By contrast, `LGDISP=-1` preserves the
+exact reference linear formulation.
 
-## Interpolación PBARN1
+## PBARN1 interpolation
 
-La documentación oficial de SOL 400 distingue dos elementos CBAR de dos
-nodos. `INT2=LC` usa interpolación lineal a lo largo del eje y cúbica para el
-desplazamiento transversal, con tres puntos de integración. Es la rama
-Euler--Bernoulli: los factores `PBAR K1/K2` no cambian su rigidez. Los casos
-154 y 160, idénticos salvo por esos factores, producen exactamente el mismo
-resultado MSC.
+The official SOL 400 documentation distinguishes two two-node CBAR elements.
+`INT2=LC` uses linear interpolation along the axis and cubic interpolation for
+transverse displacement, with three integration points. This is the
+Euler--Bernoulli branch: the `PBAR K1/K2` factors do not change its stiffness.
+Cases 154 and 160, which differ only in those factors, produce exactly the
+same MSC result.
 
-`INT2=LS` usa desplazamiento transversal y giro de sección lineales y un punto
-de integración. En el plano local XY, para los GDL
-`[vA, theta_zA, vB, theta_zB]`, se emplean:
+`INT2=LS` uses linear transverse displacement and section rotation with one
+integration point. In the local XY plane, for the DOFs
+`[vA, theta_zA, vB, theta_zB]`, the implementation uses:
 
 ```text
 B_curvature = [0, -1/L, 0, 1/L]
@@ -83,12 +83,12 @@ K_LS = E*I*L*(B_curvature outer B_curvature)
      + K*A*G*L*(B_shear outer B_shear)
 ```
 
-El segundo plano aplica el cambio de signo de `theta_y` propio del CBAR. El
-acoplamiento `I12` actúa entre las dos curvaturas constantes. Releases y
-offsets se aplican después con las mismas convenciones que en `LC`.
+The second plane applies the CBAR-specific sign change for `theta_y`. The
+`I12` coupling acts between the two constant curvatures. Releases and offsets
+are then applied with the same conventions as in `LC`.
 
-Para un voladizo con fuerza transversal en el extremo, las dos interpolaciones
-dan, en su límite lineal:
+For a cantilever with a transverse force at its tip, the two interpolations
+give, in their linear limit:
 
 ```text
 delta_LC = F*L^3/(3*E*I)
@@ -96,130 +96,131 @@ delta_LS = F*L^3/(4*E*I) + F*L/(K*A*G)
 theta    = F*L^2/(2*E*I)
 ```
 
-La diferencia `1/4` frente a `1/3` explica por qué sustituir `LS` por la matriz
-Timoshenko cerrada del CBAR lineal no reproducía el caso 142. Los pares
-155/156 y 157/158 aíslan ambos planos. El caso 159 demuestra que SOL 400 usa
-`K=1` cuando `K1/K2` valen cero en `LS`; en `LC` esos campos se ignoran.
+The `1/4` versus `1/3` difference explains why replacing `LS` with the closed
+Timoshenko matrix of the linear CBAR did not reproduce case 142. Pairs 155/156
+and 157/158 isolate both planes. Case 159 demonstrates that SOL 400 uses
+`K=1` when `K1/K2` are zero in `LS`; those fields are ignored in `LC`.
 
-## Ley de sección, fuerza interna y tangente
+## Section law, internal force, and tangent
 
-La rama `LC` reutiliza desde `BarElementSolver` la matriz Euler con `K1/K2`
-anulados expresamente. La rama `LS` construye la matriz anterior dentro de
-`CBARNonlinear`. Las seis medidas básicas se embeben en un vector local de 12
-GDL y se calculan las acciones:
+The `LC` branch reuses the Euler matrix from `BarElementSolver` with `K1/K2`
+explicitly set to zero. The `LS` branch constructs the matrix above inside
+`CBARNonlinear`. The six basic measures are embedded in a 12-DOF local vector,
+and the actions are computed as:
 
 ```text
 q_local = K_local d_local
 ```
 
-Fuerzas y momentos se rotan después a coordenadas básicas. Los momentos de
-offset añaden `r x f`. Este vector espacial es el que se ensambla y equilibra
-contra las cargas nodales.
+Forces and moments are then rotated into basic coordinates. Offset moments add
+`r x f`. This spatial vector is assembled and balanced against the nodal
+loads.
 
-La tangente es la derivada central de la fuerza interna completa respecto a
-los 12 desplazamientos y vectores de rotación totales. Incluye por tanto la
-variación de cuerda, terna, offsets y acciones geométricas. No se fuerza su
-simetría: con momentos espaciales y vectores de rotación totales esas
-coordenadas incrementales no forman un par conjugado que garantice una matriz
-simétrica. `spsolve` resuelve directamente el sistema no simétrico.
+The tangent is the central derivative of the complete internal force with
+respect to the 12 total displacement and rotation-vector coordinates. It
+therefore includes changes in the chord, triad, offsets, and geometric
+actions. Symmetry is not imposed: with spatial moments and total rotation
+vectors, these incremental coordinates do not form a conjugate pair that
+guarantees a symmetric matrix. `spsolve` solves the nonsymmetric system
+directly.
 
-Esta elección prioriza una fuerza física auditable y una derivada consistente.
-El coste es alto: una evaluación de tangente requiere 24 evaluaciones de
-fuerza por CBAR. La sustitución futura por una linealización analítica debe
-reproducir antes los tests de diferencia finita y de sonda Nastran.
+This choice prioritizes an auditable physical force and a consistent
+derivative. Its cost is high: one tangent evaluation requires 24 CBAR force
+evaluations. Any future analytical linearization must first reproduce the
+finite-difference and Nastran-probe tests.
 
-## Recuperación
+## Recovery
 
-`CBARNonlinearState` contiene:
+`CBARNonlinearState` contains:
 
-- fuerza interna y tangente 12x12;
-- longitud y terna actuales;
-- deformaciones básicas/locales y acciones locales A/B;
-- deformación/tensión/fuerza axial y giro/torsor;
-- tensiones normales en los puntos C--F de ambos extremos;
-- extremos de tensión y energía elástica de estado.
+- the 12x12 internal-force tangent and internal force;
+- current length and triad;
+- basic/local deformations and local end actions;
+- axial strain, stress, and force, plus twist and torque;
+- normal stresses at recovery points C--F at both ends;
+- stress extrema and state strain energy.
 
-La tensión axial usa `E*log(l/L0)`. La flexión reutiliza la recuperación PBAR
-lineal en la terna corrotada. Las tensiones centroidales axiales se comparan en
-el E2E. La convención exacta de MSC para tensiones de fibra bajo rotación 3D
-combinada no está cerrada todavía; no debe inferirse un esfuerzo centroidal
-promediando C--F si los puntos de recuperación no son simétricos.
+Axial stress uses `E*log(l/L0)`. Bending reuses the linear PBAR recovery in the
+corotated triad. Centroidal axial stresses are compared in the end-to-end
+tests. The exact MSC convention for fibre stresses under combined 3D rotation
+is not fully resolved; a centroidal stress must not be inferred by averaging
+C--F when the recovery points are not symmetric.
 
-### Presentación en el informe `.rpt`
+### Presentation in the `.rpt` report
 
-El estado final convergido de cada CBAR se presenta en cuatro bloques:
+The final converged state of each CBAR is presented in four blocks:
 
-1. `SECTION RESPONSE`: fuerza y tensión axial, torsor, tensión torsional
-   máxima en los puntos configurados, deformación axial logarítmica y giro por
-   unidad de longitud;
-2. `NONLINEAR STATE`: longitud actual entre extremos con offset, energía
-   elástica elemental y tensiones normales extrema máxima/mínima entre ambos
-   extremos;
-3. `END FORCES AND MOMENTS`: acciones locales `Fx/Fy/Fz/Mx/My/Mz` en A y B;
-4. `STRESSES AT RECOVERY POINTS`: contribuciones axial, de flexión, total y
-   torsional en C--F para los dos extremos.
+1. `SECTION RESPONSE`: axial force and stress, torque, maximum torsional stress
+   at the configured points, logarithmic axial strain, and twist per unit
+   length;
+2. `NONLINEAR STATE`: current offset-end length, element strain energy, and
+   maximum/minimum total normal stress across both ends;
+3. `END FORCES AND MOMENTS`: local `Fx/Fy/Fz/Mx/My/Mz` actions at A and B;
+4. `STRESSES AT RECOVERY POINTS`: axial, bending, total, and torsional
+   contributions at C--F for both ends.
 
-Las claves del diccionario `P0`--`P3` se convierten únicamente durante la
-presentación a C--F; el resultado numérico no se modifica. La tabla
-`NONLINEAR STATE` se activa por la presencia conjunta de `current_length` y
-`strain_energy`, de modo que un CBAR lineal conserva las otras tres tablas sin
-mostrar un estado no lineal ficticio. La correspondencia detallada con el F06
-está en [`result_report.md`](result_report.md).
+Dictionary keys `P0`--`P3` are converted to C--F only during presentation;
+the numerical result is not changed. The `NONLINEAR STATE` table is enabled
+by the joint presence of `current_length` and `strain_energy`, so a linear
+CBAR retains the other three tables without showing a fictitious nonlinear
+state. The detailed F06 correspondence is documented in
+[`result_report.md`](result_report.md).
 
-Los decks 161--166 aíslan esa convención de forma escalonada y solicitan los
-resultados C--F en estados finales e intermedios. Sus F06/PCH terminan sin
-`FATAL`, alcanzan factor 1.0 y ya forman parte del E2E CBAR. La tensión axial
-centroidal ajustada sobre C--F coincide aproximadamente entre 0.01 % y 1.7 %;
-se comparan además fibras alejadas del eje neutro. Algunas fibras casi neutras
-y el reparto de momentos del segundo tramo de 165/tercer tramo de 166 siguen
-siendo diagnósticos: no se han ocultado con tolerancias amplias ni `xfail`.
+Decks 161--166 isolate this convention progressively and request C--F results
+at final and intermediate states. Their F06/PCH files end without `FATAL`,
+reach load factor 1.0, and are part of the CBAR end-to-end suite. The
+centroidal axial stress fitted from C--F agrees approximately within 0.01% to
+1.7%; fibres away from the neutral axis are also compared. Some nearly
+neutral fibres and the moment distribution in the second segment of case 165
+and third segment of case 166 remain diagnostics: they are not hidden behind
+broad tolerances or `xfail`.
 
-Los modelos mixtos 167--176 comprueban que la recuperación y el ensamblaje de
-CBAR conviven con la respuesta axial corrotacional de CROD. Sus diez referencias
-se mantienen en un E2E separado y alcanzan carga completa. Véase
+Mixed models 167--176 verify that CBAR recovery and assembly coexist with the
+corotational axial CROD response. Their ten references, together with the
+updated final bridge, form an independent 11-case end-to-end suite and reach
+full load. See
 [`NONLINEAR_FINAL_CLOSURE_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_FINAL_CLOSURE_CASES.md).
 
-## Validación
+## Validation
 
-Las pruebas se reparten en tres niveles:
+The tests are organized into five complementary groups:
 
-- `test_cbar_non_linear.py`: once pruebas de límite lineal, matrices `LC/LS`,
-  valor unitario de cortante, objetividad ante rotación rígida, deformación
-  logarítmica, torsión, releases, offsets y derivada de tangente;
-- `test_nonlinear_CBAR_intermediate_validation.py`: trayectorias de los casos
-  132/137, flexibilidad tangente de 138/139 y estados 0.2/0.5/0.8 de los
-  diagnósticos `LC/LS` 155--159;
-- `test_nonlinear_CBAR_validation_E2E_.py`: diccionario explícito de los 39
-  casos con desplazamientos, reacciones, esfuerzos axiales, torsor y controles
-  de incremento seleccionados, incluidas fibras C--F de 161--166;
-- `test_nonlinear_mixed_CROD_CBAR_validation_E2E.py`: doce referencias
-  integradas, los casos 167--176 y los dos puentes finales, con
-  desplazamientos, reacciones y resultados CBAR/CROD.
-- `test_nonlinear_final_validation_case.py`: los puentes espaciales de uno y
-  tres vanos, con FORCE/MOMENT y asientos impuestos; conserva los controles
-  estructurales y la señal frente a `LGDISP=-1`.
+- `test_cbar_nonlinear.py`: ten test functions, collecting eleven checks of
+  the linear limit, `LC/LS` matrices, the unit shear default, rigid-rotation
+  objectivity, logarithmic strain, torsion, releases, offsets, and the tangent
+  derivative;
+- `test_nonlinear_cbar_intermediate_states.py`: paths for cases 132/137,
+  tangent compliance from 138/139, and states 0.2/0.5/0.8 for the `LC/LS`
+  diagnostics 155--159;
+- `test_nonlinear_cbar_validation_end_to_end.py`: an explicit dictionary of
+  the 39 cases, with displacements, reactions, axial forces, torque, selected
+  increment checks, and C--F fibres for 161--166;
+- `test_nonlinear_mixed_validation_end_to_end.py`: eleven integrated
+  references--cases 167--176 and the updated final bridge--with displacements,
+  reactions, and CBAR/CROD results;
+- `test_nonlinear_final_bridge.py`: structural checks for the updated
+  three-span bridge, including forces/moments, imposed settlements,
+  equilibrium, and a signal relative to `LGDISP=-1`.
 
-La flexibilidad `dT2/dFy` del caso 137 difiere de la sonda MSC entre 0.1 % y
-0.8 % en factores 0.2--1.0. Los 39 E2E CBAR y los doce E2E mixtos alcanzan
-carga completa. Las tolerancias reflejan la complejidad: los casos básicos
-quedan por debajo de
-0.1 %, los ensamblajes grandes se comparan entre 0.3 % y 4 %, y el marco con
-release 147 usa 7 % por una reacción transversal secundaria.
+The `dT2/dFy` compliance in case 137 differs from the MSC probe by 0.1% to
+0.8% at load factors 0.2--1.0. All 39 CBAR and 11 mixed end-to-end references
+reach full load. Tolerances reflect the complexity: basic cases remain below
+0.1%, larger assemblies are compared between 0.3% and 4%, and released frame
+147 uses 7% because of a secondary transverse reaction.
 
-Los casos diagnósticos 154--160 aíslan `LC/LS`, cada plano de cortante y la
-presencia o ausencia de `K1/K2`. Todos convergen sin `FATAL` y forman parte del
-E2E final. Frente a MSC, los máximos errores vectoriales entre esos siete casos
-son `8.04e-5` en desplazamientos, `6.03e-5` en reacciones y `1.52e-4` en
-energía. El caso 142 pasa con `rtol=5e-4` y deja de ser `xfail`.
+Diagnostic cases 154--160 isolate `LC/LS`, each shear plane, and the presence
+or absence of `K1/K2`. All converge without `FATAL` and are part of the final
+end-to-end suite. Against MSC, the maximum vector errors across these seven
+cases are `8.04e-5` in displacements, `6.03e-5` in reactions, and `1.52e-4` in
+energy. Case 142 passes with `rtol=5e-4` and is no longer an `xfail`.
 
-Los DAT y la lectura de sus salidas se describen en
+The DAT files and interpretation of their outputs are documented in
 [`NONLINEAR_CBAR_CASES.md`](../tests/solver_tst/validation_cases/NONLINEAR_CBAR_CASES.md)
-y [`validation.md`](validation.md). El modelo de integración para la defensa
-se documenta en el
-[`README` del puente](../tests/solver_tst/validation_cases/case_nonlinear_test_final/README.md).
-La ampliación de tres vanos, con 202 GRID y bases explícitas, está en
-[`case_nonlinear_test_final_updated`](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md).
-Su correlación completa conserva errores L2 del orden de `10^-5` en respuesta
-global y axial; la recuperación C--F de los largueros continuos queda
-cuantificada aparte (`1.673 %` L2 y `11.57 %` máximo significativo), sin usar
-esa envolvente para los demás campos.
+and [`validation.md`](validation.md). The sole final integration model is the
+updated three-span bridge documented in its
+[`README`](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md).
+It contains 202 GRID, 144 CBAR, 428 CROD, and explicit foundations. Its full
+correlation retains L2 errors of order `10^-5` in global and axial response;
+continuous-girder C--F recovery is quantified separately (`1.673%` L2 and
+`11.57%` maximum significant error), without applying that envelope to other
+fields.
