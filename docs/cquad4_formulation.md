@@ -817,7 +817,7 @@ The six strict `xfail` cases are:
 Equivalent faceted cases 82/88 with `SNORM,0` pass. These `xfail` cases are
 not pending planar-CQUAD4 defects; they protect the scope boundary.
 
-The complete suite observed on 19 September 2026 finished with:
+The complete suite observed on 20 September 2026 finished with:
 
 ```text
 714 passed, 6 xfailed, 2 warnings

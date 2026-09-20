@@ -606,7 +606,7 @@ VALIDATION_DATA = [
     # Variant of case 17 validating corner stresses at all four PBAR points.
     {
         "case_name": "Ej18_Hybrid_Tripod_Stress_Recovery_Points",
-        "folder": "case_22/case_18",
+        "folder": "case_18",
         "filename": "Ej18.dat",
         "description": "Hybrid tripod structure with defined PBAR stress points. Validates detailed stress recovery at cross-section corners (C, D, E, F) and total stress envelopes.",
         "expected_displacements": {

@@ -62,7 +62,7 @@ Run the complete suite with:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-The verified baseline on 19 September 2026 is `714 passed, 6 xfailed`. The
+The verified baseline on 20 September 2026 is `714 passed, 6 xfailed`. The
 six strict expected failures describe explicit CQUAD4 scope limits: five
 warped geometries and one faceted model that requires unsupported `SNORM`
 smoothing. They are not failures of the supported coplanar element.

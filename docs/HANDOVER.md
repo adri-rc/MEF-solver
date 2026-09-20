@@ -11,11 +11,15 @@ is:
 DAT/BDF -> pyNastran -> FEMModel -> linear or nonlinear solver -> RPT report
 ```
 
-The complete post-cleanup suite was run on 19 September 2026 and reported
-`714 passed, 6 xfailed, 2 warnings in 388.59s`. The cleanup removes four
-obsolete tests together with the smaller legacy nonlinear bridge case. Both
-warnings were `PytestCacheWarning` messages caused by denied write access to
-`.pytest_cache`, not numerical failures.
+The complete suite was run on 20 September 2026 after the publication asset
+cleanup and reported `714 passed, 6 xfailed, 2 warnings in 422.63s`. The
+nonlinear cleanup removed four obsolete tests together with the smaller legacy
+bridge case. The final asset pass removed 30 duplicate, superseded, or invalid
+validation artifacts, restored Case 18 to its canonical directory, and
+canonicalized the Case 37 F06 name under Git LFS. Deck comments were translated
+without changing any active Nastran line. Both warnings were
+`PytestCacheWarning` messages caused by denied write access to `.pytest_cache`,
+not numerical failures.
 
 The active final nonlinear integration model is exclusively
 [`case_nonlinear_test_final_updated`](../tests/solver_tst/validation_cases/case_nonlinear_test_final_updated/README.md).
