@@ -5,14 +5,12 @@ KAAX/DMIG matrix reference.  Case 51 is the corresponding CQUAD4 membrane
 case and is therefore used together with CQUAD4 cases 52, 53, 54 and 55.
 """
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from src.preprocessing.data_model import CQUAD4Element
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.elements.cquad4_nastran_element import (
     CQUAD4NastranElementSolver,
 )
@@ -36,8 +34,6 @@ STIFFNESS_VALIDATION_DATA = [
             ],
         },
         "max_relative_frobenius_error": 0.01,
-        "debug_export": True,
-        "output_k_file": "draft_Ej51_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej52_KGlobal_CQUAD4_PureBending_K6ROT_0.0",
@@ -46,8 +42,6 @@ STIFFNESS_VALIDATION_DATA = [
         "k_csv_file": "ej52_k_pure_flex_mid3_0_k6rot_0_Nastran.csv",
         "active_dofs": [2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22],
         "max_relative_frobenius_error": 0.01,
-        "debug_export": True,
-        "output_k_file": "draft_Ej52_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej53_KGlobal_CQUAD4_MembraneBending_K6ROT_0.0",
@@ -61,8 +55,6 @@ STIFFNESS_VALIDATION_DATA = [
             18, 19, 20, 21, 22,
         ],
         "max_relative_frobenius_error": 0.01,
-        "debug_export": True,
-        "output_k_file": "draft_Ej53_KGlobal_CQUAD4_python_test.csv",
     },
     pytest.param(
         {
@@ -72,8 +64,6 @@ STIFFNESS_VALIDATION_DATA = [
         "k_csv_file": "ej54_k_memb-flex-3d_mid3_0_k6rot_0_Nastran.csv",
         "active_dofs": list(range(24)),
         "max_relative_frobenius_error": 0.03,
-        "debug_export": True,
-        "output_k_file": "draft_Ej54_KGlobal_CQUAD4_python_test.csv",
         },
         marks=pytest.mark.xfail(
             strict=True,
@@ -91,8 +81,6 @@ STIFFNESS_VALIDATION_DATA = [
         "active_dofs": list(range(24)),
         "max_relative_frobenius_error": 0.03,
         "validate_drilling_subspace": True,
-        "debug_export": True,
-        "output_k_file": "draft_Ej55_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej65_KGlobal_CQUAD4_TransverseShear_K6ROT_0.0",
@@ -111,8 +99,6 @@ STIFFNESS_VALIDATION_DATA = [
                 2, 3, 4, 8, 9, 10, 14, 15, 16, 20, 21, 22
             ],
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej65_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej67_KGlobal_CQUAD4_FullShear_K6ROT_100.0",
@@ -138,8 +124,6 @@ STIFFNESS_VALIDATION_DATA = [
                 "columns": [0, 1, 6, 7, 12, 13, 18, 19],
             }
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej67_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej69_KGlobal_CQUAD4_MID3Blank_K6ROT_0.0",
@@ -150,8 +134,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 1.0e-8,
         "term_rtol": 1.0e-8,
         "term_atol": 1.0e-10,
-        "debug_export": True,
-        "output_k_file": "draft_Ej69_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej70_KGlobal_CQUAD4_G3Half_K6ROT_0.0",
@@ -162,8 +144,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 1.0e-8,
         "term_rtol": 1.0e-8,
         "term_atol": 1.0e-10,
-        "debug_export": True,
-        "output_k_file": "draft_Ej70_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej71_KGlobal_CQUAD4_G3Double_K6ROT_0.0",
@@ -174,8 +154,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 1.0e-8,
         "term_rtol": 1.0e-8,
         "term_atol": 1.0e-10,
-        "debug_export": True,
-        "output_k_file": "draft_Ej71_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej72_KGlobal_CQUAD4_MID3Blank_K6ROT_100.0",
@@ -186,8 +164,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 1.0e-5,
         "term_rtol": 1.0e-5,
         "term_atol": 1.0e-1,
-        "debug_export": True,
-        "output_k_file": "draft_Ej72_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej73_KGlobal_CQUAD4_TSTHalf_K6ROT_0.0",
@@ -198,8 +174,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 1.0e-8,
         "term_rtol": 1.0e-8,
         "term_atol": 1.0e-10,
-        "debug_export": True,
-        "output_k_file": "draft_Ej73_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej74_KGlobal_CQUAD4_SkewMID3_K6ROT_0.0",
@@ -210,8 +184,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 0.01,
         "term_rtol": 0.01,
         "term_atol": 1.0e-3,
-        "debug_export": True,
-        "output_k_file": "draft_Ej74_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej75_KGlobal_CQUAD4_SkewMID3Blank_K6ROT_0.0",
@@ -222,8 +194,6 @@ STIFFNESS_VALIDATION_DATA = [
         "max_relative_frobenius_error": 0.01,
         "term_rtol": 0.01,
         "term_atol": 1.0e-3,
-        "debug_export": True,
-        "output_k_file": "draft_Ej75_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej81_KGlobal_CQUAD4_SkewAffineFull_K6ROT_100.0",
@@ -277,8 +247,6 @@ STIFFNESS_VALIDATION_DATA = [
                 "term_atol": 1.0e-8,
             },
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej81_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej83_KGlobal_CQUAD4_SkewAffineMID3Isolated_K6ROT_100.0",
@@ -322,8 +290,6 @@ STIFFNESS_VALIDATION_DATA = [
                 "term_atol": 1.0e-8,
             },
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej83_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej89_KGlobal_CQUAD4_SkewAffineMID3Blank_K6ROT_100.0",
@@ -364,8 +330,6 @@ STIFFNESS_VALIDATION_DATA = [
                 "term_atol": 3.0e-8,
             },
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej89_KGlobal_CQUAD4_python_test.csv",
     },
     {
         "case_name": "Ej90_KGlobal_CQUAD4_HighSkewAffine_K6ROT_100.0",
@@ -407,36 +371,12 @@ STIFFNESS_VALIDATION_DATA = [
                 "term_atol": 1.0e-6,
             },
         },
-        "debug_export": True,
-        "output_k_file": "draft_Ej90_KGlobal_CQUAD4_python_test.csv",
     },
 ]
 
 
 class TestCQUAD4StiffnessMatrix:
     """Compare the solver's assembled CQUAD4 K matrix with Nastran KAAX."""
-
-    @staticmethod
-    def _export_stiffness_matrix(K: np.ndarray, output_path: Path) -> None:
-        """Write the complete calculated matrix using the Nastran CSV layout."""
-        dof_labels = []
-        for node_index in range(1, K.shape[0] // 6 + 1):
-            dof_labels.extend(
-                [
-                    f"u{node_index}",
-                    f"v{node_index}",
-                    f"w{node_index}",
-                    f"theta_x{node_index}",
-                    f"theta_y{node_index}",
-                    f"theta_z{node_index}",
-                ]
-            )
-
-        dataframe = pd.DataFrame(K, columns=dof_labels)
-        dataframe.insert(0, "DoF", dof_labels)
-        dataframe.insert(0, "Index", np.arange(K.shape[0]))
-        dataframe.to_csv(output_path, index=False, float_format="%.9e")
-        print(f"\n[DEBUG] Matriz CSV del solver exportada a: {output_path}")
 
     @pytest.mark.parametrize(
         "case_data",
@@ -453,9 +393,9 @@ class TestCQUAD4StiffnessMatrix:
         csv_path = case_path / case_data["k_csv_file"]
 
         if not dat_path.is_file():
-            pytest.fail(f"Falta el archivo de entrada Nastran: {dat_path}")
+            pytest.fail(f"Nastran input file not found: {dat_path}")
         if not csv_path.is_file():
-            pytest.fail(f"Falta el CSV de rigidez de Nastran: {csv_path}")
+            pytest.fail(f"Nastran stiffness CSV not found: {csv_path}")
 
         reference = pd.read_csv(csv_path).iloc[:, 2:].to_numpy(dtype=float)
         model = parse_nastran_input(str(dat_path))
@@ -463,16 +403,8 @@ class TestCQUAD4StiffnessMatrix:
         solver.build_stiffness_matrix()
         calculated = solver.K_global.toarray()
 
-        if case_data.get("debug_export", False):
-            output_k_file = case_data.get("output_k_file")
-            if not output_k_file:
-                pytest.fail("debug_export requiere configurar output_k_file")
-            self._export_stiffness_matrix(
-                calculated, case_path / output_k_file
-            )
-
         assert calculated.shape == reference.shape, (
-            "La dimensión de K_global no coincide: "
+            "K_global shape mismatch: "
             f"solver={calculated.shape}, Nastran={reference.shape}"
         )
         np.testing.assert_allclose(
@@ -480,14 +412,14 @@ class TestCQUAD4StiffnessMatrix:
             calculated.T,
             rtol=1.0e-12,
             atol=1.0e-8,
-            err_msg="K_global calculada no es simétrica",
+            err_msg="Calculated K_global is not symmetric",
         )
 
         active_dofs = case_data["active_dofs"]
         calculated_active = calculated[np.ix_(active_dofs, active_dofs)]
         reference_active = reference[np.ix_(active_dofs, active_dofs)]
         reference_norm = np.linalg.norm(reference_active)
-        assert reference_norm > 0.0, "La matriz de referencia activa es nula"
+        assert reference_norm > 0.0, "Active reference matrix is zero"
 
         relative_error = (
             np.linalg.norm(calculated_active - reference_active) / reference_norm
@@ -503,7 +435,7 @@ class TestCQUAD4StiffnessMatrix:
                 if isinstance(element, CQUAD4Element)
             ]
             assert len(cquad_elements) == 1, (
-                "La comparación en ejes del elemento requiere un solo CQUAD4"
+                "Element-axis comparison requires exactly one CQUAD4"
             )
             element = cquad_elements[0]
             prop = model.properties[element.prop_id]
@@ -529,13 +461,13 @@ class TestCQUAD4StiffnessMatrix:
             block_reference_norm = np.linalg.norm(reference_block)
             if block_reference_norm == 0.0:
                 block_error = np.linalg.norm(calculated_block)
-                error_label = "error absoluto"
+                error_label = "absolute error"
             else:
                 block_error = (
                     np.linalg.norm(calculated_block - reference_block)
                     / block_reference_norm
                 )
-                error_label = "error relativo de Frobenius"
+                error_label = "relative Frobenius error"
             block_diagnostics.append(
                 f"  - {block_name}: {error_label}={block_error:.6e}"
             )
@@ -546,9 +478,9 @@ class TestCQUAD4StiffnessMatrix:
                 assert block_error <= block_limit[
                     "max_relative_frobenius_error"
                 ], (
-                    f"El bloque {block_name} excede su tolerancia en "
+                    f"Block {block_name} exceeds its tolerance in "
                     f"{case_data['case_name']}: error={block_error:.6e}, "
-                    "límite="
+                    "limit="
                     f"{block_limit['max_relative_frobenius_error']:.6e}"
                 )
                 if "term_rtol" in block_limit:
@@ -558,8 +490,8 @@ class TestCQUAD4StiffnessMatrix:
                         rtol=block_limit["term_rtol"],
                         atol=block_limit["term_atol"],
                         err_msg=(
-                            f"El bloque {block_name} no coincide término a "
-                            f"término en {case_data['case_name']}"
+                            f"Block {block_name} differs term by term in "
+                            f"{case_data['case_name']}"
                         ),
                     )
 
@@ -573,13 +505,13 @@ class TestCQUAD4StiffnessMatrix:
             coupling_reference_norm = np.linalg.norm(reference_coupling)
             if coupling_reference_norm == 0.0:
                 coupling_error = np.linalg.norm(calculated_coupling)
-                error_label = "error absoluto"
+                error_label = "absolute error"
             else:
                 coupling_error = (
                     np.linalg.norm(calculated_coupling - reference_coupling)
                     / coupling_reference_norm
                 )
-                error_label = "error relativo de Frobenius"
+                error_label = "relative Frobenius error"
             block_diagnostics.append(
                 f"  - {coupling_name}: {error_label}={coupling_error:.6e}"
             )
@@ -590,9 +522,9 @@ class TestCQUAD4StiffnessMatrix:
                 assert coupling_error <= coupling_limit[
                     "max_relative_frobenius_error"
                 ], (
-                    f"El acoplamiento {coupling_name} excede su tolerancia "
-                    f"en {case_data['case_name']}: error={coupling_error:.6e}, "
-                    "límite="
+                    f"Coupling {coupling_name} exceeds its tolerance in "
+                    f"{case_data['case_name']}: error={coupling_error:.6e}, "
+                    "limit="
                     f"{coupling_limit['max_relative_frobenius_error']:.6e}"
                 )
                 if "term_rtol" in coupling_limit:
@@ -602,8 +534,8 @@ class TestCQUAD4StiffnessMatrix:
                         rtol=coupling_limit["term_rtol"],
                         atol=coupling_limit["term_atol"],
                         err_msg=(
-                            f"El acoplamiento {coupling_name} no coincide "
-                            f"término a término en {case_data['case_name']}"
+                            f"Coupling {coupling_name} differs term by term in "
+                            f"{case_data['case_name']}"
                         ),
                     )
 
@@ -616,20 +548,20 @@ class TestCQUAD4StiffnessMatrix:
         worst_column = active_dofs[worst_local_column]
         diagnostics = ""
         if block_diagnostics:
-            diagnostics += "\nDiagnostico por bloques:\n" + "\n".join(
+            diagnostics += "\nDiagnostics by block:\n" + "\n".join(
                 block_diagnostics
             )
         diagnostics += (
-            "\nMayor diferencia termino a termino: "
+            "\nLargest term-by-term difference: "
             f"K[{worst_row},{worst_column}] solver="
             f"{calculated[worst_row, worst_column]:.9e}, Nastran="
-            f"{reference[worst_row, worst_column]:.9e}, diferencia="
+            f"{reference[worst_row, worst_column]:.9e}, difference="
             f"{absolute_differences[worst_local_row, worst_local_column]:.9e}"
         )
         assert relative_error < tolerance, (
-            f"K_global no coincide para {case_data['case_name']}: "
-            f"error relativo de Frobenius={relative_error:.6e}, "
-            f"tolerancia={tolerance:.6e}{diagnostics}"
+            f"K_global mismatch for {case_data['case_name']}: "
+            f"relative Frobenius error={relative_error:.6e}, "
+            f"tolerance={tolerance:.6e}{diagnostics}"
         )
 
         if "term_rtol" in case_data:
@@ -639,7 +571,7 @@ class TestCQUAD4StiffnessMatrix:
                 rtol=case_data["term_rtol"],
                 atol=case_data["term_atol"],
                 err_msg=(
-                    "La matriz activa no coincide termino a termino en "
+                    "The active matrix differs term by term in "
                     f"{case_data['case_name']}"
                 ),
             )
@@ -672,7 +604,7 @@ class TestCQUAD4StiffnessMatrix:
                 rtol=1.0e-5,
                 atol=1.0e-4,
                 err_msg=(
-                    "El subespacio drilling K6ROT no coincide termino a "
-                    f"termino en {case_data['case_name']}"
+                    "The K6ROT drilling subspace differs term by term in "
+                    f"{case_data['case_name']}"
                 ),
             )

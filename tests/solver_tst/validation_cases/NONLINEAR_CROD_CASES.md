@@ -1,144 +1,144 @@
-# Campaña MSC Nastran SOL 400 para CROD
+# MSC Nastran SOL 400 campaign for CROD
 
-La campaña inicial contiene 20 casos, de `case_92` a `case_111`. Tras auditar
-sus resultados se añadieron once controles focalizados, `case_112` a
-`case_122`, para objetividad, tangente por diferencias centrales, torsión,
-comportamiento próximo al punto límite y un límite lineal sensible a cambios
-de geometría. Los casos 123--127 forman una campaña de escala estructural con
-10--30 barras, propiedades mixtas, cargas múltiples y desplazamientos
-impuestos; sus referencias MSC ya están auditadas e incorporadas al E2E.
+The initial campaign contains 20 cases, from `case_92` through `case_111`.
+After their results were audited, eleven focused controls, `case_112` through
+`case_122`, were added for objectivity, a central-difference tangent, torsion,
+behavior near the limit point, and a linear limit sensitive to geometry
+changes. Cases 123--127 form a structural-scale campaign with 10--30 rods,
+mixed properties, multiple loads, and prescribed displacements; their MSC
+references have been audited and incorporated into the end-to-end tests.
 
-## Objetivo de cada caso
+## Purpose of each case
 
-| Caso | Modelo | Comprobación principal |
+| Case | Model | Main check |
 |---:|---|---|
-| 92 | CROD axial, `LGDISP=-1` | Referencia SOL 400 sin no linealidad geométrica |
-| 93 | Mismo CROD, carga pequeña, `LGDISP=1` | Límite de pequeñas deformaciones frente a 92 |
-| 94 | CROD, tracción grande, 20 incrementos | Curva axial y estado final con `FIXED` |
-| 95 | Réplica de 94 con `ADAPT` | Independencia del stepping, iteraciones y residuos |
-| 96 | CROD, compresión finita | Signos, acortamiento, fuerza y tensión |
-| 97 | CROD inclinado 3D con `GRID.CD`/`FORCE.CID` | Transformaciones antes de la iteración |
-| 98 | Dos CROD iguales en serie | Ensamblaje y continuidad de fuerza interna |
-| 99 | Serie con dos `MAT1` y dos `PROD` | Estado distinto por elemento y compatibilidad |
-| 100 | Dos CROD coincidentes en paralelo | Reparto de fuerza no lineal |
-| 101 | CROD axial con `LOAD` | Reducción de combinaciones antes de incrementar |
-| 102 | V simétrica de dos CROD | Primera gran rotación y simetría |
-| 103 | V asimétrica con carga combinada | Rotación, distinta sección y equilibrio 2D |
-| 104 | V rebajada, `ADAPT`, diagnóstico avanzado | Convergencia cerca de pérdida de rigidez |
-| 105 | Cercha triangular cerrada | Apoyo móvil, compatibilidad y reacción horizontal |
-| 106 | Cuadro arriostrado en X | Ensamblaje 2D redundante y reparto por seis barras |
-| 107 | Trípode tetraédrico | Equilibrio y rotación geométrica 3D |
-| 108 | Pirámide de base cuadrada | Cuatro CROD, dos secciones y carga 3D |
-| 109 | V rebajada con 5 incrementos | Sensibilidad de paso, pareja con 110 |
-| 110 | V rebajada con 40 incrementos | Convergencia al refinar incrementos |
-| 111 | Mástil espacial, 9 CROD, 2 materiales | Caso E2E final, `LOAD`, energía y stepping adaptativo |
-| 112 | V simétrica estable a carga moderada | Referencia común para los casos 113--115 y 118 |
-| 113 | Copia de 112 rotada rígidamente en 3D | Objetividad y transformaciones `GRID.CD`/`FORCE.CID` |
-| 114 | Caso 112 con perturbación horizontal `+1000` | Rama positiva de una tangente secante central |
-| 115 | Caso 112 con perturbación horizontal `-1000` | Rama negativa; simetría y tangente deformada |
-| 116 | Un CROD a torsión pura con `J>0` | GDL rotacional, par interno y tensión torsional |
-| 117 | Un CROD con tracción y torsión combinadas | Acoplamiento/independencia axial-torsional con longitud finita |
-| 118 | Copia de 112 con `LGDISP=2` | Equivalencia con fuerzas no seguidoras |
-| 119 | V simétrica a `3.8e6`, 60 incrementos | Estado estable refinado inmediatamente anterior al salto de 102 |
-| 120 | V de 102 con `ADAPT` agresivo | Cambios de paso, cortes y salto; puede fallar de forma informativa |
-| 121 | V simétrica con carga pequeña y `LGDISP=-1` | Límite lineal geométricamente sensible |
-| 122 | Copia de 121 con `LGDISP=1` | Convergencia al límite lineal en una cercha que sí rota |
-| 123 | Cubierta arqueada 2D, 10 CROD | Ensamblaje redundante, tres PROD y siete fuerzas nodales |
-| 124 | Puente de celosía 2D, 20 CROD | Cinco PROD, cargas repartidas y apoyo con `T1=-4` impuesto |
-| 125 | Cubierta espacial, 30 CROD | Gran desplazamiento 3D, cuatro apoyos y dos materiales |
-| 126 | Marquesina espacial, 24 CROD | Fuerzas 3D combinadas y desplazamiento impuesto de un apoyo |
-| 127 | Torre arriostrada 3D, 30 CROD | Seis PROD, dos materiales y stepping `ADAPT` |
+| 92 | Axial CROD, `LGDISP=-1` | SOL 400 reference without geometric nonlinearity |
+| 93 | Same CROD, small load, `LGDISP=1` | Small-strain limit against 92 |
+| 94 | CROD, large tension, 20 increments | Axial curve and final state with `FIXED` |
+| 95 | Replica of 94 with `ADAPT` | Stepping independence, iterations, and residuals |
+| 96 | CROD, finite compression | Signs, shortening, force, and stress |
+| 97 | Inclined 3D CROD with `GRID.CD`/`FORCE.CID` | Transformations before iteration |
+| 98 | Two identical CRODs in series | Assembly and internal-force continuity |
+| 99 | Series with two `MAT1` and two `PROD` entries | Element-specific states and compatibility |
+| 100 | Two coincident CRODs in parallel | Nonlinear load sharing |
+| 101 | Axial CROD with `LOAD` | Combination reduction before stepping |
+| 102 | Symmetric two-CROD V | First large rotation and symmetry |
+| 103 | Asymmetric V with combined loading | Rotation, different sections, and 2D equilibrium |
+| 104 | Shallow V, `ADAPT`, advanced diagnostics | Convergence near stiffness loss |
+| 105 | Closed triangular truss | Roller support, compatibility, and horizontal reaction |
+| 106 | X-braced square | Redundant 2D assembly and sharing among six rods |
+| 107 | Tetrahedral tripod | Equilibrium and 3D geometric rotation |
+| 108 | Square-base pyramid | Four CRODs, two sections, and 3D loading |
+| 109 | Shallow V with 5 increments | Step sensitivity, paired with 110 |
+| 110 | Shallow V with 40 increments | Convergence under increment refinement |
+| 111 | Spatial mast, 9 CRODs, 2 materials | Final end-to-end case, `LOAD`, energy, and adaptive stepping |
+| 112 | Symmetric V stable at moderate load | Common reference for cases 113--115 and 118 |
+| 113 | Copy of 112 rigidly rotated in 3D | Objectivity and `GRID.CD`/`FORCE.CID` transformations |
+| 114 | Case 112 with a `+1000` horizontal perturbation | Positive branch of a central-difference tangent probe |
+| 115 | Case 112 with a `-1000` horizontal perturbation | Negative branch, symmetry, and deformed tangent |
+| 116 | One CROD in pure torsion with `J>0` | Rotational DOF, internal torque, and torsional stress |
+| 117 | One CROD under combined tension and torsion | Axial-torsional coupling/independence at finite length |
+| 118 | Copy of 112 with `LGDISP=2` | Equivalence with non-follower forces |
+| 119 | Symmetric V at `3.8e6`, 60 increments | Refined stable state immediately before the jump in 102 |
+| 120 | V from 102 with aggressive `ADAPT` | Step changes, cutbacks, and jump; may fail informatively |
+| 121 | Symmetric V with a small load and `LGDISP=-1` | Geometrically sensitive linear limit |
+| 122 | Copy of 121 with `LGDISP=1` | Convergence to the linear limit in a truss that rotates |
+| 123 | 2D arched roof, 10 CRODs | Redundant assembly, three PROD entries, and seven nodal forces |
+| 124 | 2D truss bridge, 20 CRODs | Five PROD entries, distributed nodal loads, and a support with prescribed `T1=-4` |
+| 125 | Space dome, 30 CRODs | Large 3D displacement, four supports, and two materials |
+| 126 | Space canopy, 24 CRODs | Combined 3D forces and a prescribed support displacement |
+| 127 | 3D braced tower, 30 CRODs | Six PROD entries, two materials, and `ADAPT` stepping |
 
-## Auditoría completa
+## Complete audit
 
-Resultados observados con **MSC Nastran Student Edition 2026.1**, motor
-`NLPERF`, el 20 de agosto de 2026:
+Results observed with **MSC Nastran Student Edition 2026.1**, using the
+`NLPERF` engine, on 20 August 2026:
 
-- los 30 trabajos convergidos 92--119/121--122 terminaron con `exit number 0`,
-  alcanzaron factor de carga `1.0` y no contienen fatales ni valores no finitos;
-- 92/93 coinciden en `u=1.0` y reacción `-2.1e5`; con `LGDISP=-1`, el caso 92
-  no imprime la tabla `RODNL`, por lo que su control es desplazamiento/reacción;
-- 94/95 coinciden exactamente en el estado final (`u=20`,
-  `sigma=42000`, reacción `-4.2e6`); el 95 relanzado usa nueve incrementos
-  adaptativos no uniformes;
-- 104 y 110 coinciden en toda la curva impresa. El caso 109, con cinco pasos,
-  llega al mismo desplazamiento, tensión y reacción, pero su energía/trabajo
-  acumulado difiere un `0.65 %`, que es precisamente la sensibilidad buscada;
-- 102 salta en el incremento final de `uy=-42.830` a `uy=-223.31`. No es una
-  terminación errónea: convergió en 14 iteraciones con razón de residuo
-  `4.66e-16`, pero pertenece a la rama posterior al *snap-through* y no debe
-  usarse como primer caso de depuración del solver;
-- 105 presenta otro salto convergido en el incremento 17, con factor de carga
-  `0.48571`: `uy` pasa de `-33.975` a `-218.50` en 14 iteraciones. También es
-  un control de *snap-through*, no un fallo del trabajo;
-- los relanzamientos 95/104/109/110/111 ya no contienen el warning 602;
-  95/104/111 usan 9/14/15 incrementos adaptativos reales;
-- 112/113/118 coinciden al expresar el modelo rotado en sus ejes de salida;
-  114/115 dan una flexibilidad tangente central `6.127186e-6`;
-- 116/117 recuperan `R1=0.9904762`, par `40000` y tensión torsional `2000`;
-- 119 converge antes del límite con `uy=-40.32496`; 120 termina anormalmente
-  en `lambda=0.98387` tras alcanzar el paso mínimo, resultado que se conserva
-  como referencia negativa;
-- 121/122 dan `uy=-0.269374/-0.2699212`, una diferencia geométrica del `0.2031 %`.
-- 123--127 terminaron con `exit number 0`, alcanzaron factor de carga `1.0` y
-  reprodujeron `25/30/30/40/14` incrementos. La comparación exhaustiva de las
-  tablas impresas obtuvo errores relativos máximos de `3.77e-7` en
-  desplazamientos, `3.76e-7` en reacciones y `3.72e-7` en tensión/deformación;
-- la secuencia adaptativa completa de 127 coincide desde `0.025` hasta `1.0`,
-  incluidos los pasos crecientes y los cinco últimos incrementos de `0.1`;
-- 124 y 126 confirman exactamente los desplazamientos impuestos finales
-  `T1=-4.0` y `T1=+5.0`, junto con sus reacciones conjugadas;
-- 125 presenta un *snap-through* de GRID 5 entre `lambda=0.533333` y
-  `0.566667`, donde `T3` salta de `-13.5215` a `-69.40416`. El estado mecánico
-  final coincide, pero `TotStrEn=4.7083e7` de MSC acumula trabajo a través del
-  salto y no se compara con la energía elástica de estado `1.3756e7`.
+- the 30 converged jobs 92--119/121--122 finished with `exit number 0`,
+  reached load factor `1.0`, and contain no fatal errors or non-finite values;
+- 92/93 agree at `u=1.0` and reaction `-2.1e5`; with `LGDISP=-1`, case 92
+  does not print the `RODNL` table, so its check uses displacement/reaction;
+- 94/95 agree exactly in the final state (`u=20`, `sigma=42000`, reaction
+  `-4.2e6`); the rerun of 95 uses nine nonuniform adaptive increments;
+- 104 and 110 agree over the complete printed curve. Case 109, with five
+  steps, reaches the same displacement, stress, and reaction, but its
+  accumulated energy/work differs by `0.65 %`, which is precisely the intended
+  sensitivity;
+- 102 jumps in the final increment from `uy=-42.830` to `uy=-223.31`. This is
+  not an erroneous termination: it converged in 14 iterations with a residual
+  ratio of `4.66e-16`, but belongs to the post-*snap-through* branch and should
+  not be used as the solver's first debugging case;
+- 105 has another converged jump in increment 17 at load factor `0.48571`:
+  `uy` changes from `-33.975` to `-218.50` in 14 iterations. This is also a
+  *snap-through* check, not a job failure;
+- the 95/104/109/110/111 reruns no longer contain warning 602;
+  95/104/111 use 9/14/15 actual adaptive increments;
+- 112/113/118 agree when the rotated model is expressed in its output axes;
+  114/115 give a central tangent compliance of `6.127186e-6`;
+- 116/117 recover `R1=0.9904762`, torque `40000`, and torsional stress `2000`;
+- 119 converges before the limit with `uy=-40.32496`; 120 terminates
+  abnormally at `lambda=0.98387` after reaching the minimum step, a result
+  retained as a negative reference;
+- 121/122 give `uy=-0.269374/-0.2699212`, a geometric difference of `0.2031 %`;
+- 123--127 finished with `exit number 0`, reached load factor `1.0`, and
+  reproduced `25/30/30/40/14` increments. The exhaustive comparison of the
+  printed tables obtained maximum relative errors of `3.77e-7` in
+  displacements, `3.76e-7` in reactions, and `3.72e-7` in stress/strain;
+- the complete adaptive sequence for 127 agrees from `0.025` through `1.0`,
+  including the growing steps and the final five increments of `0.1`;
+- 124 and 126 exactly confirm the final prescribed displacements `T1=-4.0`
+  and `T1=+5.0`, together with their conjugate reactions;
+- 125 exhibits *snap-through* at GRID 5 between `lambda=0.533333` and
+  `0.566667`, where `T3` jumps from `-13.5215` to `-69.40416`. The final
+  mechanical state agrees, but MSC's `TotStrEn=4.7083e7` accumulates work
+  through the jump and is not compared with the state elastic energy
+  `1.3756e7`.
 
-No queda ningún trabajo pendiente de relanzamiento entre 92--127.
+No job from 92--127 remains to be rerun.
 
-## Ejecución y archivos que deben conservarse
+## Execution and files to preserve
 
-Ejecutar cada `.dat` desde su propia carpeta para que las salidas queden junto
-al modelo. Conservar en el repositorio, como mínimo, el `.dat` y el `.f06`. El
-F06 aporta los resultados impresos, el resumen `NLSTEP`, las iteraciones y la
-versión de MSC. Conservar además el `.pch` sólo si se va a automatizar una
-extracción de estados. Los `.op2`, `.f04`, `.itr`, `.log` y `.sts` son
-artefactos de trabajo; para un caso fallido conviene mantener temporalmente
-`.log` y `.sts` hasta diagnosticarlo, pero no son referencias permanentes por
-defecto.
+Run each `.dat` from its own directory so that the outputs remain next to the
+model. Preserve at least the `.dat` and `.f06` in the repository. The F06
+provides the printed results, `NLSTEP` summary, iterations, and MSC version.
+Also preserve the `.pch` only when a state extraction will be automated.
+`.op2`, `.f04`, `.itr`, `.log`, and `.sts` are working artifacts; for a failed
+case, retain `.log` and `.sts` temporarily until it is diagnosed, but they are
+not permanent references by default.
 
-No renombrar la raíz del trabajo: los tests futuros asociarán las referencias
-por el prefijo `ejNNN_...`.
+Do not rename the job root: the tests associate references through the
+`ejNNN_...` prefix.
 
-En cada F06 registrar si MSC utilizó el motor clásico `CNLS` o el nuevo
-`NLPERF`, además de la versión exacta. Si un caso no converge, no modificar
-tolerancias ni carga todavía: devolver también el `.f06`, `.sts` y `.log` del
-fallo para decidir si el deck o el fenómeno físico necesita otra estrategia.
+For each F06, record whether MSC used the classic `CNLS` engine or the newer
+`NLPERF` engine, together with the exact version. If a case does not converge,
+do not change tolerances or loading yet: also return the failure's `.f06`,
+`.sts`, and `.log` so that the deck or physical phenomenon can be assessed
+before choosing another strategy.
 
-## Datos intermedios prioritarios
+## Priority intermediate data
 
-- Casos 92/93: desplazamiento/fuerza final y diferencia entre ambos; la tabla
-  de tensión `RODNL` sólo aparece en 93.
-- Casos 94/95: todos los pares carga--desplazamiento y fuerza axial--incremento.
-- Casos 104/109/110: tabla de `%` del F06, peor residuo, bisecciones y curva
-  carga--desplazamiento del nodo 3.
-- Caso 111: `GPFORCE`, energía, fuerzas de los nueve CROD y desplazamientos de
-  nodos 5/6 en cada salida.
-- Casos 112/113/118: igualdad de resultados al expresarlos en los ejes locales
-  del modelo base.
-- Casos 114/115: calcular `(u_plus-u_minus)/2000` y comprobar la media frente
-  a 112 para obtener una referencia de flexibilidad tangente deformada.
-- Casos 116/117: rotación `R1`, par, tensiones y deformaciones torsionales.
-- Casos 119/120: curva carga--desplazamiento, número de ciclos, cortes y último
-  residuo antes/después del punto límite.
-- Casos 121/122: diferencia relativa de desplazamiento y reacciones para el
-  límite de pequeñas rotaciones de una cercha transversalmente cargada.
-- Casos 123--127: desplazamientos de todos los nodos libres, reacciones de
-  todos los apoyos y tensiones de al menos un elemento por cada PROD; en
-  124/126 comprobar además que el desplazamiento impuesto final sea exactamente
-  `-4.0/+5.0` y registrar su reacción conjugada; en 127 registrar todos los
-  factores de carga adaptativos.
+- Cases 92/93: final displacement/force and their difference; the `RODNL`
+  stress table appears only in 93.
+- Cases 94/95: every load--displacement and axial-force--increment pair.
+- Cases 104/109/110: the F06 `%` table, worst residual, bisections, and the
+  load--displacement curve for node 3.
+- Case 111: `GPFORCE`, energy, forces in all nine CRODs, and displacements of
+  nodes 5/6 at every output state.
+- Cases 112/113/118: equality of results when expressed in the local axes of
+  the base model.
+- Cases 114/115: calculate `(u_plus-u_minus)/2000` and check the mean against
+  112 to obtain a reference for the deformed tangent compliance.
+- Cases 116/117: `R1` rotation, torque, and torsional stresses and strains.
+- Cases 119/120: load--displacement curve, number of cycles, cutbacks, and the
+  final residual before/after the limit point.
+- Cases 121/122: relative difference in displacement and reactions for the
+  small-rotation limit of a transversely loaded truss.
+- Cases 123--127: displacements of every free node, reactions at every support,
+  and stresses in at least one element for each PROD; for 124/126, also verify
+  that the final prescribed displacement is exactly `-4.0/+5.0` and record its
+  conjugate reaction; for 127, record every adaptive load factor.
 
-La campaña no solicita una DMIG tangente por iteración: MSC Nastran no ofrece
-una tarjeta estándar equivalente a la exportación lineal usada para las
-láminas. Si el balance anterior no identifica la formulación, se añadirá un
-deck DMAP específico sin alterar estos veinte controles.
+The campaign does not request a tangent DMIG for each iteration: MSC Nastran
+does not provide a standard entry equivalent to the linear export used for
+shells. If the preceding balance is insufficient to identify the formulation,
+add a dedicated DMAP deck without modifying these campaign controls.

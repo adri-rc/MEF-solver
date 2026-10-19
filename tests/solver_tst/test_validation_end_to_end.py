@@ -1,17 +1,10 @@
-"""
-@file test_validation_end_to_end.py
-@brief System tests validation against Nastran reference cases.
-@details
+"""End-to-end CROD and CBAR validation against MSC Nastran references.
 Runs full analysis cycles (Parse -> Assemble -> Solve) on external .dat files
 and compares the resulting displacements against reference values extracted 
-from MSC Nastran .f06 output files.
-"""
+from MSC Nastran .f06 output files."""
 import pytest
-import os
-from pathlib import Path
 
-# Imports de tu proyecto
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.linear_static_solver import LinearStaticSolver
 
 # --- DATABASE OF VALIDATION CASES ---
@@ -27,7 +20,7 @@ from src.solver.linear_static_solver import LinearStaticSolver
 # DOF Index map: 0=Tx, 1=Ty, 2=Tz, 3=Rx, 4=Ry, 5=Rz
 
 VALIDATION_DATA = [
-   # --- CASO 1: Barra Simple (Reference) ---
+   # --- Case 1: simple rod ---
     {
         "case_name": "Ej1_v1_Simple_Tension",
         "folder": "case_1",
@@ -46,7 +39,7 @@ VALIDATION_DATA = [
         "description": "Single Rod element. Fixed at Node 1. Load at Node 2."
     },
 
-    # --- CASO 2: Barras en Serie (Multi-material) ---
+    # --- Case 2: rods in series with multiple materials ---
     {
         "case_name": "Ej2_Series_Rods",
         "folder": "case_2",
@@ -65,7 +58,7 @@ VALIDATION_DATA = [
         "description": "Two Rod elements in series with different materials."
     },
 
-    # --- CASO 3: Cercha Plana (Rotated Coords) ---
+    # --- Case 3: planar truss in rotated coordinates ---
     {
         "case_name": "Ej3_Planar_Truss",
         "folder": "case_3",
@@ -91,7 +84,7 @@ VALIDATION_DATA = [
         "description": "2D Truss (Triangle). Validates rotated coordinate assembly."
     },
 
-    # --- CASO 4: El Riel 3D (3D Rail Effect) ---
+    # --- Case 4: 3D rail effect ---
     # Validates projection of stiffness on a constrained sliding node.
     {
         "case_name": "Ej4_Rail_3D",
@@ -109,7 +102,7 @@ VALIDATION_DATA = [
         }
     },
 
-    # --- CASO 5: CSV Parser Test ---
+    # --- Case 5: parser input ---
     # Physically identical to Ej2 but input is Comma-Separated.
     {
         "case_name": "Ej5_CSV_Parser",
@@ -126,14 +119,14 @@ VALIDATION_DATA = [
         }
     },
 
-    # --- CASO 6: Torsion Oblicua ---
+    # --- Case 6: oblique torsion ---
     # Validates Moment -> Torque projection on rotated element.
     {
         "case_name": "Ej6_Oblique_Torsion",
         "folder": "case_6",
         "filename": "Ej6.dat",
         "expected_displacements": { 
-            2: {3: 4.062500E-01} # Rotation X (Radiants)
+            2: {3: 4.062500E-01} # Rotation X (radians)
         },
         "expected_element_forces": { 
             # Element 106. Torque is amplified by 1/cos(alpha) = 1/0.8 = 1.25
@@ -144,7 +137,7 @@ VALIDATION_DATA = [
         }
     },
 
-    # --- CASO 7: Tripode (Full 3D Structure) ---
+    # --- Case 7: full 3D tripod ---
     {
         "case_name": "Ej7_Tripod_3D",
         "folder": "case_7",
@@ -169,7 +162,7 @@ VALIDATION_DATA = [
         }
     },
 
-# --- CASO 8: Riel 3D en Eje Y (Ej8.dat) ---
+# --- Case 8: 3D rail along basic Y ---
     {
         "case_name": "Ej8_Rail_Y_Axis",
         "folder": "case_8",
@@ -186,7 +179,7 @@ VALIDATION_DATA = [
         "description": "3D Rod with Node 8 constrained to slide only along Global Y axis."
     },
 
-    # --- CASO 9: Riel 3D en Eje X (Ej9.dat) ---
+    # --- Case 9: 3D rail along basic X ---
     {
         "case_name": "Ej9_Rail_X_Axis",
         "folder": "case_9",
@@ -203,7 +196,7 @@ VALIDATION_DATA = [
         "description": "3D Rod with Node 8 constrained to slide only along Global X axis."
     },
 
-    # --- CASO 10: Cercha Clase DAA (Planar Truss Multi-bay) ---
+    # --- Case 10: multi-bay planar classroom truss ---
     {
         "case_name": "Ej10_DAA_Class_Truss",
         "folder": "case_10",
@@ -233,9 +226,10 @@ VALIDATION_DATA = [
             
         },
         "description": ("Multi-bay planar truss. Validates asymmetric loading and reactions.\n"
-        "Ejercicio de clase DAA. Solo ha sido necesario adaptar las SPC de los nodos libres restringiendo todos los girros y movimiento en eje Z.")
+        "DAA classroom example with inactive rotations and out-of-plane translation constrained."
+    )
     },
-    # --- CASO 11: Spider Heterogénea y Barra Torsión (Ej11.dat) ---
+    # --- Case 11: heterogeneous spider and torsion rod ---
     # Reference: ej11.f06
     {
         "case_name": "Ej11_Heterogeneous_Spider",
@@ -260,37 +254,33 @@ VALIDATION_DATA = [
         "description": "Complex 3D assembly with heterogeneous materials and properties. Validates 3D torque projection."
     },
 
-    # --- CASO 12: Cadena 3D con Desplazamientos Impuestos (Ej12.dat) ---
-    # PENDIENTE INPLEMENTAR LECTURA DE DESPLAZAMIENTOS IMPUESTOS (SPC)
+    # --- Case 12: 3D chain with enforced displacements ---
 
 
-    # --- CASO 13: Voladizo CBAR (Flexion+Axil) ---
-    # Validacion del elemento Viga con flexion plana y axil combinado.
+    # --- Case 13: CBAR cantilever under combined bending and axial load ---
     {
         "case_name": "Ej13_CBAR_Cantilever_2D",
         "folder": "case_13",
         "filename": "Ej13.dat",
         "expected_displacements": {
-            # Node 2: Extension (x), Deflexion (y), Deflexion (z), Giro (z)
+            # Node 2: extension (x), deflection (y/z), and rotation (z).
             2: {0: 1.190476E-03, 1: 1.190481E-01, 2:0.0, 5: 3.571443E-03}
         },
         "expected_reactions": {
-            # Node 1: Empotramiento. Reacciones Fx, Fy, Fz y Momento Mz
+            # Node 1 clamp: reactions Fx, Fy, Fz, and Mz.
             1: {0: -5.000000E+02, 1: -5.000000E+02, 2:0.0, 5: -2.500000E+04}
         },
         "expected_element_forces": {
             101: {
                 "axial_force": 5.000000E+02,
                 "axial_stress": 5.000000E+00,
-                # En CBAR, nastran reporta 'BEND-MOMENT END-A PLANE 1' que es Mz
-                # Usamos notacion de punto para acceder a sub-diccionarios en el test
-
-############### REVISAR BIEN LOS SIGNOS DE LOS MOMENTOSPQ NASTRAN LO DA EN POSITIVO
-                # --- END A (Node 1) - Reactions ---
+                # Dotted names address nested result dictionaries.
+                # Nastran BEND-MOMENT END-A PLANE 1 maps to local Mz.
+                # End A (node 1) reactions.
                 "forces_n1.Mz": -2.500000E+04, # Reaction Moment (Clockwise)
                 "forces_n1.Fy": -5.000000E+02, # Reaction Shear (Down)
                 
-                # --- END B (Node 2) - Free End ---
+                # End B (node 2), free end.
                 "forces_n2.Mz": 0.0,           # Zero Moment at tip
                 "forces_n2.Fy": 5.000000E+02,  # Shear transmitted
                 "forces_n2.Fx": 5.000000E+02   # Axial transmitted
@@ -299,7 +289,7 @@ VALIDATION_DATA = [
         "description": "CBAR Cantilever with combined Axial and Tip Load (Bending)."
     },
 
-    # --- CASO 14: CBAR 3D  ---
+    # --- Case 14: 3D CBAR ---
     {
         "case_name": "Ej14_CBAR_3D",
         "folder": "case_14",
@@ -329,7 +319,7 @@ VALIDATION_DATA = [
                 "axial_stress": 3.618136E+01, 
                 "torque": 4.522670E+02,
                 
-                # Local Forces at Node 1 (Check vs Nastran End A but flipped sign)
+                # Local forces at node 1 use the opposite sign from Nastran end A.
                 "forces_n1.Mz": -1.837117E+03, 
                 "forces_n1.My":  1.347852E+04,
                 "forces_n1.Fy": -4.923660E+02,
@@ -341,16 +331,15 @@ VALIDATION_DATA = [
         "description": "3D CBAR with biaxial bending, torsion and axial load. Validates full 12x12 matrix and 3D transformation."
     },
 
-    # --- CASO 15: Vigas en Serie con Stress Points ---
-    # Descripcion: Dos vigas (CBAR) alineadas en eje Y global.
-    #              Cargas combinadas en extremo (Fx, Fy, Fz, Mx, My, Mz).
-    #              Validacion de Puntos de Tension (C, D, E, F) definidos en PBAR.
+    # --- Case 15: CBAR elements in series with recovery points ---
+    # Two CBAR elements aligned with basic Y under combined end loads. Validates
+    # PBAR stress points C, D, E, and F.
     {
         "case_name": "Ej15_Series_CBAR_Stress_Points",
         "folder": "case_15",
         "filename": "Ej15.dat",
         "expected_displacements": {
-            # Node 2 (Union Central)
+            # Node 2 (central joint)
             2: {
                 0:  6.031746E-08,  # T1 (x)
                 1:  1.904762E-07,  # T2 (y)
@@ -359,7 +348,7 @@ VALIDATION_DATA = [
                 4: -1.485714E-07,  # R2 (ry)
                 5: -5.714286E-08   # R3 (rz)
             },
-            # Node 3 (Extremo Libre - Punta)
+            # Node 3 (free tip)
             3: {
                 0:  6.603175E-07,
                 1:  7.619048E-07,
@@ -370,7 +359,7 @@ VALIDATION_DATA = [
             }
         },
         "expected_reactions": {
-            # Node 1 (Empotramiento en el origen)
+            # Node 1 clamped at the origin.
             1: {
                 0: -1.000000E+00, # Fx Reaction (opposes load Fx=1)
                 1: -2.000000E+00, # Fy Reaction (opposes load Fy=2)
@@ -381,7 +370,7 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # --- ELEMENT 101 (Inferior) ---
+            # Lower element 101.
             101: {
                 # Internal Forces at End A (Node 1) from Nastran:
                 # Axial=2.0, Torque=-3.0, M_Plane1(Mz)=7.0, M_Plane2(My)=-19.0
@@ -393,22 +382,20 @@ VALIDATION_DATA = [
                 "forces_n1.Mz": -7.000000E+00, 
                 "forces_n1.My": -1.900000E+01,
         
-                # --- STRESS POINTS VALIDATION ---
                 # Nastran Output Page 14 (STRESSES IN BAR ELEMENTS)
-                # PBAR 401 define puntos C(10,0) y D(0,10)
+                # PBAR 401 defines points C(10,0) and D(0,10).
                 # SA1 = Stress at Point C, End A. Val = -7.00E-02
                 # SA2 = Stress at Point D, End A. Val =  1.90E-01
-                # En el solver, el orden viene dado por la lista en PBAR:
-                # P0 = C, P1 = D.
-                # --- P0 (Punto C: y=10.0, z=0.0) ---
-                # Nastran SA1 = -7.00E-02. (Pure bending?)
+                # Solver order follows the PBAR list: P0=C and P1=D.
+                # P0 (point C: y=10.0, z=0.0).
+                # Nastran SA1 = -7.00E-02.
                 "stress_points.P0.sigma_bending": -7.000000E-02, # Point C
                 "stress_points.P0.sigma_axial":    2.000000E-02, # Point C
                 # Total = -0.07 + 0.02 = -0.05
                 "stress_points.P0.sigma_total":   -5.000000E-02, # Point C
 
-                # --- P1 (Punto D: y=0.0, z=10.0) ---
-                # Nastran SA2 = 1.90E-01. (Pure bending?)
+                # P1 (point D: y=0.0, z=10.0).
+                # Nastran SA2 = 1.90E-01.
                 "stress_points.P1.sigma_bending":  1.900000E-01, # Point D
                 "stress_points.P1.sigma_axial":    2.000000E-02, # Point D
                 # Total = 0.19 + 0.02 = 0.21
@@ -418,7 +405,7 @@ VALIDATION_DATA = [
                 "max_total_stress":  2.100000E-01, # Matches SA-MAX
                 "min_total_stress": -5.000000E-02, # Matches SA-MIN
 
-                # SB1/SB2 son las tensiones de flexión del extremo B en el F06.
+                # SB1/SB2 are the end-B bending stresses in the F06.
                 "stress_points_end_b.P0.sigma_bending": -5.000000E-02,
                 "stress_points_end_b.P0.sigma_total":   -3.000000E-02,
                 "stress_points_end_b.P1.sigma_bending":  1.100000E-01,
@@ -435,14 +422,14 @@ VALIDATION_DATA = [
                 "forces_n1.My": -1.100000E+01,
  
                 # --- STRESS POINTS VALIDATION ---
-                # PBAR 402 define puntos C(5,5) y D(-5,-5)
-                # SA1 (Point C, End A):  1.50E-01 (Pure bending?)
+                # PBAR 402 defines points C(5,5) and D(-5,-5).
+                # SA1 (point C, end A): 1.50E-01.
                 "stress_points.P0.sigma_bending":  1.500000E-01, # Point C
                 "stress_points.P0.sigma_axial":   4.000000E-02,  # Point C
                 # Total = 0.15 + 0.04 = 0.19
                 "stress_points.P0.sigma_total":   1.900000E-01,  # Point C
                 
-                # SA2 (Point D, End A): -1.50E-01 (Pure bending?)
+                # SA2 (point D, end A): -1.50E-01.
                 "stress_points.P1.sigma_bending": -1.500000E-01, # Point D
                 "stress_points.P1.sigma_axial":    4.000000E-02, # Point D
                 # Total = -0.15 + 0.04 = -0.11
@@ -460,16 +447,15 @@ VALIDATION_DATA = [
         "description": "Two CBARs in series (Y-axis). Validates Stress Recovery at specific points (C, D) defined in PBAR."
     },
 
-# --- CASO 16: Estructura Marco 3D (5 Barras) ---
-    # Archivo: Ej16.dat
-    # Descripcion: Marco espacial hiperestatico con cargas y orientaciones complejas.
-    #              Valida la matriz de rigidez 12x12 completa en orientacion arbitraria.
+# --- Case 16: five-member 3D frame ---
+    # Statically indeterminate spatial frame with complex loads and orientations;
+    # validates the complete 12x12 stiffness in arbitrary orientations.
     {
         "case_name": "Ej16_3D_Frame_5_Bars",
         "folder": "case_16",
         "filename": "Ej16.dat",
         "expected_displacements": {
-            # Node 3: Displacement T1, T2, T3 (Cruce superior izquierdo)
+            # Node 3 translations at the upper-left joint.
             3: {
                 0:  1.993276E-04, 
                 1:  3.672660E-05,
@@ -477,7 +463,7 @@ VALIDATION_DATA = [
                 3: -1.165399E-04, # R1 (Rx)
                 5: -1.681146E-04  # R3 (Rz)
             },
-            # Node 5: Tip Displacement (Extremo derecho)
+            # Node 5 translations at the right tip.
             5: {
                 0:  3.721953E-04,
                 1:  1.723244E-05,
@@ -503,7 +489,7 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # --- Elem 101 (Barra 1-3) ---
+            # Element 101 (member 1-3).
             # Nastran End A (Internal): Axial=-229.6, Torque=-364.5, Mz=4880.7, My=4690.8
             101: {
                 "axial_force": -2.296478E+02,
@@ -512,7 +498,7 @@ VALIDATION_DATA = [
                 "forces_n1.My": 4.690753E+03
             },
             
-            # --- Elem 102 (Barra 2-4) ---
+            # Element 102 (member 2-4).
             # Nastran End A: Axial=1770.9, Mz=-7646.0, My=-5313.5
             102: {
                 "axial_force": 1.770918E+03,
@@ -520,8 +506,7 @@ VALIDATION_DATA = [
                 "forces_n1.My": -5.313543E+03
             },
 
-            # --- Elem 105 (Barra 4-5) --- 
-            # Añadimos mas elementos para cubrir la estructura completa
+            # Element 105 (member 4-5); additional member coverage.
             # Nastran End A: Axial=600.1, Torque=-338.1, Mz=-3703.4, My=-457.49
             105: {
                 "axial_force": 6.001212E+02,
@@ -533,9 +518,9 @@ VALIDATION_DATA = [
         "description": "3D Frame with 5 CBARs. Validates full 6-DOF coupling and arbitrary orientation."
     },
 
-    # --- CASO 17: Tripode Hibrido (CBAR + CROD) ---
-    # Descripcion: 3 Patas (CBAR) soportando un poste central (CROD).
-    #              Carga vertical y Torsion en la union.
+    # --- Case 17: hybrid tripod (CBAR + CROD) ---
+    # Three CBAR legs support a central CROD post under vertical load and
+    # torsion at the joint.
     {
         "case_name": "Ej17_Hybrid_Tripod_CBAR_CROD",
         "folder": "case_17",
@@ -549,21 +534,21 @@ VALIDATION_DATA = [
                 4: 0.0, # R2
                 5: 0.0  # R3 
             },
-            # Node 4 (Union Central) - Punto clave de la estructura
+            # Node 4: central joint.
             4: {
                 0:  1.786003E-04, # T1
                 1: -9.267777E-05, # T2
-                2:  5.951593E-04, # T3 (Subida/Bajada)
+                2:  5.951593E-04, # T3 (vertical translation)
                 3:  3.652847E-05, # R1
                 4:  1.530955E-04, # R2
-                5:  1.264375E-04  # R3 (Rotation Z - Torsion del conjunto)
+                5:  1.264375E-04  # R3 (Z rotation - assembly torsion)
             },
-            # Node 5 (Top of CROD) - Se mueve con el 4 + Elongacion propia
+            # Node 5: top of CROD; follows node 4 plus its own elongation.
             5: {
-                0:  0.0,          # (En teoria 0 relativo, pero Nastran da 0 absoluto en T1/T2 si no hay carga lateral)
-                2:  2.023731E-03, # T3 (Gran desplazamiento vertical por la carga directa)
+                0:  0.0,          # No lateral load, so Nastran reports absolute zero in T1/T2.
+                2:  2.023731E-03, # T3: vertical displacement under the direct load.
                 4:  0.0,          # R2 
-                5:  1.264375E-04  # R3 (Gira igual que el nodo 4, cuerpo rigido en torsion para el CROD)
+                5:  1.264375E-04  # R3 follows node 4 as CROD torsional rigid motion.
             }
         },
         "expected_reactions": {            
@@ -585,18 +570,18 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # --- Elem 104 (CROD - Poste Vertical) ---
-            # Transmite la carga Fz=2000 puramente como Axil.
-            # El Torque es CERO o despreciable (7.10E-15 en f06), ya que es un CROD ideal.
+            # Element 104, vertical CROD post.
+            # Transfers Fz=2000 as pure axial force.
+            # Torque is negligible (7.10E-15 in the F06) for an ideal CROD.
             104: {
                 "type": "CROD",
                 "axial_force": 2.000000E+03,
-                "torque": 0.0 # Validamos que sea ~0
+                "torque": 0.0
             },
             
-            # --- Elem 101 (Pata 1 - CBAR) ---
-            # Soporta carga y momento torsor.
-            # Nastran End A (Suelo): Axial=1008.3, Torque=298.2, Mz=-2586.0, My = -2196.8
+            # Element 101, CBAR leg 1.
+            # Carries axial load and torque.
+            # Nastran end A (ground): axial=1008.3, torque=298.2, Mz=-2586.0, My=-2196.8.
             101: {
                 "type": "CBAR",
                 "axial_force":   1.008341E+03,
@@ -605,8 +590,7 @@ VALIDATION_DATA = [
                 "forces_n1.My": -2.196889E+03
             },
 
-            # --- Elem 103 (Pata 3 - CBAR) ---
-            # Pata menos cargada
+            # Element 103, the least-loaded CBAR leg.
             # Nastran End A: Axial=81.3, Mz=211.2, My=10.2
             103: {
                 "axial_force":   8.132725E+01,
@@ -618,12 +602,11 @@ VALIDATION_DATA = [
         "description": "Hybrid assembly (CBAR legs + CROD post). Validates coupling of different element types and stiffness matrices."
     }, 
 
-    # --- CASO 18: Tripode Hibrido con todos los Stress Points definidos posibles (C-F) ---
-    # Descripcion: Variante del caso 17 pero validando tensiones en 4 puntos (C,D,E,F).
-    #              Valida la recuperacion de tensiones en esquinas de secciones CBAR.
+    # --- Case 18: hybrid tripod with all C-F stress points ---
+    # Variant of case 17 validating corner stresses at all four PBAR points.
     {
         "case_name": "Ej18_Hybrid_Tripod_Stress_Recovery_Points",
-        "folder": "case_22/case_18",
+        "folder": "case_18",
         "filename": "Ej18.dat",
         "description": "Hybrid tripod structure with defined PBAR stress points. Validates detailed stress recovery at cross-section corners (C, D, E, F) and total stress envelopes.",
         "expected_displacements": {
@@ -636,7 +619,7 @@ VALIDATION_DATA = [
                 4:  0.0, # R2
                 5:  0.0  # R3
             },
-            # Node 4 (Union Central) - Valores extraidos de ej18.f06 (PAGE 11)
+            # Node 4 (central joint) - values from ej18.f06 (page 11)
             4: {
                 0:  1.786003E-04, # T1
                 1: -9.267777E-05, # T2
@@ -649,7 +632,7 @@ VALIDATION_DATA = [
             5: {
                 0:  0.0,           # T1
                 1:  0.0,           # T2
-                2:  2.023731E-03,  # T3 (Elongacion axial dominante)
+                2:  2.023731E-03,  # T3 (dominant axial elongation)
                 5:  1.264375E-04   # R3 
             }
         },
@@ -672,7 +655,7 @@ VALIDATION_DATA = [
             }
         },
         "expected_element_forces": {
-            # --- ELEMENT 101 (CBAR Pata 1) ---
+            # Element 101, CBAR leg 1.
             101: {
                 "axial_force":  1.008341E+03,
                 "axial_stress": 2.016681E+01, # AXIAL STRESS column
@@ -715,11 +698,11 @@ VALIDATION_DATA = [
                 "stress_points.P3.sigma_bending":  2.327506E+01, # SA4
                 
                 # Check Total (Axial + Bending) for Point C
-                # Total = 15.64 + 84.67 = 139.74
+                # Total = 15.64915 + 84.67422 = 100.32337
                 "stress_points.P0.sigma_total":    1.003234E+02, # Total Point C (=SA-MAX)
 
                 # Check Total (Axial + Bending) for Point E
-                # Total = 15.64 + (-23.27506) = 139.74
+                # Total = 15.64915 - 23.27506 = -7.62591
                 "stress_points.P2.sigma_total":    -7.62591E+00, # Total Point E
 
                 # MAX and MIN total stress across all recovery points (SA-MAX, SA-MIN)
@@ -727,7 +710,7 @@ VALIDATION_DATA = [
                 "min_total_stress": -6.902507E+01  # Matches SA-MIN column
             },
             
-            # --- ELEMENT 103 (CBAR Pata 3) ---
+            # Element 103, CBAR leg 3.
             103: {
                 "axial_force":  8.132725E+01,
                 "axial_stress": 8.132725E+00,
@@ -756,11 +739,10 @@ VALIDATION_DATA = [
         }
     },
 
-    # --- CASO 19: Helice Irregular 3D (Complex 3D Helix) ---
-    # Descripcion: 11 Elementos, 3 Tipos de PBAR, 2 Materiales.
-    #              Geometria espiral sin alineacion con ejes globales.
-    #              Cargas combinadas en punta (Fuerza + Momento).
-    #              Valida: Matrices de rotacion complejas y stres recovery points (SA-MAX/MIN).
+    # --- Case 19: irregular 3D helix ---
+    # Eleven elements, three PBAR properties, and two materials in a spiral
+    # geometry not aligned with the basic axes. Combined tip force and moment
+    # validate complex rotations and SA-MAX/MIN recovery points.
     {
         "case_name": "Ej19_Complex_Helix_Stress_Recovery_Points",
         "folder": "case_19",
@@ -788,7 +770,7 @@ VALIDATION_DATA = [
             }
         },
         "expected_reactions": {
-            # Node 1 (Base Empotrada)
+            # Node 1 (clamped base)
             1: {
                 0: -1.000000E+02,
                 1:  2.000000E+02,
@@ -862,20 +844,11 @@ VALIDATION_DATA = [
 
 
 class TestNastranEndToEnd:
-    """
-    @class TestNastranEndToEnd
-    @brief Automated system testing using parametrization.
-    """
+    """Run the parametrized CROD and CBAR reference cases."""
 
     @pytest.mark.parametrize("case_data", VALIDATION_DATA, ids=lambda x: x["case_name"])
     def test_run_nastran_case(self, case_data, validation_data_dir):
-        """
-        @brief Executes a complete analysis flow for a given Nastran case.
-        @param case_data Dictionary containing file info and expected results.
-        @param validation_data_dir Pytest fixture pointing to the data folder.
-        """
-        # 1. Resolve File Path (Supporting Subfolders)
-        # Construct path: tests/validation_cases / {folder} / {filename}
+        """Execute and validate one Nastran reference case."""
         folder = case_data.get("folder", "")
         filename = case_data["filename"]
         
@@ -884,52 +857,30 @@ class TestNastranEndToEnd:
         if not file_path.exists():
             pytest.fail(f"Test file not found: {file_path}")
 
-        # 2. PARSE (Implicit integration test for nastran_reader)
         try:
             model = parse_nastran_input(str(file_path))
-        except Exception as e:
-            pytest.fail(f"Parser failed on {case_data['filename']}: {e}")
+        except Exception as exc:
+            pytest.fail(f"Parser failed on {case_data['filename']}: {exc}")
 
-        # 3. SOLVE
-        # Note: We assume the .dat files are now "Python-Solver-Ready" 
-        # (containing necessary SPCs to avoid singularity), so we don't need manual stabilization here.
         try:
             solver = LinearStaticSolver(model)
             solver.assemble()
             results = solver.solve()
-        except Exception as e:
-            pytest.fail(f"Solver failed on {case_data['filename']}: {e}")
+        except Exception as exc:
+            pytest.fail(f"Solver failed on {case_data['filename']}: {exc}")
 
         # Unpack results
         displacements = results["displacements"]
         reactions = results["reactions"]
         elem_stresses = results["stresses"]
         
-        if case_data['case_name'] in ['Ej21_Multi_CTRIA3_Patch', 'Ej22_Bending_Simple', 'Ej23_Mixed_Materials']:
-            print(f"\nCAPTURING RESULTS FOR {case_data['case_name']}:")
-            print(f"DISPLACEMENTS TYPE: {type(displacements)}")
-            print(f"DISPLACEMENTS: {displacements}")
-            
-            # If it is a dict, iterate. If array, just printed.
-            if isinstance(displacements, dict):
-                for nid, disps in displacements.items():
-                    print(f"Node {nid}: {disps}")
-            
-            print("ELEMENT STRESSES:")
-            # stresses might be a dict of dicts
-            print(elem_stresses)
-
-        # 4. COMPARE RESULTS
         rel_tol = case_data.get("rel_tol", 1e-3)
         abs_tol_disp = case_data.get("abs_tol_disp", 1e-9)
         abs_tol_force = case_data.get("abs_tol_force", 1e-4)
 
-        # 4. VERIFY DISPLACEMENTS
-
         expected_disp = case_data.get("expected_displacements", {})
         
         for nid, dofs_dict in expected_disp.items():
-            # Get Global Indices
             try:
                 global_indices = solver.dof_mapper.get_dof_indices(nid)
             except ValueError:
@@ -939,14 +890,11 @@ class TestNastranEndToEnd:
                 idx = global_indices[local_dof]
                 val_calc = displacements[idx]
                 
-                # Check with tolerance (0.1% relative error is generous but safe for FEM)
-                # Absolute tolerance 1e-9 handles near-zero values.
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_disp), \
                     f"Mismatch in {case_data['case_name']}, Node {nid}, DOF {local_dof}. " \
                     f"Expected {val_ref}, Got {val_calc}"
 
         
-        # 5. VERIFY REACTIONS
         expected_react = case_data.get("expected_reactions", {})
         
         for nid, dofs_dict in expected_react.items():
@@ -954,53 +902,40 @@ class TestNastranEndToEnd:
                 # Nastran reports reactions only for constrained nodes.
                 pytest.fail(f"Reaction for Node {nid} expected but not found in results.")
             
-            # Reactions are stored as a numpy array of 6 floats per node [Fx, Fy, Fz, Mx, My, Mz]
             reac_vec = reactions[nid] 
             
             for local_dof, val_ref in dofs_dict.items():
                 val_calc = reac_vec[local_dof]
                 
-                # Tolerancia: 0.1% o 1e-4 absoluto para valores cercanos a cero
+                # 0.1 % relative or 1e-4 absolute near zero.
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
                     f"Reaction Mismatch {case_data['case_name']}, Node {nid}, DOF {local_dof}"
 
         
-        # 6. VERIFY ELEMENT STRESSES / FORCES
         expected_forces = case_data.get("expected_element_forces", {})
         
         for eid, quantities in expected_forces.items():
             if eid not in elem_stresses:
                 pytest.fail(f"Stresses for Element {eid} expected but not found in results.")
             
-            calc_data = elem_stresses[eid] # Dictionary {'axial_force': ..., 'axial_stress': ...}
+            calc_data = elem_stresses[eid]
             
             for qty_name, val_ref in quantities.items():
              
-                #--- UPDATE FOR NESTED DICTIONARIES (CBAR) ---
                 val_calc = calc_data
                 try:
                     if "." in qty_name:
                         keys = qty_name.split(".")
                         for k in keys:
-                            # Verificamos si es indexable (dict o list) antes de acceder
+                            # Reject a malformed scalar before nested lookup.
                             if not hasattr(val_calc, '__getitem__'):
                                 raise ValueError(f"Cannot access key '{k}' in scalar value: {val_calc}")
                             val_calc = val_calc[k]
                     else:
                         val_calc = calc_data[qty_name]
-                except (KeyError, IndexError, ValueError, TypeError) as e:
-                    pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {e}")
+                except (KeyError, IndexError, ValueError, TypeError) as exc:
+                    pytest.fail(f"Error accessing '{qty_name}' in Element {eid}. Details: {exc}")
 
-                # Verificamos que sea un número (float o numpy scalar)
+                # pytest.approx accepts Python and NumPy scalar values.
                 assert val_calc == pytest.approx(val_ref, rel=rel_tol, abs=abs_tol_force), \
                     f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
-
-                
-'''                if qty_name not in calc_data:
-                    pytest.fail(f"Quantity '{qty_name}' not found for Element {eid}")
-                
-                val_calc = calc_data[qty_name]
-                
-                assert val_calc == pytest.approx(val_ref, rel=1e-3, abs=1e-4), \
-                    f"Stress Mismatch {case_data['case_name']}, Elem {eid}, {qty_name}"
-                    '''

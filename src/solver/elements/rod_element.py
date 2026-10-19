@@ -1,134 +1,135 @@
+"""Linear CROD element formulation."""
+
 import numpy as np
-from ...preprocessing.data_model import Node, RodProperty, IsotropicMaterial
+
+from src.preprocessing.data_model import IsotropicMaterial, Node, RodProperty
+
 from ..quadrature import GaussQuadrature
+from ..transformations import CoordinateTransformation
 
 
 class RodElementSolver:
+    """Compute linear stiffness and stress recovery for a two-node CROD.
+
+    Each node exposes six degrees of freedom, but only local axial translation
+    and local torsional rotation contribute to this element.
     """
-    @class RodElementSolver
-    @brief Gets the element stiffness matrix of a Rod element (CROD) (2nodes; 1 integration point)
-    @details
-    Rod supports axial load (Ttension/compression) and torsional.
-    Calculate the stiffness matrix by integrating B.T * D * B.
-    """
-    def __init__(self, node1: Node, node2: Node, prop: RodProperty, mat: IsotropicMaterial, n_gaussp: int = 1):
-        """
-        @param n_gaussp Number of Gauss integration points (default 1 for constant CROD).
-        """
-        self.n1 = node1
-        self.n2 = node2
+
+    AXIAL_DOFS = (0, 6)
+    TORSIONAL_DOFS = (3, 9)
+
+    def __init__(
+        self,
+        node1: Node,
+        node2: Node,
+        prop: RodProperty,
+        mat: IsotropicMaterial,
+        n_gaussp: int = 1,
+    ):
+        self.node1 = node1
+        self.node2 = node2
         self.prop = prop
         self.mat = mat
         self.n_gaussp = n_gaussp
 
         self.n1_coords = node1.get_coords()
         self.n2_coords = node2.get_coords()
-        
-        diff = self.n1_coords - self.n2_coords
-        self.L = np.linalg.norm(diff)
-        if self.L == 0:
-            raise ValueError(f"Element with zero length between nodes {node1.nid} and {node2.nid}")
-        
-        self.n_vec = diff / self.L # Unitary Director Vector (local x-axis)
-       
-    def _get_B_matrix(self, xi: float, J: float) -> np.ndarray:
-        """
-        Calculate matrix Be (Strain-Displacement) at point xi.
-        Be = [dN1/dx, dN2/dx] = [dN1/dxi, dN2/dxi] * (1/J)
-        """
-        # Derivatives of shape linear functions linear with respect to xi
-        # N1 = 0.5*(1-xi) -> dN1 = -0.5
-        # N2 = 0.5*(1+xi) -> dN2 =  0.5
-        dNe_dxi = np.array([-0.5, 0.5])
-        
-        # Transformación al espacio físico (dx)????
-        return dNe_dxi * (1.0 / J)
-    
+        self.L = np.linalg.norm(self.n2_coords - self.n1_coords)
+        if self.L < 1.0e-12:
+            raise ValueError(
+                f"Zero length CROD between nodes {node1.nid} and {node2.nid}."
+            )
+
+        self._compute_transformation()
+
+    def _compute_transformation(self) -> None:
+        """Build the 12x12 element-to-global transformation matrix."""
+        vx, vy, vz = CoordinateTransformation.compute_local_axes(
+            self.n1_coords,
+            self.n2_coords,
+            orientation_vector=None,
+        )
+        rotation = CoordinateTransformation.get_rotation_matrix_3x3(vx, vy, vz)
+        self.T = CoordinateTransformation.build_full_transformation_matrix(
+            rotation,
+            nodes_count=2,
+            dofs_per_node=6,
+        )
+
+    @staticmethod
+    def _get_b_matrix(jacobian: float) -> np.ndarray:
+        """Return the constant strain-displacement operator."""
+        shape_derivatives = np.array([-0.5, 0.5])
+        return shape_derivatives / jacobian
+
     def get_stiffness_matrix(self) -> np.ndarray:
-        """
-        @brief Calculate and assemble the 12x12 global stiffness matrix (6 DOFs per node).
-        """
-        
-        points, weights = GaussQuadrature.get_rule(self.n_gaussp) # Default n_gaussp =1
-        
-        # 1. Initialization of local scalar rigidities. (2x2)
-        # k_axial_local --> u_local_1, u_local_2 (displacements)
-        # k_tor_local   --> theta_local_1, theta_local_2 (rotations)
-        k_axial_local = np.zeros((2, 2))
-        k_tor_local = np.zeros((2, 2))
+        """Return the 12x12 element stiffness matrix in basic coordinates."""
+        points, weights = GaussQuadrature.get_rule(self.n_gaussp)
+        axial_stiffness = np.zeros((2, 2))
+        torsional_stiffness = np.zeros((2, 2))
 
-        # 2. NUMERICAL INTEGRATION LOOP
-        for xi, w in zip(points, weights):
-            
-            J = self.L / 2.0 # Jacobian for linear element with 2 nodes (L/2)
-            Be = self._get_B_matrix(xi, J) # Be matrix at the integration point (Row vector of size 2)
-            
-            # --- INTEGRACIÓN AXIAL ---
-            # K = Integral( Be.T * E * A * Be * detJ * dxi )
-            # np.outer(B, B) genera la matriz 2x2 (B.T * B)
-            integrand_axial = np.outer(Be, Be) * self.mat.E * self.prop.A * J
-            k_axial_local += integrand_axial * w
-            
-            # --- INTEGRACIÓN TORSIONAL ---
-            # K = Integral( B.T * G * J_polar * B * detJ * dxi )
-            # Nota: Usamos la misma B porque la interpolación del ángulo de giro es lineal igual que u.
-            integrand_tor = np.outer(Be, Be) * self.mat.G * self.prop.J * J
-            k_tor_local += integrand_tor * w
-        
-        # 3. TRANSFORMACIÓN A GLOBAL Y ENSAMBLAJE (12x12)
-        # Ahora tenemos las matrices 2x2 puras. Necesitamos proyectarlas al espacio 3D.
-        
-        # Extraemos el coeficiente escalar de rigidez (k11 = EA/L numérico)
-        k_ax_val = k_axial_local[0, 0]
-        k_tor_val = k_tor_local[0, 0]
-        
-        # Matriz de Proyección P = n * n.T (3x3)
-        # Proyecta un vector 3D sobre el eje de la barra
-        P = np.outer(self.n_vec, self.n_vec)
-        
-        # Submatrices Globales 3x3
-        K_sub_ax = k_ax_val * P   # Rigidez traslacional
-        K_sub_tor = k_tor_val * P # Rigidez rotacional
-        
-        # Inicializamos matriz global 12x12
-        # Estructura de DOFs: [Tx1, Ty1, Tz1, Rx1, Ry1, Rz1, Tx2, Ty2, Tz2, Rx2, Ry2, Rz2]
-        K_global = np.zeros((12, 12))
-        
-        # Bloques de índices para los nodos 1 y 2
-        # T (Traslación): 0:3, R (Rotación): 3:6
-        idx_T1, idx_R1 = slice(0, 3), slice(3, 6)
-        idx_T2, idx_R2 = slice(6, 9), slice(9, 12)
+        jacobian = self.L / 2.0
+        for _, weight in zip(points, weights):
+            b_matrix = self._get_b_matrix(jacobian)
+            outer_b = np.outer(b_matrix, b_matrix) * jacobian * weight
+            axial_stiffness += outer_b * self.mat.E * self.prop.A
+            torsional_stiffness += outer_b * self.mat.G * self.prop.J
 
-        # --- ENSAMBLAJE AXIAL (Afecta a Traslaciones T) ---
-        # Fuerza axial opuesta en nodos: [ K  -K ]
-        #                                [ -K  K ]
-        K_global[idx_T1, idx_T1] += K_sub_ax
-        K_global[idx_T1, idx_T2] -= K_sub_ax
-        K_global[idx_T2, idx_T1] -= K_sub_ax
-        K_global[idx_T2, idx_T2] += K_sub_ax
-        
-        # --- ENSAMBLAJE TORSIONAL (Afecta a Rotaciones R) ---
-        # Momento torsor opuesto en nodos
-        K_global[idx_R1, idx_R1] += K_sub_tor
-        K_global[idx_R1, idx_R2] -= K_sub_tor
-        K_global[idx_R2, idx_R1] -= K_sub_tor
-        K_global[idx_R2, idx_R2] += K_sub_tor
-        
-        return K_global
+        local_stiffness = self._assemble_local_matrix(
+            axial_stiffness,
+            torsional_stiffness,
+        )
+        return self.T.T @ local_stiffness @ self.T
 
+    def _assemble_local_matrix(
+        self,
+        axial_stiffness: np.ndarray,
+        torsional_stiffness: np.ndarray,
+    ) -> np.ndarray:
+        """Embed the axial and torsional 2x2 blocks in the 12x12 matrix."""
+        stiffness = np.zeros((12, 12))
+        stiffness[np.ix_(self.AXIAL_DOFS, self.AXIAL_DOFS)] = axial_stiffness
+        stiffness[np.ix_(self.TORSIONAL_DOFS, self.TORSIONAL_DOFS)] = (
+            torsional_stiffness
+        )
+        return stiffness
 
+    def calculate_stresses(
+        self,
+        u_global_vector: np.ndarray,
+        dof_mapper,
+    ) -> dict:
+        """Recover axial and torsional response from basic displacements."""
+        node1_dofs = dof_mapper.get_dof_indices(self.node1.nid)
+        node2_dofs = dof_mapper.get_dof_indices(self.node2.nid)
+        element_displacements = np.concatenate(
+            [u_global_vector[node1_dofs], u_global_vector[node2_dofs]]
+        )
+        local_displacements = self.T @ element_displacements
 
+        axial_strain = (
+            local_displacements[self.AXIAL_DOFS[1]]
+            - local_displacements[self.AXIAL_DOFS[0]]
+        ) / self.L
+        axial_stress = self.mat.E * axial_strain
+        axial_force = axial_stress * self.prop.A
 
+        twist_rate = (
+            local_displacements[self.TORSIONAL_DOFS[1]]
+            - local_displacements[self.TORSIONAL_DOFS[0]]
+        ) / self.L
+        torque = self.mat.G * self.prop.J * twist_rate
 
+        outer_fiber_distance = getattr(self.prop, "C", 0.0)
+        torsional_stress = 0.0
+        if self.prop.J > 1.0e-12:
+            torsional_stress = torque * outer_fiber_distance / self.prop.J
 
-
-
-
-
-
-
-
-
-
-
-
+        return {
+            "axial_force": axial_force,
+            "axial_stress": axial_stress,
+            "axial_strain": axial_strain,
+            "torque": torque,
+            "torsional_stress": torsional_stress,
+            "twist_rate": twist_rate,
+        }

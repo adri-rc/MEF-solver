@@ -1,87 +1,148 @@
-# Guía del informe de resultados `.rpt`
+# Result report reference
 
-## Propósito y orden del informe
+## Purpose and report order
 
-`src/postprocessing/report_writer.py` genera `output/<job>.rpt`. El informe
-presenta magnitudes calculadas por MEF-solver y facilita su localización en un
-F06 de MSC Nastran, pero no intenta reproducir literalmente su maquetación.
-Todas las magnitudes usan el sistema coherente de unidades del deck.
+`src/postprocessing/report_writer.py` writes `output/<job>.rpt`. The report
+presents quantities calculated by MEF-solver and explains where to find their
+counterparts in an MSC Nastran F06. It does not reproduce the F06 layout
+verbatim. Every value uses the coherent unit system of the input deck.
 
-El orden es:
+The report order is:
 
-1. cabecero lineal o no lineal;
-2. `MODEL SUMMARY` y configuración;
-3. para SOL 400, control y resumen de convergencia;
-4. resultados del estado final;
-5. al final, historial de incrementos y correcciones de Newton.
+1. linear or nonlinear heading;
+2. `MODEL SUMMARY` and analysis configuration;
+3. `SOL 400` control and convergence summary, when applicable;
+4. final-state results;
+5. converged-increment and Newton-correction histories.
 
 ## `MODEL SUMMARY`
 
-La tabla cuenta entradas lógicas del Bulk Data de origen, igual que la tabla
-`M O D E L  S U M M A R Y` del F06. No cuenta los objetos normalizados que usa
-internamente el solver.
+This table counts logical entries in the source Bulk Data, like the F06
+`M O D E L  S U M M A R Y`. It does not count the normalized objects used
+internally by the solver.
 
-Esto es especialmente importante para las restricciones:
+Constraint counting deserves particular attention:
 
-- `SPC` cuenta entradas `SPC` con desplazamiento impuesto;
-- `SPC1` cuenta combinaciones lógicas de `SID` y componentes; líneas `SPC1`
-  repetidas con ambos campos iguales se consolidan como hace MSC;
-- `SPCADD` se mantiene como tipo independiente si existe en el deck;
-- una restricción permanente en `GRID.PS` pertenece a la entrada `GRID` y no
-  crea una entrada `SPC` adicional en el resumen;
-- `FORCE` y `MOMENT` son cargas, aparecen como tipos independientes y nunca se
-  incluyen en el número de `SPC`.
+- `SPC` counts `SPC` entries with prescribed values;
+- `SPC1` counts logical `SID`/component combinations; repeated `SPC1`
+  lines with the same fields are consolidated like MSC Nastran;
+- `SPCADD` remains a separate type when present;
+- a permanent constraint in `GRID.PS` belongs to the `GRID` entry and does
+  not create another `SPC` summary entry;
+- `FORCE` and `MOMENT` are loads, remain separate types, and never
+  contribute to the `SPC` count.
 
-Por ejemplo, el caso 127 tiene doce restricciones nodales una vez expandido
-para resolver, pero el F06 y el `.rpt` muestran `SPC1 = 2`: existen dos grupos
-lógicos, `123456` y `456`, para el mismo SID.
+For example, case 127 expands to twelve constrained nodal components for the
+solution, while both F06 and RPT show `SPC1 = 2`: the deck contains two
+logical groups, `123456` and `456`, for one SID.
 
-## Configuración y control SOL 400
+## Analysis configuration and `SOL 400` control
 
-| Bloque del `.rpt` | Dónde buscar en el F06 |
+| RPT block | F06 location |
 |---|---|
-| `ANALYSIS CONFIGURATION` | `CASE CONTROL ECHO` para `ANALYSIS`, `SPC`, `LOAD` y `NLSTEP`; el Executive Control muestra `SOL 101` o `SOL 400`. |
-| `PARAM,LGDISP` y `PARAM,FOLLOWK` | Bulk Data o eco del deck; también se contabilizan como `PARAM` en `MODEL SUMMARY`. |
-| `NONLINEAR STEP CONTROL` | `NON-LINEAR ITERATION SOLUTION CONTROL PARAMETERS`. MSC usa nombres como `TOTTIME`, `MAXITER`, `MAXBIS`, `DTINITF`, `DTMINF`, `DTMAXF`, `NDESIR`, `SFACT`, `EPSP` y `KMETHOD`. |
-| `NONLINEAR SOLUTION SUMMARY` | Se deduce del último `LOAD STEP`, de los mensajes de convergencia, de la tabla de iteraciones y de `GLOBAL WORKS & ENERGIES`; MSC no reúne exactamente estos cinco valores en una sola tabla. |
+| `ANALYSIS CONFIGURATION` | `CASE CONTROL ECHO` for `ANALYSIS`, `SPC`, `LOAD`, and `NLSTEP`; Executive Control for `SOL 101` or `SOL 400`. |
+| `PARAM,LGDISP` and `PARAM,FOLLOWK` | Bulk Data or deck echo; both also contribute to `PARAM` in `MODEL SUMMARY`. |
+| `NONLINEAR STEP CONTROL` | `NON-LINEAR ITERATION SOLUTION CONTROL PARAMETERS`. MSC uses fields such as `TOTTIME`, `MAXITER`, `MAXBIS`, `DTINITF`, `DTMINF`, `DTMAXF`, `NDESIR`, `SFACT`, `EPSP`, and `KMETHOD`. |
+| `NONLINEAR SOLUTION SUMMARY` | Derived from the last `LOAD STEP`, convergence messages, iteration table, and `GLOBAL WORKS & ENERGIES`; MSC does not collect the same five values in one table. |
 
-`FINAL LOAD FACTOR = 1` significa que se alcanzó toda la carga de referencia.
-No significa que las fuerzas tengan valor uno: el solver aplica
+`FINAL LOAD FACTOR = 1` means that the full reference load was reached. It
+does not mean that forces equal one: the solver applies
 `F_ext(lambda) = lambda F_ref`.
 
-## Resultados finales
+## Final results
 
-`FINAL CONVERGED STATE RESULTS` identifica el último equilibrio aceptado. En
-un F06 con salida intermedia pueden aparecer las mismas tablas muchas veces;
-para comparar el estado final hay que localizar su última aparición bajo el
-último `LOAD STEP` alcanzado.
+`FINAL CONVERGED STATE RESULTS` identifies the last accepted equilibrium.
+With intermediate output enabled, an F06 may repeat the same tables at every
+load step. Compare the report with the final occurrence under the last
+converged `LOAD STEP`.
 
-| Resultado del `.rpt` | Encabezado habitual del F06 SOL 400 |
+| RPT result | Typical `SOL 400` F06 heading |
 |---|---|
 | `NODAL DISPLACEMENTS` | `D I S P L A C E M E N T  V E C T O R`. |
 | `SPC REACTION FORCES AND MOMENTS` | `F O R C E S  O F  S I N G L E - P O I N T  C O N S T R A I N T`. |
-| tensión/deformación CROD | `N O N L I N E A R  S T R E S S E S  I N  R O D  E L E M E N T S (CROD)`. |
-| `STRAIN ENERGY` | `GLOBAL WORKS & ENERGIES`, campo `TOT STRAIN ENERGY`; en saltos de rama MSC puede acumular trabajo y no representar la energía elástica instantánea usada por el proyecto. |
-| fuerza axial y par CROD | No siempre aparece una tabla OEF legible en los F06 de referencia SOL 400. Se contrasta con tensión, cargas `OLOAD`, reacciones `SPCFORCES` y, cuando está disponible, PCH/OP2. |
+| CROD stress/strain | `N O N L I N E A R  S T R E S S E S  I N  R O D  E L E M E N T S (CROD)`. |
+| `SECTION RESPONSE IN CBAR ELEMENTS` | Centroidal axial stress and strain relate to `N O N L I N E A R  S T R E S S E S  I N  B A R  E L E M E N T S (CBAR)`. Under bending the F06 reports combined C--F values, not a separate centroidal value. The preserved F06 files have no direct columns for axial force, torque, twist rate, or torsional stress. |
+| `NONLINEAR STATE IN CBAR ELEMENTS` | `CURRENT LENGTH` is reconstructed from displaced geometry and offsets; MSC does not print it directly in these listings. `ELEMENT STRAIN ENERGY` is the element's elastic contribution, while `GLOBAL WORKS & ENERGIES` reports only the model total. |
+| `END FORCES AND MOMENTS IN CBAR ELEMENTS` | The reference `SOL 400` F06 files contain no textual OEF table. Checks use equilibrium with `OLOAD`, `SPCFORCES`, and PCH/OP2 when available. |
+| `STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS` | `N O N L I N E A R  S T R E S S E S  I N  B A R  E L E M E N T S (CBAR)`, using `GRID` for the end and C, D, E, or F for the point. |
+| `STRAIN ENERGY` | `GLOBAL WORKS & ENERGIES`, field `TOT STRAIN ENERGY`; after a branch jump MSC may accumulate work rather than report the instantaneous elastic state energy used here. |
+| CROD axial force and torque | A readable OEF table is not always present. Compare against stress, `OLOAD`, `SPCFORCES`, and PCH/OP2 when available. |
+
+## Linear and nonlinear CBAR results
+
+The report distributes CBAR response over four tables. Three are present in
+both `SOL 101` and `SOL 400`. `NONLINEAR STATE IN CBAR ELEMENTS` appears
+only when the element result contains converged geometric state.
+
+### `SECTION RESPONSE IN CBAR ELEMENTS`
+
+| Column | Meaning |
+|---|---|
+| `AXIAL FORCE` | Axial section resultant, positive in tension along the converged local axis. |
+| `TORQUE` | Torsional resultant about the element local axis. |
+| `AXIAL STRESS` | Uniform axial stress. In large-displacement `SOL 400`, it is $E\log(L/L_0)$. |
+| `MAX TORSIONAL STRESS` | Largest absolute value of the torsional approximation at the configured recovery points; printed as nonnegative. |
+| `AXIAL STRAIN` | Centroidal strain: linear in `SOL 101`, logarithmic in large-displacement `SOL 400`. |
+| `TWIST RATE` | Relative section rotation per unit reference length. |
+
+In a purely axial case, `AXIAL STRESS` and `AXIAL STRAIN` can be located
+directly in the nonlinear F06 CBAR table because all C--F points receive the
+same contribution. Under bending, MSC reports axial plus bending at each
+point; derive the centroidal contribution from the section law or point
+combinations rather than comparing it with one C--F row.
+
+### `NONLINEAR STATE IN CBAR ELEMENTS`
+
+| Column | Meaning |
+|---|---|
+| `CURRENT LENGTH` | Distance between current ends, including `WA/WB` offsets rotating with their nodes. |
+| `ELEMENT STRAIN ENERGY` | Instantaneous elastic energy in the CBAR at the last converged state. Summing CROD and CBAR contributions gives the project global energy. |
+| `MAX NORMAL STRESS` | Largest total normal stress over all C--F points and both ends. |
+| `MIN NORMAL STRESS` | Smallest total normal stress over all C--F points and both ends. |
+
+The table is omitted for linear CBAR results because their dictionaries do not
+contain `current_length` or individual element energy. Its absence does not
+mean that linear forces or stresses are missing; it avoids inventing zeros for
+quantities recovered only by the nonlinear path.
+
+### End actions and C--F points
+
+`END FORCES AND MOMENTS IN CBAR ELEMENTS` gives local nodal actions
+`Fx`, `Fy`, `Fz`, `Mx`, `My`, and `Mz` at ends A and B. They are
+forces exerted by the element on its nodes, so their signs are not two section
+cuts with the same outward normal. Offsets may add the moment
+$\mathbf{r}\times\mathbf{f}$.
+
+`STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS` separates:
+
+- `AXIAL`: uniform contribution;
+- `BENDING`: contribution from `My`, `Mz`, `I1`, `I2`, and `I12`;
+- `TOTAL`: `AXIAL + BENDING`;
+- `TORSIONAL`: the $T r/J$ approximation, separate from normal stress.
+
+The numerical dictionary uses internal keys `P0` through `P3`. The RPT
+presents them as C through F in the order defined by `PBAR`. Cases 161--166
+are the principal reference for locating these rows in the final F06 load
+step.
 
 ## `CONVERGED INCREMENT HISTORY`
 
-Una fila representa un incremento que terminó en equilibrio y fue aceptado.
+Each row is an increment that reached equilibrium and was accepted.
 
-| Columna | Significado | Correspondencia F06 |
+| Column | Meaning | F06 correspondence |
 |---|---|---|
-| `INCREMENT` | Número consecutivo de incremento aceptado por MEF-solver. | Columna `INC` de `NON-LINEAR ITERATION MODULE OUTPUT`, con posibles diferencias si MSC realiza una adaptación distinta. |
-| `LOAD FACTOR` | Factor total `lambda` alcanzado. | Primer campo `LOAD STEP` de la tabla iterativa y línea `LOAD STEP = ...` de cada bloque de resultados. |
-| `STEP SIZE` | Diferencia entre el factor actual y el anterior. | Mensajes `TIME INCREMENT HAS BEEN CHANGED` y diferencia entre dos `LOAD STEP`. |
-| `ITERATIONS` | Correcciones de Newton requeridas por el intento aceptado. | Número de filas `ITR` del incremento que finalmente converge. |
-| `RESIDUAL NORM` | Norma infinito final del residuo en GDL libres. | Conceptualmente `MAXIMUM RESIDUAL FORCE`; no se espera identidad exacta si MSC usa otro sistema o escalado interno. |
-| `RELATIVE RESIDUAL` | Residuo anterior dividido por la referencia definida por MEF-solver. | Análogo a `FORCE RESIDUAL CONVERGENCE RATIO`, pero no numéricamente idéntico porque MSC no publica aquí el mismo denominador. |
-| `CUTBACKS` | Intentos fallidos inmediatamente anteriores que obligaron a reducir ese paso. | Mensajes de bisección/cambio de incremento y columnas de control de la tabla iterativa. |
-| `STRAIN ENERGY` | Energía elástica del estado aceptado. | `TOT STRAIN ENERGY`, con la salvedad indicada para saltos de rama. |
+| `INCREMENT` | Consecutive accepted increment number in MEF-solver. | `INC` in `NON-LINEAR ITERATION MODULE OUTPUT`; numbering may differ if MSC adapts differently. |
+| `LOAD FACTOR` | Total reached factor $\lambda$. | `LOAD STEP` in the iteration row and result block. |
+| `STEP SIZE` | Difference between the current and previous factors. | `TIME INCREMENT HAS BEEN CHANGED` messages and adjacent load-step differences. |
+| `ITERATIONS` | Newton corrections required by the accepted attempt. | Number of `ITR` rows in the attempt that converges. |
+| `RESIDUAL NORM` | Final infinity norm over free DOFs. | Conceptually `MAXIMUM RESIDUAL FORCE`; exact identity is not expected with different internal systems/scaling. |
+| `RELATIVE RESIDUAL` | Residual divided by the MEF-solver reference. | Analogous to `FORCE RESIDUAL CONVERGENCE RATIO`, but with a different unpublished MSC denominator. |
+| `CUTBACKS` | Failed attempts immediately preceding the accepted reduced step. | Bisection/increment-change messages and iteration-control columns. |
+| `STRAIN ENERGY` | Elastic energy of the accepted state. | `TOT STRAIN ENERGY`, subject to the branch-jump caveat above. |
 
 ## `NEWTON ITERATION HISTORY`
 
-Para un factor de carga objetivo, Newton-Raphson repite:
+For one target load factor, full Newton-Raphson repeats:
 
 ```text
 r_i = lambda F_ext - F_int(u_i)
@@ -89,42 +150,38 @@ K_T(u_i) Delta_u_i = r_i
 u_(i+1) = u_i + Delta_u_i
 ```
 
-Cada fila del historial se escribe después de aplicar una corrección
-`Delta_u_i`.
+Each history row is written after applying one correction $\Delta u_i$.
 
-| Columna | Significado | Correspondencia F06 |
+| Column | Meaning | F06 correspondence |
 |---|---|---|
-| `INCREMENT` | Próximo incremento convergido que se está intentando. Si hay recorte, el mismo número reaparece. | `INC`, aunque la numeración puede diferir por la estrategia adaptativa de MSC. |
-| `LOAD FACTOR` | Factor objetivo del intento. Puede cambiar al repetir un incremento tras un recorte. | Campo `LOAD STEP` de la fila que comienza por `%`. |
-| `ITERATION` | Número de corrección de Newton dentro de ese intento. | Columna `ITR`. |
-| `RESIDUAL NORM` | `max(abs(r))` sobre los GDL libres después de corregir. Incluye fuerzas y momentos según el GDL. | `MAXIMUM RESIDUAL FORCE ... IS EQUAL TO ...`, como magnitud conceptualmente equivalente. |
-| `RELATIVE RESIDUAL` | `RESIDUAL NORM / max(norm(lambda F_ext), norm(F_int), 1)` usando norma infinito y GDL libres. Es el criterio `P` del proyecto. | `FORCE RESIDUAL CONVERGENCE RATIO` es el análogo MSC, pero emplea una referencia interna distinta y no debe compararse término a término. |
-| `CORRECTION NORM` | `max(abs(Delta_u))` sobre los GDL libres. Mide cuánto cambió la solución en esa corrección. | No tiene una columna directamente equivalente en el F06 usado para validar. `DISP MAX` de MSC es el máximo desplazamiento total del estado, no esta corrección. |
+| `INCREMENT` | Next converged increment being attempted; the same number reappears after a cutback. | `INC`, with possible differences from MSC's adaptive strategy. |
+| `LOAD FACTOR` | Attempt target; it may change when retrying after a cutback. | `LOAD STEP` in the row beginning with `%`. |
+| `ITERATION` | Newton correction number within the attempt. | `ITR`. |
+| `RESIDUAL NORM` | `max(abs(r))` over free DOFs after correction, including forces and moments according to DOF. | Conceptually `MAXIMUM RESIDUAL FORCE ... IS EQUAL TO ...`. |
+| `RELATIVE RESIDUAL` | `RESIDUAL NORM / max(norm(lambda F_ext), norm(F_int), 1)`, using infinity norms on free DOFs. This is the project `P` criterion. | MSC's analogue is `FORCE RESIDUAL CONVERGENCE RATIO`, with a different internal reference. |
+| `CORRECTION NORM` | `max(abs(Delta_u))` over free DOFs. | No direct column in the validation F06 files. MSC `DISP MAX` is total state displacement, not this correction. |
 
-### Por qué cambia el número de filas
+### Why the row count varies
 
-No existe un número fijo de filas por caso:
+- `FIXED` fixes the nominal number of increments, not the iterations within
+  each increment.
+- `ADAPT` also changes increment count and size according to
+  `DESIRED ITERATIONS` and `STEP SCALE FACTOR`.
+- Stronger nonlinearity generally needs more corrections.
+- A cutback keeps the failed-attempt rows, reduces the step, and retries the
+  same increment number at another target.
+- A state already within tolerance may converge with zero correction rows.
+- `MINIMUM ITERATIONS`, `MAXIMUM ITERATIONS`, and `MAXIMUM BISECTIONS`
+  bound the process.
 
-- `FIXED` fija el número nominal de incrementos, no las iteraciones necesarias
-  dentro de cada uno;
-- `ADAPT` cambia además el número y tamaño de incrementos según
-  `DESIRED ITERATIONS` y `STEP SCALE FACTOR`;
-- una zona más no lineal suele requerir más correcciones;
-- un recorte conserva las filas del intento fallido, reduce el paso y repite
-  el mismo número de incremento con otro factor objetivo;
-- un estado que ya satisface la tolerancia antes de corregir puede converger
-  con cero filas de corrección;
-- el proceso se limita mediante `MINIMUM ITERATIONS`, `MAXIMUM ITERATIONS` y
-  `MAXIMUM BISECTIONS`.
+Consequently, `RECORDED NEWTON CORRECTIONS` may exceed the sum of
+`CONVERGED NEWTON ITERATIONS`: the former includes attempts discarded by
+cutbacks, while the latter includes only accepted attempts.
 
-Por eso `RECORDED NEWTON CORRECTIONS` puede superar la suma de
-`CONVERGED NEWTON ITERATIONS`: la primera incluye intentos descartados por
-recortes y la segunda sólo los intentos finalmente aceptados.
+## Nonlinear CROD torsion
 
-## Torsión del CROD no lineal
-
-Sí está implementada y se aceptan cargas `MOMENT`. Requiere `G` en `MAT1` y
-una constante torsional `J > 0` en `PROD`. La formulación actual usa:
+Nonlinear CROD accepts `MOMENT` loads and implements elastic torsion when
+`MAT1.G` and `PROD.J > 0` are available:
 
 ```text
 phi = (theta_2 - theta_1) dot n_0
@@ -134,27 +191,22 @@ tau = T C / J
 k_t = G J / L_0
 ```
 
-El `.rpt` muestra `TORQUE`, `TORSIONAL STRESS` y `TWIST RATE`. En el F06 del
-caso 116, por ejemplo, la tensión aparece como `LIN. TORSIONAL STRESS`, el giro
-en `R1`, el momento aplicado en `OLOAD` y la reacción torsional en
+The RPT exposes `TORQUE`, `TORSIONAL STRESS`, and `TWIST RATE`. In case
+116, for example, the F06 reports `LIN. TORSIONAL STRESS`, rotation in
+`R1`, applied moment under `OLOAD`, and torsional reaction under
 `SPCFORCES`.
 
-La capacidad tiene un límite deliberado: la torsión es elástica, lineal y
-desacoplada del axil; se mide alrededor del eje de referencia `n_0`, y una
-extensión axial no modifica `GJ/L_0`. No implementa cinemática general de
-rotaciones finitas ni acoplamiento flexión-torsión; eso corresponde al futuro
-CBAR no lineal. Si `J = 0`, el CROD no aporta rigidez torsional y sus rotaciones
-axiales deben quedar restringidas para evitar un mecanismo.
+The deliberate limitation is that torsion remains elastic, linear, and
+uncoupled from axial response. It is measured about reference axis $n_0$, and
+extension does not change $GJ/L_0$. General finite section rotations and
+bending-torsion coupling belong to nonlinear CBAR. If `J = 0`, CROD supplies
+no torsional stiffness and its axial rotations must be constrained.
 
-### Ejemplo de lectura del caso 117
-
-En el último `LOAD STEP = 1.00000E+00`, la página 163 del F06 muestra
-`TOTAL STRAIN = 2.000000E-01`; ese es el `AXIAL STRAIN` del `.rpt`. La misma
-tabla muestra `LIN. TORSIONAL STRESS = 2.000000E+03`.
-
-MSC no imprime directamente `TWIST RATE`. En la página 168, el
-`DISPLACEMENT VECTOR` da `R1=0` para GRID 1 y `R1=9.904762E-01` para GRID 2.
-Como el deck define `L_0=100`, el valor del `.rpt` se reconstruye mediante:
+In the final `LOAD STEP = 1.00000E+00` of case 117, the F06 reports
+`TOTAL STRAIN = 2.000000E-01` and
+`LIN. TORSIONAL STRESS = 2.000000E+03`. It does not print `TWIST RATE`
+directly. With `R1=0` at GRID 1, `R1=9.904762E-01` at GRID 2, and
+`L_0=100`, the report value is:
 
 ```text
 TWIST RATE = (R1_2 - R1_1) / L_0

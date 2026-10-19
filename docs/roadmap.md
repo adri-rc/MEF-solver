@@ -1,76 +1,121 @@
-# Hoja de ruta
+# Roadmap
 
-## Estado de base
+## Verified baseline
 
-El flujo DAT/BDF → modelo → ensamblaje disperso → solución → resultados está
-operativo para CROD, CBAR, CTRIA3 y CQUAD4 plano. La colección completa termina
-con `430 passed, 6 xfailed`; los xfail documentan geometría CQUAD4 alabeada y
-suavizado `SNORM`, ambos fuera de alcance.
+The DAT/BDF to data model to sparse assembly to solution to report workflow is
+operational for CROD, CBAR, CTRIA3, and coplanar CQUAD4. The complete suite
+reported `714 passed, 6 xfailed, 2 warnings` on 20 September 2026. The six
+strict expected failures are documented CQUAD4 scope limits.
 
-La rigidez CQUAD4 plana se considera cerrada tras los casos 90/91. No se
-planifica extenderla a elementos alabeados en la siguiente fase.
+The linear implementation currently includes:
 
-Desde ese cierre se separó la escritura del informe en
-`src/postprocessing/report_writer.py`, se añadieron sus pruebas y se verificó
-el caso mixto 80 con CBAR, CTRIA3 y CQUAD4. `requirements.txt` declara
-dependencias mínimas, aunque todavía falta un bloqueo reproducible.
+- independent PSHELL `MID1`, `MID2`, and `MID3` semantics for CTRIA3 and
+  CQUAD4;
+- CTRIA3 application of `12I/T^3` to bending and `TS/T` to transverse
+  shear;
+- validated coplanar CQUAD4 stiffness through cases 90 and 91;
+- report generation isolated in `src/postprocessing/report_writer.py`;
+- two large linear integration models and one targeted CTRIA3 shear
+  diagnostic.
 
-El preproceso distingue estática lineal y `SOL 400`, normaliza `NLSTEP` o
-`NLPARM`, `LGDISP` y `FOLLOWK`, y dispone de 36 casos CROD (92--127) ejecutados
-con MSC Nastran 2026.1/NLPERF. `NonlinearStaticSolver` resuelve el subconjunto
-MAT1/PROD/CROD mediante Newton completo, tangente consistente, stepping fijo o
-adaptativo y recortes. Los 35 trabajos convergidos coinciden con referencias
-explícitas y el 120 reproduce el límite bajo control de fuerza.
+The first integration model, `case_linear_test_final`, contains 384 shell
+elements, 76 CBAR, and 4 CROD. Its unmodified deck completed in MSC Nastran
+2026.1, and full-field relative L2 errors remain below `1.5e-5`.
 
-## Prioridad 0 completada: no linealidad geométrica CROD
+`case_linear_test_final_T` extends the model to a three-dimensional T frame
+with 417 GRID and 506 elements. Global response, shell membrane resultants,
+and fibre stresses correlate with MSC Nastran. Centroidal CTRIA3 moments and
+shears do not: their L2 errors are `0.682` and `17.30`. This is an explicit
+recovery limitation and must not be hidden by changing stiffness or relaxing a
+tolerance.
 
-1. Completada la campaña MSC y conservadas sus salidas auditables.
-2. Transcritos estados intermedios, tangente por sonda y resultados finales.
-3. Implementados `CRODNonlinear` y `NonlinearStaticSolver` sin modificar la
-   formulación lineal.
-4. Integrados CLI, recuperación e informe con configuración, historial de
-   incrementos, correcciones de Newton y estado final diferenciado.
-5. Documentado el punto límite 120 y el alcance sin arco de longitud.
+`case_linear_test_final_T_no_CTRIA_MID3` changes only the CTRIA3 transverse
+shear material to `E=1e-20`. It reduces the full-field CTRIA3 moment error to
+`7.106e-5`, but produces a nearly singular physical model with
+`cond(K)=5.660208e28`. The case is a diagnostic, not an alternative validated
+structure.
 
-La siguiente ampliación física será CBAR con grandes desplazamientos, como una
-fase independiente y precedida por sus propios casos de referencia.
+The nonlinear implementation distinguishes `SOL 101` from `SOL 400`,
+normalizes `NLSTEP`/`NLPARM`, `LGDISP`, `FOLLOWK`, and relevant
+`PBARN1` fields, and solves geometric nonlinearity for `MAT1` CROD/CBAR
+models. The audited MSC campaigns cover CROD cases 92--127, CBAR cases
+128--166, mixed cases 167--176, and the final three-span bridge model.
 
-## Prioridad 1: consolidación
+## Completed: geometric nonlinear CROD
 
-1. Añadir integración continua para ejecutar pytest en cada cambio.
-2. Añadir `pyproject.toml` o un fichero de bloqueo con versiones reproducibles.
-3. Añadir pruebas de convergencia sobre mallas refinadas, además de DMIG/E2E.
-4. Definir una política de ejecución por lotes: detenerse o continuar y
-   acumular errores por modelo.
-5. Revisar y aislar los módulos y scripts antiguos o exploratorios antes de
-   ampliar el alcance físico.
+1. Preserved auditable MSC results for cases 92--127.
+2. Transcribed intermediate states, tangent probes, and final results.
+3. Implemented `CRODNonlinear` and `NonlinearStaticSolver` without changing
+   the linear formulation.
+4. Integrated CLI routing, recovery, and nonlinear report history.
+5. Documented the force-controlled limit point in case 120 and the absence of
+   arc-length control.
 
-## Prioridad 2: rendimiento
+## Completed: geometric nonlinear CBAR
 
-1. Ensamblar mediante tripletas COO vectorizadas.
-2. Cachear transformaciones y objetos de elemento entre ensamblaje y
-   recuperación.
-3. Medir lectura, rigidez elemental, ensamblaje, solución y postproceso sobre
-   familias de mallas crecientes.
-4. Estudiar reordenamientos y solvers iterativos cuando el tamaño lo justifique.
+1. Implemented a corotational `CBARNonlinear` without modifying the linear
+   path.
+2. Integrated `I12`, `K1/K2`, offsets, releases, `G0` orientation, loads,
+   and prescribed displacements.
+3. Identified logarithmic axial strain with cases 130/131 and checked the
+   tangent with cases 137--139.
+4. Added 39 explicit CBAR end-to-end references; all pass.
+5. Validated `INT2=LC` as Euler--Bernoulli and `INT2=LS` as one-point
+   linear shear interpolation with cases 154--160.
+6. Added converged geometry, end actions, and C--F stresses to the report
+   without changing the linear tables.
 
-## Prioridad 3: nuevas capacidades
+Some near-neutral fibres and severe combined-rotation segments in cases
+165/166 remain diagnostics. They do not invalidate the closed global response
+and centroidal axial-stress scope.
 
-Cada ampliación debe incorporar un caso mínimo, una referencia externa y una
-prueba E2E antes de anunciarse como soportada. Candidatos:
+## Priority 1: public-release consolidation
 
-- presión de lámina, gravedad y otras cargas distribuidas;
-- MPC y elementos rígidos;
-- propiedades avanzadas de vigas;
-- materiales ortótropos y laminados;
-- elementos de mayor orden y sólidos;
-- exportación a formatos de visualización.
+The preprocessing, linear-analysis, and nonlinear-analysis publication passes
+are complete. They cover active-module naming, removal of disconnected or
+superseded artifacts, English comments/docstrings, and English documentation
+checked against code and tests. The nonlinear pass also retains only the final
+three-span bridge referenced by the submitted thesis.
 
-## Mejoras opcionales de CQUAD4
+Remaining consolidation work:
 
-- Investigar la recuperación centroidal propietaria de `Qx/Qy` sin tocar la
-  rigidez validada.
-- Añadir resultados en más estaciones o vértices.
-- Implementar `SNORM` sólo si aparecen modelos facetados que lo requieran.
-- Mantener el rechazo de nodos no coplanares. Una futura formulación alabeada
-  sería un elemento nuevo, no una relajación de la tolerancia actual.
+1. add continuous integration for the full pytest suite;
+2. add `pyproject.toml` and/or a reproducible dependency lock;
+3. add mesh-refinement convergence tests in addition to DMIG and E2E checks;
+4. decide whether batch mode stops on the first error or accumulates failures;
+5. choose and add a repository license before public release.
+
+The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
+a formulation/recovery limit. It is not a consolidation task and does not
+justify recalibrating validated stiffness.
+
+## Priority 2: performance
+
+1. assemble from vectorized COO triplets;
+2. cache transformations and element solver objects between assembly and
+   recovery;
+3. measure parsing, element stiffness, assembly, solution, and recovery on
+   increasing mesh sizes;
+4. investigate reordering and iterative solvers when model size warrants it.
+
+## Priority 3: new capabilities
+
+Every physical extension must include a minimal model, an auditable external
+reference, and an end-to-end test before it is advertised as supported.
+Candidates include:
+
+- shell pressure, gravity, and other distributed loads;
+- MPC and rigid elements;
+- advanced beam properties;
+- orthotropic and laminated materials;
+- higher-order and solid elements;
+- export to visualization formats.
+
+## Optional CQUAD4 work
+
+- Investigate MSC Nastran's centroidal `Qx/Qy` reporting convention without
+  changing validated stiffness.
+- Add recovery at additional stations or corners.
+- Implement `SNORM` only if a supported faceted model requires it.
+- Keep rejecting warped quadrilaterals. A future warped formulation would be a
+  new element, not a relaxed tolerance in the current coplanar one.

@@ -1,70 +1,66 @@
-# Guía de trabajo para asistentes de IA
+# Working guide for AI assistants
 
-Estas instrucciones se aplican a todo el repositorio. El objetivo es conservar
-la trazabilidad numérica de un solver académico comparado con MSC Nastran.
+These instructions apply to the entire repository. Their purpose is to preserve
+the numerical traceability of this academic solver against MSC Nastran.
 
-## Incorporación al proyecto
+## Project onboarding
 
-Antes de proponer o modificar código:
+Before proposing or modifying code:
 
-1. ejecutar `git status --short --branch` y no sobrescribir cambios locales;
-2. leer `README.md`, `docs/TRASPASO.md` y `docs/roadmap.md`;
-3. consultar el documento técnico específico de la zona que se vaya a tocar;
-4. revisar los tests y casos de validación relacionados;
-5. ejecutar como línea base
-   `.\.venv\Scripts\python.exe -m pytest -q` en Windows, si existe el entorno.
+1. run `git status --short --branch` and do not overwrite local changes;
+2. read `README.md`, `docs/HANDOVER.md`, and `docs/roadmap.md`;
+3. consult the technical document for the area being changed;
+4. review the related tests and validation cases;
+5. run `.\.venv\Scripts\python.exe -m pytest -q` as a baseline on Windows
+   when the environment exists.
 
-El estado verificable, el historial reciente y el orden de lectura están en
-`docs/TRASPASO.md`. El código y los tests tienen prioridad si un documento se
-ha quedado desactualizado; en ese caso, actualizar también la documentación.
+The verifiable state, recent history, and recommended reading order are in
+`docs/HANDOVER.md`. Code and tests take precedence if a document is outdated;
+update that document in the same change.
 
-## Invariantes que deben preservarse
+## Invariants that must be preserved
 
-- La ruta lineal cubre pequeñas deformaciones con `MAT1` isótropo y seis GDL
-  por nodo para CROD, CBAR, CTRIA3 y CQUAD4 coplanar.
-- La ruta `SOL 400` cubre sólo no linealidad geométrica MAT1/PROD/CROD con
-  cargas nodales conservativas, Newton completo y `FIXED`/`ADAPT`. No incluye
-  plasticidad, contacto, arco de longitud, cargas seguidoras ni CBAR no lineal.
-- No presentar el proyecto como un sustituto general de Nastran.
-- No existe `AUTOSPC` general: un mecanismo estructural real debe producir un
-  fallo, no estabilizarse silenciosamente.
-- Las coordenadas `GRID.CP`, los GDL en `GRID.CD` y los vectores de carga en su
-  `CID` deben transformarse en las etapas documentadas en
-  `docs/arquitectura.md`.
-- Para PSHELL, `MID2` vacío desactiva flexión y `MID3` vacío desactiva la
-  flexibilidad física de cortante; no heredan automáticamente otros MID.
-- CQUAD4 rechaza geometrías alabeadas. Los `xfail` estrictos de alabeo y
-  `SNORM` son límites explícitos, no fallos pendientes del elemento coplanar.
-- No recalibrar la rigidez CQUAD4 para ajustar únicamente `Qx/Qy` centroidales
-  sin una nueva referencia DMIG: la discrepancia conocida es de recuperación.
-- La presentación de resultados pertenece a
-  `src/postprocessing/report_writer.py`; el solver conserva la recuperación
-  numérica y `main.py` sólo orquesta el flujo.
+- The linear path covers small strains with isotropic `MAT1` and six DOFs per
+  node for CROD, CBAR, CTRIA3, and coplanar CQUAD4.
+- The `SOL 400` path covers geometric nonlinearity only with `MAT1`,
+  `PROD/CROD`, and `PBAR/PBARN1/CBAR`, conservative nodal loads, full Newton,
+  and `FIXED`/`ADAPT`. It does not include plasticity, contact, arc-length
+  control, or follower loads.
+- Do not present the project as a general replacement for Nastran.
+- There is no general `AUTOSPC`: a real structural mechanism must fail rather
+  than be stabilized silently.
+- `GRID.CP` coordinates, DOFs in `GRID.CD`, and load vectors in their `CID`
+  must be transformed at the stages documented in `docs/architecture.md`.
+- For PSHELL, a blank `MID2` disables bending and a blank `MID3` disables the
+  physical transverse-shear flexibility; neither field inherits another MID.
+- CQUAD4 rejects warped geometries. The strict warped-geometry and `SNORM`
+  `xfail` cases are explicit scope limits, not pending defects in the coplanar
+  element.
+- Do not recalibrate CQUAD4 stiffness solely to fit centroidal `Qx/Qy` without
+  a new DMIG reference: the known discrepancy is in recovery.
+- Result presentation belongs in `src/postprocessing/report_writer.py`; the
+  solver retains numerical recovery and `main.py` only orchestrates the flow.
 
-## Forma de trabajo
+## Working practices
 
-- Hacer cambios pequeños y apoyarlos primero con el test focalizado. Antes de
-  entregar, ejecutar la colección completa cuando el entorno lo permita.
-- Toda nueva capacidad física necesita un caso mínimo, una referencia externa
-  auditable y una prueba E2E que falle antes de implementar el cambio.
-- No relajar tolerancias ni convertir un fallo en `xfail` sin documentar la
-  causa numérica y la evidencia de referencia.
-- Mantener nombres de código e identificadores en inglés. La documentación de
-  usuario y el resumen de entrega se mantienen en español.
-- Los modelos `.dat/.bdf`, resultados `.f06` y otros binarios usan Git LFS.
-  Comprobar que no sean punteros de texto antes de diagnosticar una lectura.
-- `output/`, cachés y ficheros `draft_*` son artefactos locales; no son fuente
-  de verdad ni deben incorporarse al repositorio.
-- `docs/TFM/` puede contener material de tesis local no versionado. No editarlo,
-  borrarlo ni añadirlo a Git sin una petición explícita del usuario.
-- No crear commits, hacer push ni reescribir el historial salvo petición
-  explícita. Al terminar, informar de tests, archivos cambiados y riesgos.
+- Make small changes and support them with focused tests first. Run the full
+  suite before delivery whenever the environment permits.
+- Every new physical capability needs a minimal case, an auditable external
+  reference, and an end-to-end test that fails before implementation.
+- Do not relax tolerances or convert a failure to `xfail` without documenting
+  the numerical cause and reference evidence.
+- Keep code names, identifiers, comments, docstrings, and user documentation
+  in English. Write delivery summaries in the user's language.
+- `.dat`/`.bdf` models, `.f06` results, and other binaries use Git LFS. Confirm
+  that they are not text pointers before diagnosing a read failure.
+- `output/`, caches, and `draft_*` files are local artifacts; they are not a
+  source of truth and must not be committed.
 
-## Documentación que acompaña a los cambios
+## Documentation accompanying changes
 
-- Cambios de uso, dependencias o CLI: `README.md` y `docs/uso.md`.
-- Cambios de módulos o flujo: `docs/arquitectura.md`.
-- Cambios de formulación: `docs/formulacion.md` y el documento del elemento.
-- Nuevas referencias o tolerancias: `docs/validacion.md`.
-- Cambio del estado general, prioridades o decisiones: `docs/TRASPASO.md` y
+- Usage, dependency, or CLI changes: `README.md` and `docs/usage.md`.
+- Module or flow changes: `docs/architecture.md`.
+- Formulation changes: `docs/formulation.md` and the element document.
+- New references or tolerances: `docs/validation.md`.
+- General status, priorities, or decisions: `docs/HANDOVER.md` and
   `docs/roadmap.md`.

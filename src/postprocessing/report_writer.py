@@ -30,6 +30,7 @@ from src.preprocessing.data_model import (
 
 _REPORT_WIDTH = 148
 _RESULT_TYPE_ORDER = ("CROD", "CBAR", "CTRIA3", "CQUAD4")
+_CBAR_RECOVERY_POINT_NAMES = {"P0": "C", "P1": "D", "P2": "E", "P3": "F"}
 
 
 def _format_cell(value, width: int) -> str:
@@ -358,7 +359,70 @@ def _write_crod_results(stream: TextIO, section: int, items: list[tuple[int, Map
 
 
 def _write_cbar_results(stream: TextIO, section: int, items: list[tuple[int, Mapping]]) -> int:
+    stream.write(f"3.{section}. SECTION RESPONSE IN CBAR ELEMENTS\n")
+    stream.write(
+        "     Axial/torsional measures use the converged local element axis; "
+        "MAX TORSIONAL STRESS is the largest absolute value at the configured recovery points.\n"
+    )
+    _write_table(
+        stream,
+        (
+            "ELEMENT ID", "AXIAL FORCE", "TORQUE", "AXIAL STRESS",
+            "MAX TORSIONAL STRESS", "AXIAL STRAIN", "TWIST RATE",
+        ),
+        (12, 18, 18, 18, 22, 18, 18),
+        (
+            (
+                eid,
+                data.get("axial_force", 0.0),
+                data.get("torque", 0.0),
+                data.get("axial_stress", 0.0),
+                data.get("torsional_stress", 0.0),
+                data.get("axial_strain", 0.0),
+                data.get("twist_rate", 0.0),
+            )
+            for eid, data in items
+        ),
+    )
+    section += 1
+
+    nonlinear_items = [
+        (eid, data)
+        for eid, data in items
+        if "current_length" in data and "strain_energy" in data
+    ]
+    if nonlinear_items:
+        stream.write(f"3.{section}. NONLINEAR STATE IN CBAR ELEMENTS\n")
+        stream.write(
+            "     CURRENT LENGTH is measured between the current offset ends; "
+            "stress extrema include recovery points at both ends.\n"
+        )
+        _write_table(
+            stream,
+            (
+                "ELEMENT ID", "CURRENT LENGTH", "ELEMENT STRAIN ENERGY",
+                "MAX NORMAL STRESS", "MIN NORMAL STRESS",
+            ),
+            (12, 18, 22, 20, 20),
+            (
+                (
+                    eid,
+                    data["current_length"],
+                    data["strain_energy"],
+                    data.get(
+                        "max_element_stress", data.get("max_total_stress", 0.0)
+                    ),
+                    data.get(
+                        "min_element_stress", data.get("min_total_stress", 0.0)
+                    ),
+                )
+                for eid, data in nonlinear_items
+            ),
+        )
+        section += 1
+
     stream.write(f"3.{section}. END FORCES AND MOMENTS IN CBAR ELEMENTS\n")
+    stream.write("     Components are nodal end actions in the converged local element axes.\n")
     force_rows = []
     for eid, data in items:
         for end, key in (("A", "forces_n1"), ("B", "forces_n2")):
@@ -380,13 +444,17 @@ def _write_cbar_results(stream: TextIO, section: int, items: list[tuple[int, Map
     section += 1
 
     stream.write(f"3.{section}. STRESSES AT RECOVERY POINTS IN CBAR ELEMENTS\n")
+    stream.write(
+        "     Points C--F follow PBAR order; AXIAL + BENDING = TOTAL and TORSIONAL is reported separately.\n"
+    )
     stress_rows = []
     for eid, data in items:
         for end, key in (("A", "stress_points_end_a"), ("B", "stress_points_end_b")):
             for point_id, point in sorted(data.get(key, {}).items()):
                 stress_rows.append(
                     (
-                        eid, end, point_id, point.get("y", 0.0), point.get("z", 0.0),
+                        eid, end, _CBAR_RECOVERY_POINT_NAMES.get(point_id, point_id),
+                        point.get("y", 0.0), point.get("z", 0.0),
                         point.get("sigma_axial", 0.0), point.get("sigma_bending", 0.0),
                         point.get("sigma_total", 0.0), point.get("tau_xy", 0.0),
                     )

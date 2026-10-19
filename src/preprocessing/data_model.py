@@ -1,57 +1,34 @@
+"""Format-independent data structures for the finite-element model."""
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict, Optional
-import numpy as np
+from typing import Dict, List, Optional
 
-"""
-@file data_model.py
-@brief Definition of data structures for the FEM model.
-@details This module contains the classes that represent the physical 
-    entities of the problem (nodes, elements, materials) 
-    DECOUPLED from the input format.
-"""
+import numpy as np
 
 @dataclass
 class Node:
-    """
-    @class Node
-    @brief Generic node definition where raw data from input file can be saved and general 
-        coordinates in global sistem are also saved.
-    
-    @details
-        This class stores both the “raw” data from the input file (such as a Nastran GRID card)
-        and the coordinates processed in the global Cartesian system,
-        which are necessary for matrix assembly.
+    """A GRID entry with both its input and basic-coordinate positions.
 
-    @var nid ID único del nodo (Entero > 0).
-    @var coord_id ID del sistema de coordenadas (CP) donde se definen x1, x2, x3. (0 = Global Cartesiano).
-    @var x1 Primera coordenada en el sistema local CP.
-    @var x2 Segunda coordenada en el sistema local CP.
-    @var x3 Tercera coordenada en el sistema local CP.
-    @var cd_id ID del sistema de coordenadas de salida (CD) para los desplazamientos.
-    @var ps Restricción permanente de punto único (Permanent SPC), ej: "123".
-    @var seid ID del super-elemento (SEID).
-    @var x Coordenada X procesada en el Sistema Cartesiano Global (Calculada).
-    @var y Coordenada Y procesada en el Sistema Cartesiano Global (Calculada).
-    @var z Coordenada Z procesada en el Sistema Cartesiano Global (Calculada).
+    ``x1``--``x3`` are expressed in ``coord_id`` (GRID.CP), while ``x``--``z``
+    are the corresponding Cartesian coordinates in the basic frame. The
+    displacement frame is identified by ``cd_id`` (GRID.CD).
     """
-    nid: int # node id 
-    # Raw data fom input file
-    coord_id: int # Identification number of coordinate system where node is defined.
+
+    nid: int
+    coord_id: int
     x1: float
     x2: float
     x3: float
     cd_id: int
-    ps: str # Permanent Single Point Constraint
-    seid: int # Superelement ID
-    
-    # Processed coordinates (Global Cartesian) - Calculated after reading input file
+    ps: str
+    seid: int
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
 
     # Maps vectors expressed in the basic/global frame to the GRID displacement
-    # frame (CD).  It is the identity for CD=0.  The solver uses the same frame
+    # frame (CD). It is the identity for CD=0. The solver uses the same frame
     # for nodal translations and rotations, exactly as Nastran does.
     dof_transform: np.ndarray = field(
         default_factory=lambda: np.eye(3), repr=False, compare=False
@@ -68,128 +45,105 @@ class Node:
         return np.array([self.x, self.y, self.z])
     
 
-# region Materials classes
 @dataclass
 class Material:
-    """
-    @class Material
-    @brief Base class for properties constituting materials.
-    """
-    mid: int #: ID material
+    """Base class for material definitions."""
 
-# region IsotropicMaterial(Material)
+    mid: int
+
+
 @dataclass
 class IsotropicMaterial(Material):
-    """
-    @class IsotropicMaterial
-    @brief Linear isotropic elastic material (equivalent to NASTRAN MAT1).
-    @details 
-    This class implements the elastic constant triangulation logic.
-    The triplet (E, G, nu) is guaranteed to be complete and consistent.    
-    Allows the class to be instantiated with ANY pair of constants:
-        1. (E, nu) -> Calculates G
-        2. (E, G) -> Calculates nu
-        3. (G, nu) -> Calculates E
-    @var E Módulo de Young's Module [Pa].
-    @var nu Coeficiente de Poisson [-].
-    @var G Shear Module [Pa].
-    @var rho density [kg/m^3].
+    """Linear isotropic material equivalent to Nastran MAT1.
 
+    Any two of Young's modulus ``E``, shear modulus ``G`` and Poisson's ratio
+    ``nu`` determine the third. When all three are supplied, they must agree
+    within the project's five-percent engineering tolerance.
     """
-    E: Optional[float] = None   #: Young´s Module
-    nu: Optional[float] = None  #: Poisson Coef
-    G: Optional[float] = None   #: Shear module (optional, calculado si es 0)
-    rho: Optional[float] = None #: density (if needed in future)
+
+    E: Optional[float] = None
+    nu: Optional[float] = None
+    G: Optional[float] = None
+    rho: Optional[float] = None
 
     def __post_init__(self):
-            """
-            Triangulation logic to calculate the missing constant.
-            """
-            # How many elastic parameters have been defined is count (excluding rho).
-            params = [self.E is not None, self.nu is not None, self.G is not None]
-            inputs_count = sum(params)
+        supplied = [value for value in (self.E, self.G, self.nu) if value is not None]
+        if len(supplied) < 2:
+            raise ValueError(
+                f"Review inputs in material '{self.mid}'\n"
+                "There must be at least 2 parameters defined between (E, nu, G)."
+            )
+        if not all(np.isfinite(value) for value in supplied):
+            raise ValueError(
+                f"Material '{self.mid}' contains non-finite elastic constants."
+            )
 
-            # Test 1: There must be at least 2 parameters.
-            if inputs_count < 2:
-                raise ValueError(f"Review inputs in material '{self.mid}'\nThere must be at least 2 parameters defined between (E, nu, G).")
-
-            # --- CALC ---
-                        
-            supplied = [value for value in (self.E, self.G, self.nu) if value is not None]
-            if not all(np.isfinite(value) for value in supplied):
-                raise ValueError(f"Material '{self.mid}' contains non-finite elastic constants.")
-
-            if self.E is None: # CASE 1: Missing E -> (G, nu) Known
-                self.E = 2 * self.G * (1 + self.nu) # Formula: E = 2G(1 + nu)
-
-            
-            elif self.G is None: # CASE 2: Missing G -> (E, nu) Known
-                if self.nu == -1: # Avoid theoretical division by zero
-                    raise ValueError(f"Review inputs in material '{self.mid}'\nPoisson's ratio cannot be -1.")
-                self.G = self.E / (2 * (1 + self.nu)) # Formula: G = E / (2(1 + nu))
-
-            
-            elif self.nu is None: # CASE 3: Missing nu -> (E, G) Known
-                
-                if self.G == 0:
-                    raise ValueError(f"Review inputs in material '{self.mid}'\nG cannot be 0 to calculate nu.")
-                self.nu = (self.E / (2 * self.G)) - 1 # Formula: nu = (E / 2G) - 1
-
-            else: # CASE 4: The three parameters (E, G and nu) were given -> Consistency validation
-                E_calculated = 2 * self.G * (1 + self.nu) # We verify whether the three values given comply with physics.
-                if self.E == 0.0:
-                    raise ValueError(f"Review inputs in material '{self.mid}'\nE must be greater than zero.")
-                error = abs(self.E - E_calculated) / abs(self.E)
-                
-                
-                if error > 0.05: # If the error is greater than 5%, it´s notified (engineering tolerance).
-                    raise ValueError(
-                        f"Material ID '{self.mid}' is physically inconsistent. \n"
-                        f"        Calculated E based on G/nu: {E_calculated:.2e}\n"
-                        f"        User input E:               {self.E:.2e}\n"
-                        f"        Difference is > 5% ({error:.1%}). Review material inputs."
-                    )
-
-            if self.E <= 0.0 or self.G <= 0.0:
-                raise ValueError(f"Material '{self.mid}' requires E > 0 and G > 0.")
-            if not (-1.0 < self.nu <= 0.5):
+        if self.E is None:
+            self.E = 2 * self.G * (1 + self.nu)
+        elif self.G is None:
+            if self.nu == -1:
                 raise ValueError(
-                    f"Material '{self.mid}' requires -1 < nu <= 0.5."
+                    f"Review inputs in material '{self.mid}'\n"
+                    "Poisson's ratio cannot be -1."
                 )
-            if self.rho is not None and (not np.isfinite(self.rho) or self.rho < 0.0):
-                raise ValueError(f"Material '{self.mid}' requires a finite, non-negative density.")
-                    
+            self.G = self.E / (2 * (1 + self.nu))
+        elif self.nu is None:
+            if self.G == 0:
+                raise ValueError(
+                    f"Review inputs in material '{self.mid}'\n"
+                    "G cannot be 0 to calculate nu."
+                )
+            self.nu = (self.E / (2 * self.G)) - 1
+        else:
+            E_calculated = 2 * self.G * (1 + self.nu)
+            if self.E == 0.0:
+                raise ValueError(
+                    f"Review inputs in material '{self.mid}'\n"
+                    "E must be greater than zero."
+                )
+            error = abs(self.E - E_calculated) / abs(self.E)
+            if error > 0.05:
+                raise ValueError(
+                    f"Material ID '{self.mid}' is physically inconsistent. \n"
+                    f"        Calculated E based on G/nu: {E_calculated:.2e}\n"
+                    f"        User input E:               {self.E:.2e}\n"
+                    f"        Difference is > 5% ({error:.1%}). Review material inputs."
+                )
+
+        if self.E <= 0.0 or self.G <= 0.0:
+            raise ValueError(f"Material '{self.mid}' requires E > 0 and G > 0.")
+        if not (-1.0 < self.nu <= 0.5):
+            raise ValueError(f"Material '{self.mid}' requires -1 < nu <= 0.5.")
+        if self.rho is not None and (
+            not np.isfinite(self.rho) or self.rho < 0.0
+        ):
+            raise ValueError(
+                f"Material '{self.mid}' requires a finite, non-negative density."
+            )
 
     def __repr__(self):
-        # Usamos 'or 0' por seguridad en el f-string, aunque post_init asegura valores
-        return (f"IsotropicMaterial with id:{self.mid}\n"
-                f"(E={self.E:.2e}, nu={self.nu:.4f}, G={self.G:.2e}, rho={self.rho})")
-# endregion IsotropicMaterial(Material)
+        return (
+            f"IsotropicMaterial with id:{self.mid}\n"
+            f"(E={self.E:.2e}, nu={self.nu:.4f}, "
+            f"G={self.G:.2e}, rho={self.rho})"
+        )
 
-# endregion Material Classes
 
-# region Property Classes
 @dataclass
 class Property:
-    """
-    @class Property
-    @brief Base class for any elemen property.
-    """
-    pid: int #: ID property
-    
+    """Base class for element properties."""
 
-# region RodProperty(Property)
+    pid: int
+
 @dataclass
 class RodProperty(Property):
-    """
-    @class RodProperty
-    @brief Corresponds to PROD in NASTRAN.
-    """
-    mat_id: int  #: ID from asociated material.
-    A: float     #: Transverse section area.
-    J: float     #: Torsion constant (Polar inertia for circulars coordinates)
-    C: float     #: Coefficient for calculating torsional stresses
-    NSM: float   #: Non-structural mass per unit length
+    """PROD section properties for a CROD element."""
+
+    mat_id: int
+    A: float
+    J: float
+    C: float
+    NSM: float
 
     def __post_init__(self):
         values = (self.A, self.J, self.C, self.NSM)
@@ -199,83 +153,109 @@ class RodProperty(Property):
             raise ValueError(f"RodProperty {self.pid} requires A > 0.")
         if self.J < 0.0 or self.NSM < 0.0:
             raise ValueError(f"RodProperty {self.pid} requires J and NSM to be non-negative.")
-# endregion RodProperty(Property)
 
-# region BarProperty(Property)
+
 @dataclass
 class BarProperty(Property):
-    '''
-    @class BarProperty
-    @brief Geometric properties for the beam element (PBAR).
-    @details Defines the area, inertia, and torsional constant.
-    '''
-    mat_id: int         #: ID from asociated material.
-    A: float            #: Transverse section area.
-    I1: float           #: Moment of inertia of area around plane 1 (local z) - XY bending
-    I2: float           #: Moment of inertia of area around plane 2 (and local) - Bending XZ
-    J: float            #: Torsion constant
-    I12: float = 0.0    #: Producto de inercia (Iyz). Default 0 (sección simétrica)
-    K1: float = 0.0     #: Area factor for shear, plane 1. Default 0 (Euler-Bernoulli)
-    K2: float = 0.0     #: Area factor for shear, plane 2. Default 0 (Euler-Bernoulli)
-    NSM: float = 0.0    #: Non-structural mass per unit length
-    
-    # Stress Recovery Points
-    # List of tuples [(y_c, z_c), (y_d, z_d), (y_e, z_e), (y_f, z_f)]
-    # If the list is empty, it will be calculated only at the centroid (0,0) or default endpoints.
+    """PBAR section properties for a CBAR element."""
+
+    mat_id: int
+    A: float
+    I1: float
+    I2: float
+    J: float
+    I12: float = 0.0
+    K1: float = 0.0
+    K2: float = 0.0
+    NSM: float = 0.0
+
+    # PBAR recovery points C--F, stored as (y, z) pairs in section axes.
     stress_points: List[tuple] = field(default_factory=list)
-    
+    # Optional SOL 400 PBARN1 extension associated with this PBAR. Keeping
+    # these fields on the format-independent property lets the nonlinear
+    # solver distinguish advanced beam behavior without coupling it to
+    # pyNastran (which rejects PBARN1 in the supported version).
+    nonlinear_section: Optional[str] = None
+    nonlinear_behavior: Optional[str] = None
+    nonlinear_integration: Optional[str] = None
+
     def __post_init__(self):
-        values = (self.A, self.I1, self.I2, self.J, self.I12, self.K1, self.K2, self.NSM)
+        for attribute in (
+            "nonlinear_section",
+            "nonlinear_behavior",
+            "nonlinear_integration",
+        ):
+            value = getattr(self, attribute)
+            if value is not None:
+                setattr(self, attribute, str(value).upper())
+        values = (
+            self.A,
+            self.I1,
+            self.I2,
+            self.J,
+            self.I12,
+            self.K1,
+            self.K2,
+            self.NSM,
+        )
         if not all(np.isfinite(value) for value in values):
             raise ValueError(f"BarProperty {self.pid} contains non-finite values.")
         if self.A <= 0.0 or self.I1 <= 0.0 or self.I2 <= 0.0:
-            raise ValueError(f"BarProperty {self.pid} requires A, I1 and I2 to be positive.")
+            raise ValueError(
+                f"BarProperty {self.pid} requires A, I1 and I2 to be positive."
+            )
         if self.J < 0.0 or self.K1 < 0.0 or self.K2 < 0.0 or self.NSM < 0.0:
-            raise ValueError(f"BarProperty {self.pid} requires J, K1, K2 and NSM to be non-negative.")
+            raise ValueError(
+                f"BarProperty {self.pid} requires J, K1, K2 and NSM to be "
+                "non-negative."
+            )
         # A positive-definite centroidal inertia tensor requires a strict inequality.
-        if (self.I1 * self.I2) <= (self.I12 ** 2):
-            raise ValueError(f"Inconsistent inertial properties in BarProperty with id: {self.pid}")
-# endregion BarProperty(Property)
+        if (self.I1 * self.I2) <= (self.I12**2):
+            raise ValueError(
+                f"Inconsistent inertial properties in BarProperty with id: {self.pid}"
+            )
 
-# region ShellProperty(Property)
+
 @dataclass
 class ShellProperty(Property):
-    """
-    @class ShellProperty
-    @brief Properties for Shell elements (PSHELL).
-    @details Defines thickness and material IDs for membrane and bending.
-    """
-    mat_id: int          #: Material ID for Membrane
-    t: float             #: Thickness
-    mat_id_bending: Optional[int] = None #: Material ID for bending (blank MID2 disables bending)
-    mat_id_shear: Optional[int] = None #: Material ID for transverse-shear flexibility (MID3)
-    bending_inertia_ratio: float = 1.0 #: PSHELL 12I/T^3 factor
-    shear_thickness_ratio: float = 5.0 / 6.0 #: PSHELL TS/T factor
+    """PSHELL thickness, material assignments and stiffness factors."""
+
+    mat_id: Optional[int]
+    t: float
+    mat_id_bending: Optional[int] = None
+    mat_id_shear: Optional[int] = None
+    bending_inertia_ratio: float = 1.0
+    shear_thickness_ratio: float = 5.0 / 6.0
 
     def __post_init__(self):
         if not np.isfinite(self.t) or self.t <= 0.0:
             raise ValueError(f"ShellProperty {self.pid} requires a finite thickness t > 0.")
+        if self.mat_id == -1:
+            self.mat_id = None
         if self.mat_id_bending == -1:
             self.mat_id_bending = None
         if self.mat_id_shear == -1:
             self.mat_id_shear = None
+        if self.mat_id_shear is not None and self.mat_id_bending is None:
+            raise ValueError(
+                f"ShellProperty {self.pid} cannot define MID3 without MID2."
+            )
+        if self.mat_id is None and self.mat_id_bending is None:
+            raise ValueError(
+                f"ShellProperty {self.pid} requires MID1 or MID2."
+            )
         if (
             not np.isfinite(self.bending_inertia_ratio)
             or self.bending_inertia_ratio <= 0.0
         ):
-            raise ValueError(
-                f"ShellProperty {self.pid} requires 12I/T^3 > 0."
-            )
+            raise ValueError(f"ShellProperty {self.pid} requires 12I/T^3 > 0.")
         if (
             not np.isfinite(self.shear_thickness_ratio)
             or self.shear_thickness_ratio <= 0.0
         ):
             raise ValueError(f"ShellProperty {self.pid} requires TS/T > 0.")
-# endregion ShellProperty(Property)
-# endregion Property Classes
 
 
-# region Element Classes
 @dataclass
 class Element:
     """Base class for elements."""
@@ -285,81 +265,54 @@ class Element:
 
 @dataclass
 class RodElement(Element):
-    """
-    @brief 2-node bar (CROD).
-    @details Defines a tension-compression-torsion element"""
+    """Two-node CROD element with axial and torsional response."""
+
     pass
 
 @dataclass
 class BarElement(Element):
-    """
-    @class BarElement
-    @brief 2-node prismatic beam element (CBAR).
-    @details 
-    Supports traction, torsion, and bending in two planes.
-    Includes support for vector or node orientation, 
-    offsets (eccentricities), and releases (pin flags).
-    """
-    # --- Orientation ---
-    # Can be defined by vector (v) or by auxiliary node (g0).
-    # Both are saved and solver will decide which one to use (priority to g0 if it exists).
-    orientation_vector: Optional[List[float]] = None 
+    """Two-node CBAR element, including orientation, offsets and releases."""
+
+    # When both are present, the solver uses the G0 node for orientation.
+    orientation_vector: Optional[List[float]] = None
     g0: Optional[int] = None
 
-    # --- Offsets
-    offt: str = 'GGG' # offset type: 'GGG', 'B', 'LOC'. Default Global.
-    wa: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0]) # Offset Node A
-    wb: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0]) # Offset Node B
+    offt: str = "GGG"
+    wa: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    wb: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
 
-    # --- Releases (Joints/Pin Flags) ---
-    # Integers representing the released DOFs (e.g., 456).
-    pa: int = 0 # Default: 0 = Clamped (fully fixed), complete continuity between elements.
-    pb: int = 0 # Default: 0 = Clamped (fully fixed), complete continuity between elements.
-    
-
-
+    # Integers encode released end DOFs; zero means full continuity.
+    pa: int = 0
+    pb: int = 0
 
 @dataclass
 class CQUAD4Element(Element):
-    """
-    @brief 4-node Quadrilateral Plate Element (CQUAD4).
-    @details Stores connectivity and material angle. The active solver uses
-    the validated planar Nastran reconstruction.
-    """
-    theta: float = 0.0 # Material coordinate system orientation
+    """Four-node CQUAD4 with a material-axis angle in degrees."""
+
+    theta: float = 0.0
 
 @dataclass
 class CTRIA3Element(Element):
-    """
-    @brief 3-node Triangular Shell Element (CTRIA3).
-    @details Supports membrane and bending stiffness (Reissner-Mindlin).
-    """
-    theta: float = 0.0 # Material coordinate system orientation
-# endregion Element Classes
+    """Three-node CTRIA3 with a material-axis angle in degrees."""
+
+    theta: float = 0.0
 
 
-# region LOADs Classes
 @dataclass
 class LoadCase:
-    """
-    @class LoadCase
-    @brief Abstract base class for any load type (point, distributed, thermal).
-    """
-    sid: int  #: Set ID (SID) para agrupar casos de carga
+    """Base class for loads grouped by set ID."""
 
-# region SinglePointLoad(LoadCase) (FORCE)
+    sid: int
+
+
 @dataclass
 class SinglePointLoad(LoadCase):
-    """
-    @class SinglePointLoad
-    @brief Represents a static point load (FORCE card).
-    @details Defines a force applied to a specific node, 
-        with a magnitude and direction vector referenced to a coordinate system.
-    """
-    appnode_id: int      #: Application node ID (nid)
-    module: float        #: Force module (F, scale factor)
-    vector: List[float]  #: Director vector [N1, N2, N3]
-    cid: int = 0    #: Coordinate system ID (CID) where the vector is defined. 0=Global.
+    """Concentrated FORCE with magnitude and direction components."""
+
+    appnode_id: int
+    module: float
+    vector: List[float]
+    cid: int = 0
 
     def __post_init__(self):
         vector = np.asarray(self.vector, dtype=float)
@@ -367,20 +320,16 @@ class SinglePointLoad(LoadCase):
             raise ValueError("FORCE direction must contain three finite components.")
         if not np.isfinite(self.module):
             raise ValueError("FORCE magnitude must be finite.")
-# endregion SinglePointLoad(LoadCase) (FORCE)
 
-# region SinglePointMoment(LoadCase) (MOMENT)
+
 @dataclass
 class SinglePointMoment(LoadCase):
-    """
-    @class SinglePointMoment
-    @brief Point-in-time applied to a node (MOMENT card).
-    @details affects the degrees of rotational freedom. (For beams(CBAR) or plates (CQUAD4) elements.)
-    """
-    appnode_id: int      #: Application node ID (nid)
-    module: float        #: Moment module (M, scale factor)
-    vector: List[float]  #: Director vector [N1, N2, N3]
-    cid: int = 0         #: Coordinate system ID (CID) where the vector is defined. 0=Global.
+    """Concentrated MOMENT with magnitude and direction components."""
+
+    appnode_id: int
+    module: float
+    vector: List[float]
+    cid: int = 0
 
     def __post_init__(self):
         vector = np.asarray(self.vector, dtype=float)
@@ -388,30 +337,22 @@ class SinglePointMoment(LoadCase):
             raise ValueError("MOMENT direction must contain three finite components.")
         if not np.isfinite(self.module):
             raise ValueError("MOMENT magnitude must be finite.")
-# endregion SinglePointMoment(LoadCase) (MOMENT)
 
-# endregion LOADS Classes
 
-# region Constraints
 @dataclass
 class Constraint:
-    """
-    @class ConstraintS
-    @brief Base class for boundary conditions and kinematic constraints.
-    """
-    sid: int  #: Set ID (SID) para agrupar restricciones (Load Case)
+    """Base class for boundary conditions grouped by set ID."""
 
-# region SPCConstraint
+    sid: int
+
+
 @dataclass
 class SPCConstraint(Constraint):
-    """
-    @class SPCConstraint
-    @brief Restricción de Punto Único (Tarjetas SPC y SPC1).
-    @details Fija grados de libertad específicos de un nodo a un valor constante.
-    """
-    node_id: int        #: Grid ID (Gi)
-    components: str     #: Componentes restringidas (ej. "123456" o "3")
-    value: float = 0.0  #: Enforced displacement (Di). Default=0.0 (empotramiento).
+    """SPC or SPC1 constraint on one or more nodal components."""
+
+    node_id: int
+    components: str
+    value: float = 0.0
 
     def __post_init__(self):
         components = str(self.components)
@@ -421,12 +362,8 @@ class SPCConstraint(Constraint):
             raise ValueError(f"Repeated SPC components in '{self.components}'.")
         if not np.isfinite(self.value):
             raise ValueError("SPC enforced displacement must be finite.")
-# endregion SPCConstraint
-
-# endregion Constraints
 
 
-# region Analysis configuration
 class AnalysisType(str, Enum):
     """Analysis families understood by the project orchestration layer."""
 
@@ -439,8 +376,8 @@ class NonlinearStepControl:
     """Format-independent subset of Nastran NLSTEP/NLPARM controls.
 
     Values that Nastran derives from ``CTRLDEF`` are left as ``None`` unless
-    they were explicitly supplied.  This prevents the future nonlinear solver
-    from silently baking one MSC-version-dependent default into the model.
+    explicitly supplied, so the model does not silently embed defaults tied
+    to one MSC Nastran version.
     """
 
     sid: int
@@ -497,14 +434,22 @@ class NonlinearStepControl:
                 self.minimum_step_fraction,
                 self.maximum_step_fraction,
             )
-            if any(value is None or not np.isfinite(value) or value <= 0.0 for value in fractions):
-                raise ValueError("ADAPT stepping requires positive DTINITF, DTMINF and DTMAXF.")
+            if any(
+                value is None or not np.isfinite(value) or value <= 0.0
+                for value in fractions
+            ):
+                raise ValueError(
+                    "ADAPT stepping requires positive DTINITF, DTMINF and DTMAXF."
+                )
             if not (
                 self.minimum_step_fraction
                 <= self.initial_step_fraction
                 <= self.maximum_step_fraction
             ):
-                raise ValueError("ADAPT step fractions must satisfy DTMINF <= DTINITF <= DTMAXF.")
+                raise ValueError(
+                    "ADAPT step fractions must satisfy "
+                    "DTMINF <= DTINITF <= DTMAXF."
+                )
             if self.desired_iterations is not None and self.desired_iterations <= 0:
                 raise ValueError("ADAPT desired_iterations must be positive.")
             if self.step_scale_factor is not None and (
@@ -514,7 +459,9 @@ class NonlinearStepControl:
             if self.maximum_increments is not None and self.maximum_increments <= 0:
                 raise ValueError("ADAPT maximum_increments must be positive.")
         if self.output_intervals < -1:
-            raise ValueError("Nonlinear output_intervals must be -1, 0 or a positive integer.")
+            raise ValueError(
+                "Nonlinear output_intervals must be -1, 0 or a positive integer."
+            )
         if self.minimum_iterations < 0 or self.maximum_iterations <= 0:
             raise ValueError("Nonlinear iteration limits must be non-negative/positive.")
         if self.minimum_iterations > self.maximum_iterations:
@@ -536,7 +483,10 @@ class NonlinearStepControl:
             )
         if (
             self.stiffness_update_method == "ITER"
-            and (self.stiffness_update_interval is None or self.stiffness_update_interval <= 0)
+            and (
+                self.stiffness_update_interval is None
+                or self.stiffness_update_interval <= 0
+            )
         ):
             raise ValueError("ITER stiffness updates require KSTEP > 0.")
 
@@ -554,37 +504,25 @@ class AnalysisConfiguration:
     nonlinear_step: Optional[NonlinearStepControl] = None
 
 
-# endregion Analysis configuration
-
-# region FEMModel
 class FEMModel:
-    """
-    @class FEMModel
-    @brief Main container (“Database”) of the physical model.
-    @details Stores all parsed and processed entities, 
-        acting as the single source for the Solver.
-    """
-    def __init__(self):
-        self.nodes: Dict[int, Node] = {}            #: Diccionario de Nodos {ID: Node}
-        self.materials: Dict[int, Material] = {}    #: Diccionario de Materiales {ID: Material}
-        self.properties: Dict[int, Property] = {}   #: Propiedades de sección {ID: Property}
-        self.elements: Dict[int, Element] = {}      #: Elementos finitos {ID: Element}
+    """Container for the normalized physical model consumed by the solvers."""
 
-                # Future user coordinate systems will be implemented
-                #self.coords: Dict[int, CoordSystem] = {}    #: Sistemas de Coordenadas definidos por usuario
-        
-        # Loads and restrictions are stored in lists because different subcase can count with the same load_id or SPC_id multiple times,
-        # therefor in a dictionary they can be overwritten.
-        self.constraints: List[Constraint] = []     
+    def __init__(self):
+        self.nodes: Dict[int, Node] = {}
+        self.materials: Dict[int, Material] = {}
+        self.properties: Dict[int, Property] = {}
+        self.elements: Dict[int, Element] = {}
+
+        # Lists preserve repeated SIDs after LOAD/SPCADD expansion.
+        self.constraints: List[Constraint] = []
         self.loads: List[LoadCase] = []
 
-        # --- PARÁMETROS GLOBALES DE NASTRAN ---
-        self.k6rot: float = 0.0                     #: Factor de rigidez de drilling (PARAM, K6ROT)
+        self.k6rot: float = 0.0
         self.active_subcase_id: Optional[int] = None
         self.active_load_sid: Optional[int] = None
         self.active_spc_sid: Optional[int] = None
         # Logical Bulk Data entry counts retained for an F06-like model summary.
-        # They are deliberately separate from normalized loads/constraints,
+        # They are deliberately separate from normalized loads and constraints,
         # which may expand or combine the source entries used by the solver.
         self.source_entry_counts: Dict[str, int] = {}
         self.analysis = AnalysisConfiguration()
@@ -625,40 +563,10 @@ class FEMModel:
                 )
 
     def get_node(self, node_id: int) -> Node:
-        """
-        @brief Retrieves a Node object by its ID.
-        @param node_id ID of the node to search for.
-        @return Class Node with the node id requested.
-        @throws KeyError if the node does not exist in the model.
-        """
-
+        """Return a node by ID, raising ``KeyError`` when it is absent."""
         if node_id not in self.nodes:
-            raise KeyError(f"[FEMModel ERROR] Node ID: '{node_id}' does not exist in the model.")
-        
+            raise KeyError(
+                f"[FEMModel ERROR] Node ID: '{node_id}' does not exist in the model."
+            )
         return self.nodes[node_id]
-    
-        '''def get_coord_system(self, cid: int) -> Optional[CoordSystem]:
-            """
-            @brief Recupera un sistema de coordenadas.
-            @return Objeto CoordSystem o None si es el global (CID=0).
-            """
-            if cid == 0:
-                return None
-            return self.coords[cid]'''
-
-# endregion FEMModel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

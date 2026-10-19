@@ -3,6 +3,8 @@
 The script reads the actual validation decks, builds one element with either
 the Nastran reconstruction or classical Reissner-Mindlin formulation, and
 reports relative Frobenius and maximum absolute errors on the active block.
+The default run covers supported coplanar cases 51--53. Case 54 remains
+selectable only to exercise the documented non-coplanar rejection.
 
 Run from the repository root with::
 
@@ -24,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.preprocessing.nastran_reader_v2 import parse_nastran_input
+from src.preprocessing.nastran_reader import parse_nastran_input
 from src.solver.elements.cquad4_nastran_element import CQUAD4NastranElementSolver
 from src.solver.elements.cquad4_reissner_mindlin_element import (
     CQUAD4ReissnerMindlinElementSolver,
@@ -50,10 +52,10 @@ CASES = {
         "ej53_k_memb-flex_mid3_0_k6rot_0.dat",
         "ej53_k_memb-flex_mid3_0_k6rot_0_Nastran.csv",
         [
-            0, 1, 2, 3, 4,          # Nudo 1: u, v, w, th_x, th_y (th_z inactivo)
-            6, 7, 8, 9, 10,         # Nudo 2: u, v, w, th_x, th_y
-            12, 13, 14, 15, 16,     # Nudo 3: u, v, w, th_x, th_y
-            18, 19, 20, 21, 22      # Nudo 4: u, v, w, th_x, th_y
+            0, 1, 2, 3, 4,          # Node 1: u, v, w, th_x, th_y (inactive th_z)
+            6, 7, 8, 9, 10,         # Node 2: u, v, w, th_x, th_y
+            12, 13, 14, 15, 16,     # Node 3: u, v, w, th_x, th_y
+            18, 19, 20, 21, 22      # Node 4: u, v, w, th_x, th_y
         ],
     ),
     "54": (
@@ -65,6 +67,7 @@ CASES = {
         list(range(24)),
     ),
 }
+DEFAULT_CASES = ("51", "52", "53")
 
 
 def calculate(case: str, formulation: str) -> tuple[np.ndarray, np.ndarray, list[int]]:
@@ -97,7 +100,12 @@ def calculate(case: str, formulation: str) -> tuple[np.ndarray, np.ndarray, list
 def main() -> None:
     """Run selected comparisons and optionally export calculated matrices."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cases", nargs="+", choices=CASES, default=list(CASES))
+    parser.add_argument(
+        "--cases",
+        nargs="+",
+        choices=CASES,
+        default=DEFAULT_CASES,
+    )
     parser.add_argument("--export-dir", type=Path)
     args = parser.parse_args()
 

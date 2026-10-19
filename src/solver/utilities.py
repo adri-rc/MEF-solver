@@ -1,20 +1,9 @@
+"""Small utilities shared by the finite-element solvers."""
 
-"""
-@file utilities.py
-@brief Helper classes for the Finite Element Solver.
-"""
 
 class DofMapper:
-    """
-    @class DofMapper
-    @brief Maps arbitrary Node IDs to continuous Global Matrix Indices.
-    @details
-    Nastran allows arbitrary IDs (e.g., 10, 50, 200). The solver matrices 
-    need continuous 0-based indexing (0, 1, 2...).
-    
-    This class handles the translation:
-    Global_Index = (Node_Internal_Index * DOFs_per_node) + DOF_Component
-    """
+    """Map arbitrary GRID IDs to contiguous zero-based matrix indices."""
+
     def __init__(self, node_ids: list[int], dofs_per_node: int = 6):
         self.dofs_per_node = dofs_per_node
         self.node_to_index: dict[int, int] = {}
@@ -34,11 +23,7 @@ class DofMapper:
         self.total_dofs = len(node_ids) * dofs_per_node
 
     def get_dof_indices(self, node_id: int) -> list[int]:
-        """
-        @brief Returns the range of global indices for a given node.
-        @param node_id The User ID of the node (e.g., 101).
-        @return List of integers (e.g., [12, 13, 14, 15, 16, 17])
-        """
+        """Return the global DOF indices assigned to ``node_id``."""
         if node_id not in self.node_to_index:
             raise ValueError(f"Node ID {node_id} is not mapped.")
             
@@ -46,12 +31,9 @@ class DofMapper:
         return list(range(start_index, start_index + self.dofs_per_node))
     
     def get_node_from_index(self, global_index: int) -> int:
-        """
-        @brief Reverse lookup: Given a matrix row/col index, find the Node ID.
-        @details Useful for debugging or mapping results back to nodes.
-        """
+        """Return the GRID ID associated with a global matrix index."""
         if not (0 <= global_index < self.total_dofs):
             raise IndexError(f"Index {global_index} out of bounds (Total: {self.total_dofs})")
         
-        internal_index = global_index // self.dofs_per_node # integer division (//)
+        internal_index = global_index // self.dofs_per_node
         return self.index_to_node[internal_index]
