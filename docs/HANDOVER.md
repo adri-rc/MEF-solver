@@ -11,6 +11,11 @@ is:
 DAT/BDF -> pyNastran -> FEMModel -> linear or nonlinear solver -> RPT report
 ```
 
+Development for the master's thesis is complete. The repository serves as an
+academic reference and is not actively maintained. User support, issue triage,
+and review of external contributions are not provided. Future-work items are
+optional research suggestions, not commitments to further development.
+
 The complete suite was run on 20 September 2026 after the publication asset
 cleanup and reported `714 passed, 6 xfailed, 2 warnings in 422.63s`. The
 nonlinear cleanup removed four obsolete tests together with the smaller legacy
@@ -211,26 +216,25 @@ image evidence are managed through Git LFS; PCH references remain plain text.
 Confirm LFS-backed files are materialized before diagnosing a parser or
 numerical failure.
 
-## Publication checklist and next work
+## Publication preparation and optional future work
 
 The project's original source code is licensed under
 [BSD-3-Clause](../LICENSE). The [README](../README.md) records the thesis
 purpose, absence of warranties, limitation of liability, and scope of the
-MSC Nastran comparisons. The published
+MSC Nastran comparisons. The included
 [master's thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf)
-is available as an academic reference. Code, tests, and the maintained
+is available as an academic reference. Code, tests, and the retained
 technical documentation define the current implementation.
 
-Before publishing the repository:
+Before making the repository public, run a final secret, absolute-path, and
+Git LFS audit, verify the documentation links, and record the final test-suite
+result. These publication checks do not require extending the solver's scope.
 
-1. add continuous integration for the complete pytest suite and Git LFS
-   checkout;
-2. add `pyproject.toml` and/or an exact reproducible dependency lock;
-3. run a final secret, absolute-path, and LFS audit;
-4. decide and document whether CLI batch processing stops at the first error
-   or accumulates failures;
-5. add mesh-refinement convergence studies if stronger public numerical
-   evidence is required.
+Possible follow-up work for independent study includes continuous integration
+with Git LFS checkout, `pyproject.toml` and/or an exact dependency lock,
+mesh-refinement convergence studies, and an explicit CLI batch-error policy.
+These ideas and the extensions in [roadmap.md](roadmap.md) have no committed
+schedule and do not imply ongoing maintenance or support.
 
 Do not commit generated `output/`, caches, `draft_*` material, or local thesis
 sources. Thesis material under `docs/TFM/` or `docs/draft_TFM/` is outside the

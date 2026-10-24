@@ -1,5 +1,11 @@
 # Roadmap
 
+The work developed for the master's thesis is complete. This document records
+the delivered baseline and possible topics for independent future study. The
+project is not actively maintained; user support, issue triage, and review of
+external contributions are not provided. Optional items below have no
+committed implementation or delivery schedule.
+
 ## Verified baseline
 
 The DAT/BDF to data model to sparse assembly to solution to report workflow is
@@ -69,7 +75,7 @@ Some near-neutral fibres and severe combined-rotation segments in cases
 165/166 remain diagnostics. They do not invalidate the closed global response
 and centroidal axial-stress scope.
 
-## Priority 1: public-release consolidation
+## Completed: repository consolidation
 
 The preprocessing, linear-analysis, and nonlinear-analysis publication passes
 are complete. They cover active-module naming, removal of disconnected or
@@ -84,18 +90,18 @@ the MSC Nastran comparisons. The
 [master's thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf)
 is now available in the repository as an academic reference.
 
-Remaining consolidation work:
+The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
+a formulation/recovery limit. It does not justify recalibrating validated
+stiffness.
+
+## Optional reproducibility and validation studies
 
 1. add continuous integration for the full pytest suite;
 2. add `pyproject.toml` and/or a reproducible dependency lock;
 3. add mesh-refinement convergence tests in addition to DMIG and E2E checks;
 4. decide whether batch mode stops on the first error or accumulates failures.
 
-The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
-a formulation/recovery limit. It is not a consolidation task and does not
-justify recalibrating validated stiffness.
-
-## Priority 2: performance
+## Optional performance studies
 
 1. assemble from vectorized COO triplets;
 2. cache transformations and element solver objects between assembly and
@@ -104,7 +110,7 @@ justify recalibrating validated stiffness.
    increasing mesh sizes;
 4. investigate reordering and iterative solvers when model size warrants it.
 
-## Priority 3: new capabilities
+## Optional new capabilities
 
 Every physical extension must include a minimal model, an auditable external
 reference, and an end-to-end test before it is advertised as supported.

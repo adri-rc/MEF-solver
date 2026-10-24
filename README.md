@@ -25,6 +25,18 @@ to the documented scope.
 For questions, implementation details, and mathematical formulations, consult
 the [master's thesis (PDF)](docs/thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf).
 
+## Project status
+
+This repository contains the completed work developed for a master's thesis
+and is provided as an academic reference. It is not actively maintained.
+No user support, handling of bug reports, or review of external contributions
+is provided. Readers may fork and adapt the original source code under the
+[BSD 3-Clause License](LICENSE).
+
+The [roadmap](docs/roadmap.md) records possible directions for future academic
+work; it does not constitute a development plan or a commitment to implement
+changes.
+
 ## Capabilities
 
 The linear static path supports small deformations, isotropic `MAT1`
