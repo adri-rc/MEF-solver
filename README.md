@@ -1,9 +1,29 @@
 # MEF-solver
 
-MEF-solver is an academic finite element solver for static structural analysis
-and numerical comparison with MSC Nastran. It was developed as a master's
-thesis project and intentionally implements a limited, documented subset of
-Nastran. It is not a general replacement for MSC Nastran.
+> **Academic disclaimer**
+>
+> This project was developed solely to complete a master's thesis (TFM).
+> The software, models, documentation, and results may contain errors,
+> omissions, and limitations. They are provided "as is", without warranties
+> of correctness, accuracy, completeness, or fitness for a particular purpose.
+> To the maximum extent permitted by applicable law, the author and
+> contributors disclaim liability for errors, use of this project, or any
+> resulting loss or damage. Any engineering use requires independent
+> verification by a qualified professional. See [LICENSE](LICENSE).
+>
+> MSC Nastran results are used as external references for assessing the
+> implementation developed for the thesis. This project does not assess,
+> certify, endorse, or warrant the correctness of MSC Nastran or its results,
+> and does not claim to reproduce or replace that software. The project is
+> independent and is not endorsed or certified by MSC Nastran's developers
+> or vendors.
+
+MEF-solver is an academic finite element solver for static structural analysis.
+Its supported analyses, elements, and input formats are deliberately limited
+to the documented scope.
+
+For questions, implementation details, and mathematical formulations, consult
+the [master's thesis (PDF)](docs/thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf).
 
 ## Capabilities
 
@@ -98,8 +118,15 @@ reference.
 - The program performs no unit conversion; every deck must use one coherent
   unit system.
 
+## License
+
+The project's original source code is licensed under the
+[BSD 3-Clause License](LICENSE). Existing third-party notices remain
+applicable.
+
 ## Documentation
 
+- [Master's thesis (PDF)](docs/thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf)
 - [Usage](docs/usage.md)
 - [Architecture](docs/architecture.md)
 - [Mathematical formulation](docs/formulation.md)

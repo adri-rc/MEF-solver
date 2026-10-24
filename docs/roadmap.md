@@ -77,13 +77,19 @@ superseded artifacts, English comments/docstrings, and English documentation
 checked against code and tests. The nonlinear pass also retains only the final
 three-span bridge referenced by the submitted thesis.
 
+The project's original source code now uses [BSD-3-Clause](../LICENSE).
+The [README](../README.md) opens with an academic disclaimer explaining the
+thesis purpose, absence of warranties, limitation of liability, and scope of
+the MSC Nastran comparisons. The
+[master's thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf)
+is now available in the repository as an academic reference.
+
 Remaining consolidation work:
 
 1. add continuous integration for the full pytest suite;
 2. add `pyproject.toml` and/or a reproducible dependency lock;
 3. add mesh-refinement convergence tests in addition to DMIG and E2E checks;
-4. decide whether batch mode stops on the first error or accumulates failures;
-5. choose and add a repository license before public release.
+4. decide whether batch mode stops on the first error or accumulates failures.
 
 The CTRIA3 centroidal `M/Q` discrepancy in the T frame is already isolated as
 a formulation/recovery limit. It is not a consolidation task and does not

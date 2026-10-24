@@ -1,5 +1,8 @@
 # Mathematical formulation
 
+For the academic background and thesis discussion, see the
+[master's thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf).
+
 ## General assumptions
 
 The linear solver covers small-deformation statics with isotropic materials:

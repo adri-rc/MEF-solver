@@ -227,8 +227,9 @@ printing remains optional recovery work.
 ## Final nonlinear integration model
 
 `case_nonlinear_test_final_updated` is the final three-span bridge documented
-in the submitted thesis. It contains 202 GRID and 572 elements: 144 CBAR and
-428 CROD. Both solvers complete 20 increments without cutbacks. Relative L2
+in the [submitted thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf).
+It contains 202 GRID and 572 elements: 144 CBAR and 428 CROD. Both solvers
+complete 20 increments without cutbacks. Relative L2
 errors are `3.280e-5` in translations, `2.416e-5` in rotations,
 `2.898e-5` in force reactions, `2.125e-5` in CROD stress, and
 `1.379e-5` in centroidal CBAR axial stress. Full CBAR fibre results have

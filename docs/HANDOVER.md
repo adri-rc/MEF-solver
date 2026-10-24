@@ -213,16 +213,23 @@ numerical failure.
 
 ## Publication checklist and next work
 
+The project's original source code is licensed under
+[BSD-3-Clause](../LICENSE). The [README](../README.md) records the thesis
+purpose, absence of warranties, limitation of liability, and scope of the
+MSC Nastran comparisons. The published
+[master's thesis (PDF)](thesis/MEF-solver_MastersThesis_AdrianRuizCalderon.pdf)
+is available as an academic reference. Code, tests, and the maintained
+technical documentation define the current implementation.
+
 Before publishing the repository:
 
 1. add continuous integration for the complete pytest suite and Git LFS
    checkout;
-2. choose and add a repository license;
-3. add `pyproject.toml` and/or an exact reproducible dependency lock;
-4. run a final secret, absolute-path, and LFS audit;
-5. decide and document whether CLI batch processing stops at the first error
+2. add `pyproject.toml` and/or an exact reproducible dependency lock;
+3. run a final secret, absolute-path, and LFS audit;
+4. decide and document whether CLI batch processing stops at the first error
    or accumulates failures;
-6. add mesh-refinement convergence studies if stronger public numerical
+5. add mesh-refinement convergence studies if stronger public numerical
    evidence is required.
 
 Do not commit generated `output/`, caches, `draft_*` material, or local thesis
